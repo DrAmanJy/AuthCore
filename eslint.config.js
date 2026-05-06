@@ -34,7 +34,6 @@ export default [
       "no-var": "error",
       "prefer-const": "error",
       "prefer-template": "warn",
-      "object-shorthand": ["warn", "always"],
 
       "no-unused-vars": [
         "warn",
@@ -44,8 +43,6 @@ export default [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
-
-      "no-process-exit": "warn",
 
       "no-trailing-spaces": "warn",
       "eol-last": ["warn", "always"],
