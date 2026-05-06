@@ -1,0 +1,52 @@
+{
+  "name": "authcore",
+  "version": "1.0.0",
+  "description": "Centralized authentication and session management service",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "check:format": "prettier --check ."
+  },
+  "keywords": [
+    "authentication",
+    "auth-service",
+    "jwt",
+    "sessions",
+    "express",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "Aman",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.6.1",
+    "morgan": "^1.10.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.4.0",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.8.3"
+  }
+}
