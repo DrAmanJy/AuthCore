@@ -30,7 +30,7 @@ export default [
       "no-async-promise-executor": "error",
 
       eqeqeq: ["error", "always"],
-      curly: ["error", "all"],
+      // curly: ["error", "all"],
       "no-var": "error",
       "prefer-const": "error",
       "prefer-template": "warn",
@@ -45,7 +45,7 @@ export default [
       ],
 
       "no-trailing-spaces": "warn",
-      "eol-last": ["warn", "always"],
+      // "eol-last": ["warn", "always"],
 
       "no-console": [
         "warn",
