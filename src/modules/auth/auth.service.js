@@ -4,7 +4,7 @@ import Users from "../users/user.model.js";
 
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/AppError.js";
-import { createSession } from "../sessions/session.service.js";
+import { createSession, revokeSession } from "../sessions/session.service.js";
 import { createAccessToken } from "../../utils/token.js";
 
 export const registerUser = async ({ name, email, password }) => {
@@ -56,4 +56,14 @@ export const loginUser = async ({
   const accessToken = createAccessToken(user._id, sessionId, serviceName);
 
   return { user, refreshToken, accessToken };
+};
+
+export const logoutUser = async sessionId => {
+  const status = await revokeSession(sessionId);
+
+  if (!status) {
+    throw new AppError("Session invalid or already logged out", 400);
+  }
+
+  return true;
 };
