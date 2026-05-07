@@ -1,4 +1,5 @@
 import { env } from "../../config/env.js";
+import { AppError } from "../../utils/AppError.js";
 import { getClientInfo } from "../../utils/clientInfo.utils.js";
 import * as authService from "./auth.service.js";
 
@@ -75,5 +76,34 @@ export const logoutAll = async (req, res) => {
   res.status(200).json({
     success: true,
     message: "Successfully logged out of all devices",
+  });
+};
+
+export const refreshToken = async (req, res) => {
+  const { name: serviceName } = req.service;
+  const plainToken = req.cookies.refreshToken;
+
+  if (!plainToken) {
+    throw new AppError("No refresh token found. Please log in again.", 401);
+  }
+
+  const { refreshToken, accessToken } = await authService.refreshAccessToken(
+    plainToken,
+    serviceName
+  );
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Access token successfully created",
+    data: {
+      accessToken,
+    },
   });
 };
