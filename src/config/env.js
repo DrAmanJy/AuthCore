@@ -27,7 +27,7 @@ const envSchema = z.object({
   JWT_AUDIENCE: z.string().min(1),
 
   REFRESH_TOKEN_BYTES: z.coerce.number().int().min(32).max(128),
-  SESSION_ABSOLUTE_EXPIRY_DAYS: z.coerce.number().int().positive(),
+  SESSION_EXPIRY_DAYS: z.coerce.number().int().positive(),
 
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(14),
 
