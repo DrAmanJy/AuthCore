@@ -4,7 +4,11 @@ import Users from "../users/user.model.js";
 
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/AppError.js";
-import { createSession, revokeSession } from "../sessions/session.service.js";
+import {
+  createSession,
+  revokeAllSessions,
+  revokeSession,
+} from "../sessions/session.service.js";
 import { createAccessToken } from "../../utils/token.js";
 
 export const registerUser = async ({ name, email, password }) => {
@@ -63,6 +67,16 @@ export const logoutUser = async sessionId => {
 
   if (!status) {
     throw new AppError("Session invalid or already logged out", 400);
+  }
+
+  return true;
+};
+
+export const logoutAllUser = async userId => {
+  const status = await revokeAllSessions(userId);
+
+  if (!status) {
+    throw new AppError("Internal server error: Failed to revoke sessions", 400);
   }
 
   return true;
