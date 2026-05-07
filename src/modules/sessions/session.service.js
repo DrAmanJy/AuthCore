@@ -73,3 +73,40 @@ export async function rotateSession(plainToken) {
     throw new AppError("Internal server error during rotation", 500);
   }
 }
+
+export async function revokeSession(sessionId) {
+  try {
+    const revokedSession = await Sessions.findByIdAndUpdate(
+      sessionId,
+      { revokedAt: new Date() },
+      { new: true }
+    );
+
+    if (!revokedSession) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Database Error while revoking session:", error);
+    return false;
+  }
+}
+
+export async function revokeAllSessions(userId) {
+  try {
+    await Sessions.updateMany(
+      {
+        userId: userId,
+        revokedAt: null,
+      },
+      {
+        $set: { revokedAt: new Date() },
+      }
+    );
+    return true;
+  } catch (error) {
+    console.error("Database Error while revoking all sessions:", error);
+    return false;
+  }
+}
