@@ -27,7 +27,7 @@ export async function createSession(
     return {
       plainToken,
       userId: session.userId,
-      serviceId: session.serviceId,
+      sessionId: session._id,
     };
   } catch (error) {
     console.error("Database Error while creating session:", error);
@@ -63,7 +63,7 @@ export async function rotateSession(plainToken) {
     return {
       newPlainToken,
       userId: session.userId,
-      serviceId: session.serviceId,
+      sessionId: session._id,
     };
   } catch (error) {
     if (error instanceof AppError) {
@@ -114,6 +114,16 @@ export async function revokeAllSessions(userId) {
 export async function findSessionById(sessionId) {
   try {
     return await Sessions.findById(sessionId);
+  } catch (error) {
+    console.error("Database Error while getting session by ID:", error);
+    return null;
+  }
+}
+
+export async function findSessionByToken(plainToken) {
+  try {
+    const refreshTokenHash = hashSessionToken(plainToken);
+    return await Sessions.findOne({ refreshTokenHash });
   } catch (error) {
     console.error("Database Error while getting session by ID:", error);
     return null;
