@@ -34,3 +34,42 @@ export async function createSession(
     throw new AppError("Error while creating session", 500);
   }
 }
+
+export async function rotateSession(plainToken) {
+  try {
+    const refreshTokenHash = hashSessionToken(plainToken);
+    const session = await Sessions.findOne({ refreshTokenHash });
+
+    if (!session) {
+      throw new AppError("Invalid session token", 401);
+    }
+
+    if (session.expiresAt.getTime() < Date.now()) {
+      throw new AppError("Session has expired", 401);
+    }
+
+    if (session.revokedAt) {
+      throw new AppError("Session has been revoked", 401);
+    }
+
+    const newPlainToken = createSessionToken();
+    const newRefreshTokenHash = hashSessionToken(newPlainToken);
+
+    session.refreshTokenHash = newRefreshTokenHash;
+    session.lastUsedAt = Date.now();
+
+    await session.save();
+
+    return {
+      newPlainToken,
+      userId: session.userId,
+      serviceId: session.serviceId,
+    };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    console.error("Database Error while rotating session:", error);
+    throw new AppError("Internal server error during rotation", 500);
+  }
+}
