@@ -60,3 +60,20 @@ export const logout = async (req, res) => {
     message: "User logged out successfully",
   });
 };
+
+export const logoutAll = async (req, res) => {
+  const { sub: userId } = req.accessToken;
+
+  await authService.logoutAllUser(userId);
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Successfully logged out of all devices",
+  });
+};
