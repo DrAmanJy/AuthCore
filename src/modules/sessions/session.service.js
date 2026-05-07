@@ -110,3 +110,26 @@ export async function revokeAllSessions(userId) {
     return false;
   }
 }
+
+export async function findSessionById(sessionId) {
+  try {
+    return await Sessions.findById(sessionId);
+  } catch (error) {
+    console.error("Database Error while getting session by ID:", error);
+    return null;
+  }
+}
+
+export async function findUserSessions(userId) {
+  try {
+    return await Sessions.find({
+      userId: userId,
+      revokedAt: null,
+    })
+      .sort({ lastUsedAt: -1 })
+      .populate("serviceId", "name");
+  } catch (error) {
+    console.error("Database Error while getting user sessions:", error);
+    return [];
+  }
+}
