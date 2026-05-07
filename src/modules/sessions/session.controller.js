@@ -1,5 +1,5 @@
 import { AppError } from "../../utils/AppError.js";
-import { findSessionById, findUserSessions } from "./session.service.js";
+import { findSessionById, findUserSessions, revokeSession } from "./session.service.js";
 
 export const getUserSessionById = async (req, res) => {
   const sessionId = req.params.sessionId;
@@ -22,5 +22,20 @@ export const getUserSessions = async (req, res) => {
     status: "success",
     message: "Sessions successfully found",
     data: { sessions },
+  });
+};
+
+export const deleteUserSessionById = async (req, res) => {
+  const sessionId = req.params.sessionId;
+
+  const status = await revokeSession(sessionId);
+
+  if (!status) {
+    throw new AppError("Session not found or already revoked", 404);
+  }
+
+  return res.status(200).json({
+    status: "success",
+    message: "Session successfully deleted",
   });
 };
