@@ -1,5 +1,10 @@
 import { AppError } from "../../utils/AppError.js";
-import { findSessionById, findUserSessions, revokeSession } from "./session.service.js";
+import {
+  findSessionById,
+  findUserSessions,
+  revokeAllSessions,
+  revokeSession,
+} from "./session.service.js";
 
 export const getUserSessionById = async (req, res) => {
   const sessionId = req.params.sessionId;
@@ -37,5 +42,20 @@ export const deleteUserSessionById = async (req, res) => {
   return res.status(200).json({
     status: "success",
     message: "Session successfully deleted",
+  });
+};
+
+export const deleteUserSessions = async (req, res) => {
+  const { sub: userId } = req.accessToken;
+
+  const status = await revokeAllSessions(userId);
+
+  if (!status) {
+    throw new AppError("Internal server error: Failed to revoke sessions", 500);
+  }
+
+  return res.status(200).json({
+    status: "success",
+    message: "All sessions successfully revoked",
   });
 };
