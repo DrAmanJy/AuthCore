@@ -8,6 +8,7 @@ import {
   createSession,
   revokeAllSessions,
   revokeSession,
+  rotateSession,
 } from "../sessions/session.service.js";
 import { createAccessToken } from "../../utils/token.js";
 
@@ -80,4 +81,16 @@ export const logoutAllUser = async userId => {
   }
 
   return true;
+};
+
+export const refreshAccessToken = async (plainToken, serviceName) => {
+  const {
+    newPlainToken: refreshToken,
+    sessionId,
+    userId,
+  } = await rotateSession(plainToken);
+
+  const accessToken = createAccessToken(userId, sessionId, serviceName);
+
+  return { refreshToken, accessToken };
 };
