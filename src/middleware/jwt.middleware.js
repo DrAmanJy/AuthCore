@@ -1,9 +1,9 @@
 import jwt from "jsonwebtoken";
 import { AppError } from "../utils/AppError.js";
-import { env } from "../config/env";
+import { env } from "../config/env.js";
 
 export const verifyAccessToken = (req, res, next) => {
-  const authHeader = "req.headers.authorization";
+  const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer "))
     throw new AppError("Not authorized, no token provided", 401);
@@ -15,7 +15,7 @@ export const verifyAccessToken = (req, res, next) => {
 
   let decoded;
   try {
-    decoded = jwt.verify(accessToken, env.JWT_ACCESS_SECRET, {
+    decoded = jwt.verify(accessToken, env.JWT_ACCESS_PUBLIC_KEY, {
       algorithms: ["RS256"],
     });
   } catch {
@@ -24,6 +24,6 @@ export const verifyAccessToken = (req, res, next) => {
 
   if (!decoded) throw new AppError("Invalid or expire access token", 401);
 
-  res.accessToken = { ...decoded };
+  req.accessToken = { ...decoded };
   next();
 };
