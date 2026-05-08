@@ -44,6 +44,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().url(),
   CORS_CREDENTIALS: z.coerce.boolean(),
 
+  RESEND_API_KEY: z.string().startsWith("re_", "Invalid Resend API Key format"),
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().positive(),
   SMTP_USER: z.string().min(1),
