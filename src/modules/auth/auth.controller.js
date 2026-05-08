@@ -15,6 +15,34 @@ export const register = async (req, res) => {
   });
 };
 
+export const verifyEmail = async (req, res) => {
+  const { email, otp } = req.body;
+  const { device, ipAddress, userAgent } = getClientInfo(req);
+  const { name: serviceName } = req.service;
+
+  const { user, accessToken, refreshToken } = await authService.verifyUser(
+    email,
+    otp,
+    serviceName,
+    device,
+    ipAddress,
+    userAgent
+  );
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Email successfully verified",
+    data: { accessToken, user },
+  });
+};
+
 export const login = async (req, res) => {
   const { ipAddress, userAgent, device } = getClientInfo(req);
   const { name: serviceName } = req.service;
