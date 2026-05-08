@@ -14,7 +14,7 @@ const router = Router();
 
 router.post("/register", validate(registerSchema), controller.register);
 router.post("/login", extractServiceIdentity, validate(loginSchema), controller.login);
-router.post("/refresh", controller.refreshToken);
+router.post("/refresh", extractServiceIdentity, controller.refreshToken);
 
 router.post(
   "/verify",
@@ -34,3 +34,5 @@ router.patch(
   validate(changePasswordSchema),
   controller.changePassword
 );
+
+export default router;
