@@ -17,14 +17,14 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   const { ipAddress, userAgent, device } = getClientInfo(req);
-  const { _id: serviceId, name: serviceName } = req.service;
+  const { name: serviceName } = req.service;
 
   const { user, accessToken, refreshToken } = await authService.loginUser({
     ...req.body,
     ipAddress,
     userAgent,
     device,
-    serviceId,
+    serviceId: serviceName,
     serviceName,
   });
 
