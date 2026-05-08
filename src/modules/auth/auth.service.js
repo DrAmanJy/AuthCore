@@ -94,3 +94,49 @@ export const refreshAccessToken = async (plainToken, serviceName) => {
 
   return { refreshToken, accessToken };
 };
+
+export const changeUserPassword = async (
+  userId,
+  serviceName,
+  device,
+  ipAddress,
+  userAgent,
+  oldPassword,
+  newPassword
+) => {
+  const user = await Users.findById(userId).select("+password");
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const isValidPass = await bcrypt.compare(oldPassword, user.password);
+  if (!isValidPass) {
+    throw new AppError("Invalid current password", 401);
+  }
+
+  const saltRounds = Number(env.BCRYPT_SALT_ROUNDS) || 10;
+  const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+  user.password = hashedPassword;
+  await user.save();
+
+  const success = await revokeAllSessions(user._id);
+  if (!success) {
+    throw new AppError(
+      "Password changed, but failed to securely log out other devices",
+      500
+    );
+  }
+
+  const { plainToken: refreshToken, sessionId } = await createSession(
+    user._id,
+    serviceName,
+    device,
+    ipAddress,
+    userAgent
+  );
+
+  const accessToken = createAccessToken(user._id, sessionId, serviceName);
+
+  return { user, refreshToken, accessToken };
+};
