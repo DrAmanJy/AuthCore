@@ -11,8 +11,9 @@ const sessionSchema = new Schema(
     },
 
     serviceId: {
-      type: Types.ObjectId,
-      ref: "Service",
+      // type: Types.ObjectId,
+      // ref: "Service",
+      type: String,
       required: true,
       index: true,
     },
