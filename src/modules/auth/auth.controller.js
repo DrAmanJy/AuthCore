@@ -107,3 +107,33 @@ export const refreshToken = async (req, res) => {
     },
   });
 };
+
+export const changePassword = async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const { sub: userId } = req.accessToken;
+  const { ipAddress, userAgent, device } = getClientInfo(req);
+  const { name: serviceName } = req.service;
+
+  const { refreshToken, accessToken } = await authService.changeUserPassword(
+    userId,
+    serviceName,
+    device,
+    ipAddress,
+    userAgent,
+    oldPassword,
+    newPassword
+  );
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.status(200).json({
+    status: "success",
+    message: "Password successfully changed",
+    data: { accessToken },
+  });
+};
