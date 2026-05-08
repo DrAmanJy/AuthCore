@@ -115,7 +115,7 @@ export const loginUser = async ({
   serviceId,
   serviceName,
 }) => {
-  const user = await Users.findOne({ email });
+  const user = await Users.findOne({ email }).select("+password");
 
   if (!user) throw new AppError("Invalid email or password", 400);
   if (!user.isVerified) throw new AppError("Verify your account before login", 401);
