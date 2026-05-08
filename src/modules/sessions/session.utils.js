@@ -31,7 +31,7 @@ export const compareSessionToken = (plainToken, hashToken) => {
     }
 
     return crypto.timingSafeEqual(newHashBuffer, dbHashBuffer);
-  } catch (error) {
+  } catch (_) {
     return false;
   }
 };

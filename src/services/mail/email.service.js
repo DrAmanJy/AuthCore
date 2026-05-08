@@ -8,7 +8,7 @@ export const sendVerificationEmail = async (userEmail, username, otpCode) => {
     const htmlContent = generateOtpEmailTemplate(otpCode, username);
 
     const { data, error } = await resend.emails.send({
-      from: `PulseTrack <onboarding@${env.EMAIL_DOMAIN}>`,
+      from: `onboarding@resend.dev`,
       to: userEmail,
       subject: "Verify your PulseTrack account",
       html: htmlContent,
