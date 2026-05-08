@@ -23,20 +23,21 @@ const userSchema = new Schema(
       required: true,
       select: false,
     },
-    isVerified: { type: Boolean, default: false },
+
     roles: {
       type: [String],
       enum: ["user", "admin"],
       default: ["user"],
     },
-    tokenVersion: {
-      type: Number,
-      default: 0,
-    },
+
+    isVerified: { type: Boolean, default: false },
     isActive: {
       type: Boolean,
       default: true,
     },
+
+    verifyOtp: { type: String, select: false },
+    verifyOtpExpire: { type: Date, select: false },
   },
 
   {
