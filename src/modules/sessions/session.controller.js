@@ -7,6 +7,7 @@ import {
 } from "./session.service.js";
 
 export const getUserSessionById = async (req, res) => {
+
   const sessionId = req.params.sessionId;
 
   const session = await findSessionById(sessionId);
@@ -20,6 +21,7 @@ export const getUserSessionById = async (req, res) => {
 };
 
 export const getUserSessions = async (req, res) => {
+
   const { sub: userId } = req.accessToken;
 
   const sessions = await findUserSessions(userId);
@@ -31,6 +33,7 @@ export const getUserSessions = async (req, res) => {
 };
 
 export const deleteUserSessionById = async (req, res) => {
+
   const sessionId = req.params.sessionId;
 
   const status = await revokeSession(sessionId);
@@ -46,6 +49,7 @@ export const deleteUserSessionById = async (req, res) => {
 };
 
 export const deleteUserSessions = async (req, res) => {
+
   const { sub: userId } = req.accessToken;
 
   const status = await revokeAllSessions(userId);
