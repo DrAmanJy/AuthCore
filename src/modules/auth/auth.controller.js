@@ -4,6 +4,7 @@ import { getClientInfo } from "../../utils/clientInfo.utils.js";
 import * as authService from "./auth.service.js";
 
 export const register = async (req, res) => {
+
   const user = await authService.registerUser(req.body);
 
   res.status(201).json({
@@ -16,6 +17,7 @@ export const register = async (req, res) => {
 };
 
 export const verifyEmail = async (req, res) => {
+
   const { email, otp } = req.body;
   const { device, ipAddress, userAgent } = getClientInfo(req);
   const { name: serviceName } = req.service;
@@ -44,6 +46,7 @@ export const verifyEmail = async (req, res) => {
 };
 
 export const login = async (req, res) => {
+
   const { ipAddress, userAgent, device } = getClientInfo(req);
   const { name: serviceName } = req.service;
 
@@ -74,6 +77,7 @@ export const login = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
+
   const { sid: sessionId } = req.accessToken;
 
   await authService.logoutUser(sessionId);
@@ -91,6 +95,7 @@ export const logout = async (req, res) => {
 };
 
 export const logoutAll = async (req, res) => {
+
   const { sub: userId } = req.accessToken;
 
   await authService.logoutAllUser(userId);
@@ -108,6 +113,7 @@ export const logoutAll = async (req, res) => {
 };
 
 export const refreshToken = async (req, res) => {
+
   const { name: serviceName } = req.service;
   const plainToken = req.cookies.refreshToken;
 
@@ -137,6 +143,7 @@ export const refreshToken = async (req, res) => {
 };
 
 export const changePassword = async (req, res) => {
+
   const { oldPassword, newPassword } = req.body;
   const { sub: userId } = req.accessToken;
   const { ipAddress, userAgent, device } = getClientInfo(req);
@@ -163,5 +170,17 @@ export const changePassword = async (req, res) => {
     status: "success",
     message: "Password successfully changed",
     data: { accessToken },
+  });
+};
+
+export const resendVerification = async (req, res) => {
+
+  const { email } = req.body;
+
+  await authService.resendVerificationEmail(email);
+
+  res.status(200).json({
+    success: true,
+    message: "A new verification code has been sent to your email.",
   });
 };
