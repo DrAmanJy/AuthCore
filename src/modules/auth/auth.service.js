@@ -214,3 +214,35 @@ export const changeUserPassword = async (
 
   return { user, refreshToken, accessToken };
 };
+
+export const resendVerificationEmail = async email => {
+  const user = await Users.findOne({ email });
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (user.isVerified) {
+    throw new AppError("Account is already verified. Please log in.", 400);
+  }
+
+  const plainOTP = generateOTP(6);
+  const hashedOTP = await hashOTP(plainOTP);
+
+  const expiresInMs = parseInt(env.EMAIL_VERIFICATION_EXPIRES_IN) * 60 * 1000;
+  const expireDate = new Date(Date.now() + expiresInMs);
+
+  user.verifyOtp = hashedOTP;
+  user.verifyOtpExpire = expireDate;
+
+  await user.save();
+
+  try {
+    await sendVerificationEmail(user.email, user.name, plainOTP);
+  } catch (error) {
+    console.error("Email failed to send during OTP resend:", error);
+    throw new AppError("Failed to send verification email. Please try again later.", 500);
+  }
+
+  return true;
+};
