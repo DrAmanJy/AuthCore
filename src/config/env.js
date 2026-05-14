@@ -41,7 +41,16 @@ const envSchema = z.object({
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().positive(),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().positive(),
 
-  CORS_ORIGIN: z.string().url(),
+  CORS_ORIGIN: z
+    .string()
+    .min(1)
+    .transform(val =>
+      val
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean)
+    )
+    .pipe(z.array(z.string().url()).min(1, "At least one valid CORS origin is required")),
   CORS_CREDENTIALS: z.coerce.boolean(),
 
   RESEND_API_KEY: z.string().startsWith("re_", "Invalid Resend API Key format"),
@@ -57,6 +66,23 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]),
 
   TRUST_PROXY: z.coerce.boolean(),
+
+  ENABLE_API_DOCS: z.preprocess(val => {
+    if (val === undefined || val === "") {
+      return process.env.NODE_ENV !== "production";
+    }
+    if (typeof val === "boolean") {
+      return val;
+    }
+    const s = String(val).toLowerCase();
+    if (["true", "1", "yes"].includes(s)) {
+      return true;
+    }
+    if (["false", "0", "no"].includes(s)) {
+      return false;
+    }
+    return val;
+  }, z.boolean()),
 
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
