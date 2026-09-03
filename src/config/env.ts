@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import type { StringValue } from "ms";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -21,7 +22,10 @@ const envSchema = z.object({
 
   JWT_ACCESS_PRIVATE_KEY: z.string().min(50),
   JWT_ACCESS_PUBLIC_KEY: z.string().min(50),
-  JWT_ACCESS_EXPIRES_IN: z.string().min(2),
+  JWT_ACCESS_EXPIRES_IN: z.custom<StringValue>(
+    value => typeof value === "string",
+    "Invalid JWT expiration"
+  ),
   JWT_REFRESH_EXPIRES_IN: z.string().min(2),
   JWT_ISSUER: z.string().min(1),
   JWT_AUDIENCE: z.string().min(1),
