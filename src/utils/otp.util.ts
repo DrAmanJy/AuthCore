@@ -9,12 +9,12 @@ export const generateOTP = (length = 6) => {
   return otpNumber.toString().padStart(length, "0");
 };
 
-export const hashOTP = async plainOTP => {
+export const hashOTP = async (plainOTP: string) => {
   const hashedOTP = await bcrypt.hash(plainOTP, env.BCRYPT_SALT_ROUNDS);
   return hashedOTP;
 };
 
-export const verifyOTP = async (plainOTP, hashedOTP) => {
+export const verifyOTP = async (plainOTP: string, hashedOTP: string) => {
   const isValid = await bcrypt.compare(plainOTP, hashedOTP);
   return isValid;
 };

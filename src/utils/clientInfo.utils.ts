@@ -1,8 +1,20 @@
 import { UAParser } from "ua-parser-js";
+import { Request } from "express";
+import { Device } from "../modules/sessions/session.model.js";
 
-export const getClientInfo = req => {
+type ClientInfo = {
+  ipAddress: string;
+  userAgent: string;
+  device: Device;
+};
+
+export const getClientInfo = (req: Request): ClientInfo => {
+  const forwardedFor = req.headers["x-forwarded-for"];
+
   const ipAddress =
-    req.headers["x-forwarded-for"]?.split(",")[0] || req.ip || "Unknown IP";
+    (typeof forwardedFor === "string" ? forwardedFor.split(",")[0] : undefined) ||
+    req.ip ||
+    "Unknown IP";
 
   const userAgent = req.headers["user-agent"] || "Unknown User Agent";
 
