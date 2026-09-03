@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/AppError.js";
 
-export const createSessionToken = () => {
+export const createSessionToken = (): string => {
   try {
     const buf = crypto.randomBytes(env.REFRESH_TOKEN_BYTES);
     return buf.toString("hex");
@@ -11,7 +11,7 @@ export const createSessionToken = () => {
   }
 };
 
-export const hashSessionToken = sessionToken => {
+export const hashSessionToken = (sessionToken: string): string => {
   try {
     return crypto.createHash("sha256").update(sessionToken).digest("hex");
   } catch (_) {
@@ -19,7 +19,7 @@ export const hashSessionToken = sessionToken => {
   }
 };
 
-export const compareSessionToken = (plainToken, hashToken) => {
+export const compareSessionToken = (plainToken: string, hashToken: string): boolean => {
   try {
     const newHash = crypto.createHash("sha256").update(plainToken).digest("hex");
 
@@ -31,7 +31,7 @@ export const compareSessionToken = (plainToken, hashToken) => {
     }
 
     return crypto.timingSafeEqual(newHashBuffer, dbHashBuffer);
-  } catch (_) {
+  } catch {
     return false;
   }
 };

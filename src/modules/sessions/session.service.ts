@@ -1,27 +1,42 @@
+import { HydratedDocument, Types } from "mongoose";
 import { AppError } from "../../utils/AppError.js";
-import Sessions from "./session.model.js";
+import SessionsModel, { Session, Device } from "./session.model.js";
 import { createSessionToken, hashSessionToken } from "./session.utils.js";
 
-export async function createSession(
+type CreateSessionInput = {
+  userId: Types.ObjectId;
+  serviceId: string;
+  device: Device;
+  ipAddress: string;
+  userAgent: string;
+};
+
+type SessionTokenResult = {
+  plainToken: string;
+  userId: Types.ObjectId;
+  sessionId: Types.ObjectId;
+};
+
+type SessionDocument = HydratedDocument<Session>;
+
+export async function createSession({
   userId,
   serviceId,
   device,
   ipAddress,
   userAgent,
-  tokenVersion = 1
-) {
+}: CreateSessionInput): Promise<SessionTokenResult> {
   try {
     const plainToken = createSessionToken();
     const refreshTokenHash = hashSessionToken(plainToken);
 
-    const session = await Sessions.create({
+    const session = await SessionsModel.create({
       userId,
       serviceId,
       refreshTokenHash,
       device,
       ipAddress,
       userAgent,
-      tokenVersion,
     });
 
     return {
@@ -35,10 +50,10 @@ export async function createSession(
   }
 }
 
-export async function rotateSession(plainToken) {
+export async function rotateSession(plainToken: string): Promise<SessionTokenResult> {
   try {
     const refreshTokenHash = hashSessionToken(plainToken);
-    const session = await Sessions.findOne({ refreshTokenHash });
+    const session = await SessionsModel.findOne({ refreshTokenHash });
 
     if (!session) {
       throw new AppError("Invalid session token", 401);
@@ -56,12 +71,11 @@ export async function rotateSession(plainToken) {
     const newRefreshTokenHash = hashSessionToken(newPlainToken);
 
     session.refreshTokenHash = newRefreshTokenHash;
-    session.lastUsedAt = Date.now();
-
+    session.lastUsedAt = new Date();
     await session.save();
 
     return {
-      newPlainToken,
+      plainToken: newPlainToken,
       userId: session.userId,
       sessionId: session._id,
     };
@@ -74,9 +88,9 @@ export async function rotateSession(plainToken) {
   }
 }
 
-export async function revokeSession(sessionId) {
+export async function revokeSession(sessionId: Types.ObjectId): Promise<boolean> {
   try {
-    const revokedSession = await Sessions.findByIdAndUpdate(
+    const revokedSession = await SessionsModel.findByIdAndUpdate(
       sessionId,
       { revokedAt: new Date() },
       { new: true }
@@ -93,9 +107,9 @@ export async function revokeSession(sessionId) {
   }
 }
 
-export async function revokeAllSessions(userId) {
+export async function revokeAllSessions(userId: Types.ObjectId): Promise<boolean> {
   try {
-    await Sessions.updateMany(
+    await SessionsModel.updateMany(
       {
         userId: userId,
         revokedAt: null,
@@ -111,28 +125,30 @@ export async function revokeAllSessions(userId) {
   }
 }
 
-export async function findSessionById(sessionId) {
+export async function findSessionById(
+  sessionId: Types.ObjectId
+): Promise<SessionDocument | null> {
   try {
-    return await Sessions.findById(sessionId);
+    return await SessionsModel.findById(sessionId);
   } catch (error) {
     console.error("Database Error while getting session by ID:", error);
     return null;
   }
 }
 
-export async function findSessionByToken(plainToken) {
+export async function findSessionByToken(plainToken: string): Promise<Session | null> {
   try {
     const refreshTokenHash = hashSessionToken(plainToken);
-    return await Sessions.findOne({ refreshTokenHash });
+    return await SessionsModel.findOne({ refreshTokenHash });
   } catch (error) {
     console.error("Database Error while getting session by ID:", error);
     return null;
   }
 }
 
-export async function findUserSessions(userId) {
+export async function findUserSessions(userId: Types.ObjectId): Promise<Session[]> {
   try {
-    return await Sessions.find({
+    return await SessionsModel.find({
       userId: userId,
       revokedAt: null,
     })

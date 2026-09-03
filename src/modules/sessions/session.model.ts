@@ -1,7 +1,25 @@
 import { model, Schema, Types } from "mongoose";
 import { env } from "../../config/env.js";
 
-const sessionSchema = new Schema(
+export type Device = {
+  deviceName?: string;
+  browser?: string;
+  os?: string;
+};
+
+export type Session = {
+  userId: Types.ObjectId;
+  serviceId: string;
+  refreshTokenHash: string;
+  device: Device;
+  ipAddress: string;
+  userAgent: string;
+  expiresAt: Date;
+  lastUsedAt: Date;
+  revokedAt: Date | null;
+};
+
+const sessionSchema = new Schema<Session>(
   {
     userId: {
       type: Types.ObjectId,
@@ -81,6 +99,6 @@ sessionSchema.index({
   serviceId: 1,
 });
 
-const Sessions = model("Session", sessionSchema);
+const SessionsModel = model<Session>("Session", sessionSchema);
 
-export default Sessions;
+export default SessionsModel;
