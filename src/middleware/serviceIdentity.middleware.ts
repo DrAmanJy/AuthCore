@@ -1,6 +1,11 @@
+import { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/AppError.js";
 
-export const extractServiceIdentity = (req, res, next) => {
+export const extractServiceIdentity = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const targetAudience = req.headers["x-target-audience"];
 
   if (!targetAudience) {

@@ -2,7 +2,7 @@ import rateLimit from "express-rate-limit";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
 
-const createRateLimitError = message => {
+const createRateLimitError = (message: string) => {
   return new AppError(`Too many requests: ${message}`, 429);
 };
 
@@ -21,7 +21,7 @@ export const authLimiter = rateLimit({
   max: env.AUTH_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res, next) => {
+  handler: (_req, _res, next) => {
     next(
       createRateLimitError("Too many authentication attempts. Please try again later.")
     );
@@ -34,7 +34,7 @@ export const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
-  handler: (req, res, next) => {
+  handler: (_req, _res, next) => {
     next(
       createRateLimitError("Too many login attempts. Please try again after 15 minutes.")
     );
@@ -46,7 +46,7 @@ export const otpLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res, next) => {
+  handler: (_req, _res, next) => {
     next(
       createRateLimitError(
         "Too many email requests. Please check your inbox or try again in an hour."

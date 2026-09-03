@@ -1,8 +1,23 @@
 import { ZodError } from "zod";
-import { AppError } from "../utils/AppError.js";
-import { env } from "../config/env.js";
+import { NextFunction, Request, Response } from "express";
 
-export const errorHandler = (error, req, res, next) => {
+import { env } from "../config/env.js";
+import { AppError } from "../utils/AppError.js";
+
+type ErrorResponse = {
+  status: "error";
+  error: {
+    message: string;
+    stack?: string;
+  };
+};
+
+export const errorHandler = (
+  error: unknown,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Response | void => {
   if (res.headersSent) {
     return next(error);
   }
@@ -19,10 +34,10 @@ export const errorHandler = (error, req, res, next) => {
 
   if (error instanceof ZodError) {
     statusCode = 400;
-    const firstIssue = error.issues?.[0];
-    message =
-      (typeof firstIssue?.message === "string" && firstIssue.message) ||
-      "Invalid input data";
+
+    const firstIssue = error.issues[0];
+
+    message = firstIssue?.message || "Invalid input data";
   }
 
   console.error({
@@ -32,7 +47,7 @@ export const errorHandler = (error, req, res, next) => {
     err: error,
   });
 
-  const responseBody = {
+  const responseBody: ErrorResponse = {
     status: "error",
     error: {
       message,
@@ -43,5 +58,5 @@ export const errorHandler = (error, req, res, next) => {
     responseBody.error.stack = error.stack;
   }
 
-  res.status(statusCode).json(responseBody);
+  return res.status(statusCode).json(responseBody);
 };
