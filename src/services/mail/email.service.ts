@@ -1,9 +1,12 @@
 import { resend } from "../../config/resend.js";
-import { env } from "../../config/env.js";
 import { generateOtpEmailTemplate } from "./otpEmail.template.js";
 import { AppError } from "../../utils/AppError.js";
 
-export const sendVerificationEmail = async (userEmail, username, otpCode) => {
+export const sendVerificationEmail = async (
+  userEmail: string,
+  username: string,
+  otpCode: string
+) => {
   try {
     const htmlContent = generateOtpEmailTemplate(otpCode, username);
 
