@@ -1,6 +1,8 @@
 import bcrypt from "bcrypt";
+import { Types } from "mongoose";
 
-import Users from "../users/user.model.js";
+import UserModel, { UserDocument } from "../users/user.model.js";
+import { Device } from "../sessions/session.model.js";
 
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/AppError.js";
@@ -14,8 +16,39 @@ import { createAccessToken } from "../../utils/token.js";
 import { generateOTP, hashOTP, verifyOTP } from "../../utils/otp.util.js";
 import { sendVerificationEmail } from "../../services/mail/email.service.js";
 
-export const registerUser = async ({ name, email, password }) => {
-  const existingUser = await Users.exists({ email });
+type RegisterUserTypes = { name: string; email: string; password: string };
+type VerifyUserTypes = {
+  email: string;
+  submittedOtp: string;
+  serviceId: string;
+  device: Device;
+  ipAddress: string;
+  userAgent: string;
+};
+type LoginUserTypes = {
+  email: string;
+  password: string;
+  serviceId: string;
+  device: Device;
+  ipAddress: string;
+  userAgent: string;
+};
+type ChangeUserPasswordTypes = {
+  userId: Types.ObjectId;
+  serviceId: string;
+  device: Device;
+  ipAddress: string;
+  userAgent: string;
+  oldPassword: string;
+  newPassword: string;
+};
+
+export const registerUser = async ({
+  name,
+  email,
+  password,
+}: RegisterUserTypes): Promise<UserDocument> => {
+  const existingUser = await UserModel.exists({ email });
 
   if (existingUser) {
     throw new AppError("User with this email already exists", 409);
@@ -29,7 +62,7 @@ export const registerUser = async ({ name, email, password }) => {
   const expiresInMs = parseInt(env.EMAIL_VERIFICATION_EXPIRES_IN) * 60 * 1000;
   const expireDate = new Date(Date.now() + expiresInMs);
 
-  const user = await Users.create({
+  const user = await UserModel.create({
     name,
     email,
     password: hashedPassword,
@@ -51,15 +84,15 @@ export const registerUser = async ({ name, email, password }) => {
   return user;
 };
 
-export const verifyUser = async (
+export const verifyUser = async ({
   email,
   submittedOtp,
-  serviceName,
+  serviceId,
   device,
   ipAddress,
-  userAgent
-) => {
-  const user = await Users.findOne({ email }).select("+verifyOtp +verifyOtpExpire");
+  userAgent,
+}: VerifyUserTypes) => {
+  const user = await UserModel.findOne({ email }).select("+verifyOtp +verifyOtpExpire");
 
   if (!user) {
     throw new AppError("User not found", 404);
@@ -88,20 +121,24 @@ export const verifyUser = async (
   }
 
   user.isVerified = true;
-  user.verifyOtp = undefined;
-  user.verifyOtpExpire = undefined;
+  delete user.verifyOtp;
+  delete user.verifyOtpExpire;
 
   await user.save();
 
-  const { plainToken: refreshToken, sessionId } = await createSession(
-    user._id,
-    serviceName,
+  const { plainToken: refreshToken, sessionId } = await createSession({
+    userId: user._id,
+    serviceId,
     device,
     ipAddress,
-    userAgent
-  );
+    userAgent,
+  });
 
-  const accessToken = createAccessToken(user._id, sessionId, serviceName);
+  const accessToken = createAccessToken(
+    user._id.toString(),
+    sessionId.toString(),
+    serviceId
+  );
 
   return { user, refreshToken, accessToken };
 };
@@ -109,13 +146,12 @@ export const verifyUser = async (
 export const loginUser = async ({
   email,
   password,
+  serviceId,
   device,
   ipAddress,
   userAgent,
-  serviceId,
-  serviceName,
-}) => {
-  const user = await Users.findOne({ email }).select("+password");
+}: LoginUserTypes) => {
+  const user = await UserModel.findOne({ email }).select("+password");
 
   if (!user) throw new AppError("Invalid email or password", 400);
   if (!user.isVerified) throw new AppError("Verify your account before login", 401);
@@ -124,20 +160,24 @@ export const loginUser = async ({
   const isValidPass = await bcrypt.compare(password, user.password);
   if (!isValidPass) throw new AppError("Invalid email or password", 400);
 
-  const { plainToken: refreshToken, sessionId } = await createSession(
-    user._id,
+  const { plainToken: refreshToken, sessionId } = await createSession({
+    userId: user._id,
     serviceId,
     device,
     ipAddress,
-    userAgent
-  );
+    userAgent,
+  });
 
-  const accessToken = createAccessToken(user._id, sessionId, serviceName);
+  const accessToken = createAccessToken(
+    user._id.toString(),
+    sessionId.toString(),
+    serviceId
+  );
 
   return { user, refreshToken, accessToken };
 };
 
-export const logoutUser = async sessionId => {
+export const logoutUser = async (sessionId: Types.ObjectId) => {
   const status = await revokeSession(sessionId);
 
   if (!status) {
@@ -147,7 +187,7 @@ export const logoutUser = async sessionId => {
   return true;
 };
 
-export const logoutAllUser = async userId => {
+export const logoutAllUser = async (userId: Types.ObjectId) => {
   const status = await revokeAllSessions(userId);
 
   if (!status) {
@@ -157,28 +197,28 @@ export const logoutAllUser = async userId => {
   return true;
 };
 
-export const refreshAccessToken = async (plainToken, serviceName) => {
-  const {
-    newPlainToken: refreshToken,
-    sessionId,
-    userId,
-  } = await rotateSession(plainToken);
+export const refreshAccessToken = async (plainToken: string, serviceName: string) => {
+  const { plainToken: refreshToken, sessionId, userId } = await rotateSession(plainToken);
 
-  const accessToken = createAccessToken(userId, sessionId, serviceName);
+  const accessToken = createAccessToken(
+    userId.toString(),
+    sessionId.toString(),
+    serviceName
+  );
 
   return { refreshToken, accessToken };
 };
 
-export const changeUserPassword = async (
+export const changeUserPassword = async ({
   userId,
-  serviceName,
+  serviceId,
   device,
   ipAddress,
   userAgent,
   oldPassword,
-  newPassword
-) => {
-  const user = await Users.findById(userId).select("+password");
+  newPassword,
+}: ChangeUserPasswordTypes) => {
+  const user = await UserModel.findById(userId).select("+password");
   if (!user) {
     throw new AppError("User not found", 404);
   }
@@ -202,21 +242,25 @@ export const changeUserPassword = async (
     );
   }
 
-  const { plainToken: refreshToken, sessionId } = await createSession(
-    user._id,
-    serviceName,
+  const { plainToken: refreshToken, sessionId } = await createSession({
+    userId: user._id,
+    serviceId,
     device,
     ipAddress,
-    userAgent
-  );
+    userAgent,
+  });
 
-  const accessToken = createAccessToken(user._id, sessionId, serviceName);
+  const accessToken = createAccessToken(
+    user._id.toString(),
+    sessionId.toString(),
+    serviceId
+  );
 
   return { user, refreshToken, accessToken };
 };
 
-export const resendVerificationEmail = async email => {
-  const user = await Users.findOne({ email });
+export const resendVerificationEmail = async (email: string) => {
+  const user = await UserModel.findOne({ email });
 
   if (!user) {
     throw new AppError("User not found", 404);
