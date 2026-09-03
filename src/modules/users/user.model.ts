@@ -1,6 +1,31 @@
-import { model, Schema } from "mongoose";
+import { HydratedDocument, model, Schema, Types } from "mongoose";
 
-const userSchema = new Schema(
+export type UserRole = "user" | "admin";
+
+export type User = {
+  name: string;
+  email: string;
+  password: string;
+  roles: UserRole[];
+  isVerified: boolean;
+  isActive: boolean;
+  verifyOtp?: string | undefined;
+  verifyOtpExpire?: Date | undefined;
+};
+
+export type UserJSON = {
+  _id?: unknown;
+  password?: string;
+  name: string;
+  email: string;
+  roles: UserRole[];
+  isVerified: boolean;
+  isActive: boolean;
+};
+
+export type UserDocument = HydratedDocument<User>;
+
+const userSchema = new Schema<User>(
   {
     name: {
       type: String,
@@ -45,7 +70,7 @@ const userSchema = new Schema(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: function (doc, ret) {
+      transform: function (doc, ret: UserJSON) {
         delete ret._id;
         delete ret.password;
         return ret;
@@ -54,5 +79,5 @@ const userSchema = new Schema(
   }
 );
 
-const Users = model("User", userSchema);
-export default Users;
+const UserModel = model<User>("User", userSchema);
+export default UserModel;

@@ -1,8 +1,12 @@
 import { AppError } from "../../utils/AppError.js";
-import Users from "./user.model.js";
+import Users, { User, UserDocument } from "./user.model.js";
 import { revokeAllSessions } from "../sessions/session.service.js";
+import { Types } from "mongoose";
 
-export const getUserProfile = async userId => {
+type UserId = Types.ObjectId;
+type UpdateUserProfileInput = Partial<Pick<User, "name" | "email">>;
+
+export const getUserProfile = async (userId: UserId): Promise<UserDocument> => {
   const user = await Users.findById(userId);
 
   if (!user) {
@@ -12,7 +16,10 @@ export const getUserProfile = async userId => {
   return user;
 };
 
-export const updateUserProfile = async (userId, updateData) => {
+export const updateUserProfile = async (
+  userId: UserId,
+  updateData: UpdateUserProfileInput
+): Promise<UserDocument> => {
   const user = await Users.findByIdAndUpdate(
     userId,
     { $set: updateData },
@@ -29,7 +36,7 @@ export const updateUserProfile = async (userId, updateData) => {
   return user;
 };
 
-export const deactivateUserProfile = async userId => {
+export const deactivateUserProfile = async (userId: UserId): Promise<boolean> => {
   const user = await Users.findByIdAndUpdate(
     userId,
     { $set: { isActive: false } },
