@@ -1,4 +1,6 @@
-onlyBuiltDependencies:
-  - '@scarf/scarf'
-  - bcrypt
-  - esbuild
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  argon2: true
+  esbuild: true

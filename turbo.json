@@ -1,0 +1,34 @@
+{
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+
+    "test": {
+      "outputs": []
+    },
+
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+
+    "lint": {
+      "outputs": []
+    },
+
+    "typecheck": {
+      "outputs": []
+    },
+
+    "clean": {
+      "cache": false
+    }
+  }
+}
