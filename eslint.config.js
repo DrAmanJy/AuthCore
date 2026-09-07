@@ -1,15 +1,142 @@
 import js from "@eslint/js";
 import globals from "globals";
 import prettier from "eslint-config-prettier";
+import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: ["node_modules", "dist", "build", "coverage", ".pnpm-store", ".turbo"],
+    ignores: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/.pnpm-store/**",
+      "**/.turbo/**",
+    ],
   },
 
   js.configs.recommended,
 
-  prettier,
+  ...tseslint.configs.recommendedTypeChecked,
+
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+
+    rules: {
+      // ─────────────────────────────────────────────
+      // TypeScript
+      // ─────────────────────────────────────────────
+
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "all",
+          argsIgnorePattern: "^_$",
+          vars: "all",
+          varsIgnorePattern: "^_$",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_$",
+          ignoreRestSiblings: false,
+        },
+      ],
+
+      "@typescript-eslint/no-explicit-any": "error",
+
+      "@typescript-eslint/no-non-null-assertion": "error",
+
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "type-imports",
+          fixStyle: "separate-type-imports",
+        },
+      ],
+
+      "@typescript-eslint/consistent-type-exports": "error",
+
+      "@typescript-eslint/no-inferrable-types": "error",
+
+      "@typescript-eslint/no-unnecessary-condition": "error",
+
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
+
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        {
+          checksVoidReturn: true,
+          checksConditionals: true,
+          checksSpreads: true,
+        },
+      ],
+
+      "@typescript-eslint/require-await": "error",
+
+      "@typescript-eslint/return-await": ["error", "in-try-catch"],
+
+      "@typescript-eslint/no-floating-promises": [
+        "error",
+        {
+          ignoreVoid: false,
+        },
+      ],
+
+      "@typescript-eslint/await-thenable": "error",
+
+      "@typescript-eslint/no-unnecessary-await": "error",
+
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
+
+      "@typescript-eslint/prefer-optional-chain": "error",
+
+      "@typescript-eslint/no-confusing-void-expression": "error",
+
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+
+      // ─────────────────────────────────────────────
+      // General
+      // ─────────────────────────────────────────────
+
+      "no-undef": "error",
+
+      "no-unreachable": "error",
+
+      "no-constant-condition": "error",
+
+      "no-async-promise-executor": "error",
+
+      eqeqeq: ["error", "always"],
+
+      "no-var": "error",
+
+      "prefer-const": "error",
+
+      "prefer-template": "error",
+
+      "no-trailing-spaces": "error",
+
+      "no-console": [
+        "error",
+        {
+          allow: ["warn", "error", "info"],
+        },
+      ],
+
+      "no-throw-literal": "error",
+
+      "no-return-await": "off",
+    },
+  },
 
   {
     files: ["**/*.js"],
@@ -25,34 +152,45 @@ export default [
 
     rules: {
       "no-undef": "error",
+
       "no-unreachable": "error",
-      "no-constant-condition": "warn",
+
+      "no-constant-condition": "error",
+
       "no-async-promise-executor": "error",
 
       eqeqeq: ["error", "always"],
-      // curly: ["error", "all"],
+
       "no-var": "error",
+
       "prefer-const": "error",
-      "prefer-template": "warn",
+
+      "prefer-template": "error",
 
       "no-unused-vars": [
-        "warn",
+        "error",
         {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
+          args: "all",
+          argsIgnorePattern: "^_$",
+          vars: "all",
+          varsIgnorePattern: "^_$",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_$",
         },
       ],
 
-      "no-trailing-spaces": "warn",
-      // "eol-last": ["warn", "always"],
+      "no-trailing-spaces": "error",
 
       "no-console": [
-        "warn",
+        "error",
         {
           allow: ["warn", "error", "info"],
         },
       ],
+
+      "no-throw-literal": "error",
     },
   },
+
+  prettier,
 ];
