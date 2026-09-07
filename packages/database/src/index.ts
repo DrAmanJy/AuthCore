@@ -9,12 +9,15 @@ export {
 export { mapDatabaseError } from "./errors/database-error.utils.js";
 
 export type {
-  UserRepository,
+  User,
   UserId,
+  UserCredentials,
   CreateUserData,
   UpdateUserData,
-} from "./repositories/user.repository.js";
+} from "./repositories/user.types.js";
+
+export type { UserStatus } from "./models/user.model.js";
+
+export type { UserRepository } from "./repositories/user.repository.js";
 
 export { MongoUserRepository } from "./repositories/mongo-user.repository.js";
-
-export type { IUser, UserDocument, UserStatus } from "./models/user.model.js";

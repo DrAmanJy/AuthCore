@@ -1,34 +1,23 @@
-import type { UserDocument, UserStatus } from "../models/user.model.js";
-
-export type UserId = string;
-
-export interface CreateUserData {
-  email: string;
-  passwordHash: string;
-  displayName: string;
-  emailVerified?: boolean;
-  status?: UserStatus;
-  lastLoginAt?: Date;
-}
-
-export interface UpdateUserData {
-  email?: string;
-  displayName?: string;
-  emailVerified?: boolean;
-  status?: UserStatus;
-  lastLoginAt?: Date;
-}
+import type {
+  CreateUserData,
+  UpdateUserData,
+  User,
+  UserCredentials,
+  UserId,
+} from "./user.types.js";
 
 export interface UserRepository {
-  findById(userId: UserId): Promise<UserDocument | null>;
+  findAllUsers(): Promise<User[]>;
 
-  findByEmail(email: string): Promise<UserDocument | null>;
+  findById(userId: UserId): Promise<User | null>;
 
-  findCredentialsByEmail(email: string): Promise<UserDocument | null>;
+  findCredentialsByEmail(email: string): Promise<UserCredentials | null>;
 
-  create(data: CreateUserData): Promise<UserDocument>;
+  findCredentialsById(userId: UserId): Promise<UserCredentials | null>;
 
-  update(userId: UserId, data: UpdateUserData): Promise<UserDocument | null>;
+  create(data: CreateUserData): Promise<User>;
 
-  delete(userId: UserId): Promise<UserDocument | null>;
+  update(userId: UserId, data: UpdateUserData): Promise<User | null>;
+
+  delete(userId: UserId): Promise<User | null>;
 }
