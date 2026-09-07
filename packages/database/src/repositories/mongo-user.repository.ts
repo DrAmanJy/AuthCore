@@ -197,7 +197,9 @@ export class MongoUserRepository implements UserRepository {
       email: record.email,
       displayName: record.displayName,
       status: record.status,
-      lastLoginAt: record.lastLoginAt,
+      ...(record.lastLoginAt !== undefined && {
+        lastLoginAt: record.lastLoginAt,
+      }),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
