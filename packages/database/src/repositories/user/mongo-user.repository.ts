@@ -1,14 +1,17 @@
 import { Types } from "mongoose";
+
 import type {
   CreateUserData,
   UpdateUserData,
   User,
   UserCredentials,
   UserId,
+  UserStatus,
 } from "./user.types.js";
+
 import { UserRepository } from "./user.repository.js";
-import UserModel, { UserStatus } from "../models/user.model.js";
-import { mapDatabaseError } from "../errors/database-error.utils.js";
+import UserModel from "../../models/user.model.js";
+import { mapDatabaseError } from "../../errors/database-error.utils.js";
 
 type MongoUserRecord = {
   _id: Types.ObjectId;
@@ -41,12 +44,14 @@ export class MongoUserRepository implements UserRepository {
   }
 
   async findById(userId: UserId): Promise<User | null> {
-    if (!Types.ObjectId.isValid(userId)) {
+    const objectId = this.toObjectId(userId);
+
+    if (!objectId) {
       return null;
     }
 
     try {
-      const user = await UserModel.findById(userId)
+      const user = await UserModel.findById(objectId)
         .select("_id email displayName status lastLoginAt createdAt updatedAt")
         .lean()
         .exec();
@@ -70,11 +75,7 @@ export class MongoUserRepository implements UserRepository {
         .lean()
         .exec();
 
-      if (!user) {
-        return null;
-      }
-
-      if (!user.passwordHash) {
+      if (!user?.passwordHash) {
         return null;
       }
 
@@ -85,21 +86,19 @@ export class MongoUserRepository implements UserRepository {
   }
 
   async findCredentialsById(userId: UserId): Promise<UserCredentials | null> {
-    if (!Types.ObjectId.isValid(userId)) {
+    const objectId = this.toObjectId(userId);
+
+    if (!objectId) {
       return null;
     }
 
     try {
-      const user = await UserModel.findById(userId)
+      const user = await UserModel.findById(objectId)
         .select("_id email +passwordHash")
         .lean()
         .exec();
 
-      if (!user) {
-        return null;
-      }
-
-      if (!user.passwordHash) {
+      if (!user?.passwordHash) {
         return null;
       }
 
@@ -127,7 +126,9 @@ export class MongoUserRepository implements UserRepository {
   }
 
   async update(userId: UserId, data: UpdateUserData): Promise<User | null> {
-    if (!Types.ObjectId.isValid(userId)) {
+    const objectId = this.toObjectId(userId);
+
+    if (!objectId) {
       return null;
     }
 
@@ -155,13 +156,16 @@ export class MongoUserRepository implements UserRepository {
 
     try {
       const user = await UserModel.findByIdAndUpdate(
-        userId,
+        objectId,
         { $set: updateData },
         {
           new: true,
           runValidators: true,
         },
-      ).exec();
+      )
+        .select("_id email displayName status lastLoginAt createdAt updatedAt")
+        .lean()
+        .exec();
 
       if (!user) {
         return null;
@@ -174,12 +178,17 @@ export class MongoUserRepository implements UserRepository {
   }
 
   async delete(userId: UserId): Promise<User | null> {
-    if (!Types.ObjectId.isValid(userId)) {
+    const objectId = this.toObjectId(userId);
+
+    if (!objectId) {
       return null;
     }
 
     try {
-      const user = await UserModel.findByIdAndDelete(userId).exec();
+      const user = await UserModel.findByIdAndDelete(objectId)
+        .select("_id email displayName status lastLoginAt createdAt updatedAt")
+        .lean()
+        .exec();
 
       if (!user) {
         return null;
@@ -189,6 +198,14 @@ export class MongoUserRepository implements UserRepository {
     } catch (error) {
       throw mapDatabaseError(error);
     }
+  }
+
+  private toObjectId(id: string): Types.ObjectId | null {
+    if (!Types.ObjectId.isValid(id)) {
+      return null;
+    }
+
+    return new Types.ObjectId(id);
   }
 
   private toUserType(record: MongoUserRecord): User {
@@ -213,3 +230,5 @@ export class MongoUserRepository implements UserRepository {
     };
   }
 }
+
+export default MongoUserRepository;

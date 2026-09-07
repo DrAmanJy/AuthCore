@@ -1,6 +1,8 @@
-import type { UserStatus } from "../models/user.model.js";
+import type { USER_STATUSES } from "../../models/user.model.js";
 
 export type UserId = string;
+
+export type UserStatus = (typeof USER_STATUSES)[number];
 
 export type User = {
   id: UserId;

@@ -1,4 +1,5 @@
 import { model, Schema, type HydratedDocument } from "mongoose";
+import { UserStatus } from "../repositories/user/user.types.js";
 
 export const USER_STATUSES = [
   "pending",
@@ -8,9 +9,7 @@ export const USER_STATUSES = [
   "deactivated",
 ] as const;
 
-export type UserStatus = (typeof USER_STATUSES)[number];
-
-export interface IUser {
+interface IUser {
   email: string;
   passwordHash: string;
   displayName: string;
@@ -28,7 +27,6 @@ const UserSchema = new Schema<IUser>(
     email: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
       match: /^\S+@\S+\.\S+$/,

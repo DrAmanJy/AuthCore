@@ -14,10 +14,9 @@ export type {
   UserCredentials,
   CreateUserData,
   UpdateUserData,
-} from "./repositories/user.types.js";
+  UserStatus,
+} from "./repositories/user/user.types.js";
 
-export type { UserStatus } from "./models/user.model.js";
+export type { UserRepository } from "./repositories/user/user.repository.js";
 
-export type { UserRepository } from "./repositories/user.repository.js";
-
-export { MongoUserRepository } from "./repositories/mongo-user.repository.js";
+export { MongoUserRepository } from "./repositories/user/mongo-user.repository.js";
