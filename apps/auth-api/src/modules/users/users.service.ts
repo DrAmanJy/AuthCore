@@ -1,76 +1,102 @@
 import type { UserId } from "./users.types.js";
-import { UserDocument, UserRepository, UserStatus } from "@authcore/database";
-import { UpdateProfile, UserProfile } from "@authcore/contracts";
+
+import type { User, UserRepository } from "@authcore/database";
+import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
 
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
 
-  async getUserById(userId: UserId) {
-    return this.userRepository.findById(userId);
-  }
-  async getUserByEmail(email: string) {
-    return this.userRepository.findByEmail(email);
-  }
+  async getAuthenticatedUser(userId: UserId): Promise<User> {
+    const user = await this.getUserById(userId);
 
-  async getPublicUserProfile(userId: UserId): Promise<UserProfile | null> {
-    const user = await this.userRepository.findById(userId);
-    if (user?.status !== "active") {
-      return null;
-    }
-    return {
-      id: user._id.toString() || user.id.toString(),
-      displayName: user.displayName,
-      createdAt: user.createdAt,
-    };
-  }
-
-  async updateUserProfile(
-    userId: UserId,
-    { displayName }: UpdateProfile,
-  ): Promise<UserDocument | null> {
-    const user = await this.userRepository.findById(userId);
-    if (user?.status !== "active") {
-      return null; //todo throw api error
-    }
-    if (displayName === user.displayName) {
-      return user;
-    }
-    return this.userRepository.update(userId, { displayName });
-  }
-
-  async changeEmail(userId: UserId, email: string) {
-    return this.userRepository.update(userId, { email });
-  }
-
-  async changeDisplayName(userId: UserId, { displayName }: { displayName: string }) {
-    return this.userRepository.update(userId, { displayName });
-  }
-
-  async changeAccountStatus(userId: UserId, { status }: { status: UserStatus }) {
-    return this.userRepository.update(userId, { status });
-  }
-
-  async deleteAccount(userId: UserId) {
-    return this.userRepository.delete(userId);
-  }
-
-  async deactivateAccount(userId: UserId) {
-    const user = await this.userRepository.findById(userId);
     if (!user) {
-      return null; //todo throw user not fund error
+      throw new Error("User not found");
     }
-    switch (user?.status) {
+
+    this.assertAccountActive(user);
+
+    return user;
+  }
+
+  async getUserById(userId: UserId): Promise<User> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) throw new Error("User not found");
+
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return this.userRepository.findAllUsers();
+  }
+
+  async updateProfile(userId: UserId, data: UpdateProfile): Promise<User> {
+    await this.getAuthenticatedUser(userId);
+
+    const user = await this.userRepository.update(userId, {
+      displayName: data.displayName,
+    });
+
+    if (!user) throw new Error("User not found");
+    return user;
+  }
+
+  async changeEmail(userId: UserId, data: ChangeEmail): Promise<User> {
+    await this.getAuthenticatedUser(userId);
+
+    const user = await this.userRepository.update(userId, {
+      email: data.email,
+    });
+
+    if (!user) throw new Error("User not found");
+    return user;
+  }
+
+  async changeStatus(userId: UserId, data: ChangeStatus): Promise<User> {
+    await this.getUserById(userId);
+
+    const user = await this.userRepository.update(userId, {
+      status: data.status,
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  }
+
+  async deleteUser(userId: UserId): Promise<User> {
+    await this.getUserById(userId);
+
+    const user = await this.userRepository.delete(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
+
+  async deactivateUser(userId: UserId) {
+    await this.getAuthenticatedUser(userId);
+    return this.changeStatus(userId, { status: "deactivated" });
+  }
+
+  private assertAccountActive(user: User): void {
+    switch (user.status) {
+      case "deactivated":
+        throw new Error("User account is deactivated");
+
+      case "inactive":
+        throw new Error("User account is inactive");
+
       case "pending":
-        return null; // todo throw user setup is pending
+        throw new Error("User account is pending");
 
       case "suspended":
-        return null; // todo throw user account is suspended
+        throw new Error("User account is suspended");
 
-      case "deactivated":
-        return null; // todo throw user account already deactivated
-      default:
-        break;
+      case "active":
+        return;
     }
-    return this.userRepository.update(userId, { status: "deactivated" });
   }
 }
