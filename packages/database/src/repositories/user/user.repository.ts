@@ -1,5 +1,6 @@
 import type {
   CreateUserData,
+  ExistsUserCriteria,
   UpdateUserData,
   User,
   UserCredentials,
@@ -7,6 +8,8 @@ import type {
 } from "./user.types.js";
 
 export interface UserRepository {
+  exists(criteria: ExistsUserCriteria): Promise<boolean>;
+
   findAllUsers(): Promise<User[]>;
 
   findById(userId: UserId): Promise<User | null>;

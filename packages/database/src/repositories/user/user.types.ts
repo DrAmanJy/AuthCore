@@ -1,6 +1,10 @@
 import type { USER_STATUSES } from "../../models/user.model.js";
 
-export type UserId = string;
+export type UserId = string & {
+  readonly __brand: "UserId";
+};
+
+export const asUserId = (id: string): UserId => id as UserId;
 
 export type UserStatus = (typeof USER_STATUSES)[number];
 
@@ -36,3 +40,13 @@ export type UpdateUserData = {
   status?: UserStatus;
   lastLoginAt?: Date;
 };
+
+export type ExistsUserCriteria =
+  | {
+      type: "id";
+      value: UserId;
+    }
+  | {
+      type: "email";
+      value: string;
+    };
