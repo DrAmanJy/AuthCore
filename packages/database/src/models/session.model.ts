@@ -6,7 +6,7 @@ interface IDevice {
   ip: string;
 }
 
-interface ISession {
+export interface ISession {
   userId: Types.ObjectId;
   organizationId: Types.ObjectId;
 

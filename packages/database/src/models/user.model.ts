@@ -1,5 +1,5 @@
 import { model, Schema, type HydratedDocument } from "mongoose";
-import { UserStatus } from "../repositories/user/user.types.js";
+import type { UserStatus } from "../repositories/user/user.types.js";
 
 export const USER_STATUSES = [
   "pending",
