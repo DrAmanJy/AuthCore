@@ -15,12 +15,62 @@ export default [
     ],
   },
 
-  js.configs.recommended,
+  // JavaScript
+  {
+    files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
 
-  ...tseslint.configs.recommendedTypeChecked,
+    ...js.configs.recommended,
 
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+
+      globals: {
+        ...globals.node,
+      },
+    },
+
+    rules: {
+      "no-undef": "error",
+      "no-unreachable": "error",
+      "no-constant-condition": "error",
+      "no-async-promise-executor": "error",
+
+      eqeqeq: ["error", "always"],
+      "no-var": "error",
+      "prefer-const": "error",
+      "prefer-template": "error",
+
+      "no-unused-vars": [
+        "error",
+        {
+          args: "all",
+          argsIgnorePattern: "^_$",
+          vars: "all",
+          varsIgnorePattern: "^_$",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_$",
+        },
+      ],
+
+      "no-trailing-spaces": "error",
+
+      "no-console": [
+        "error",
+        {
+          allow: ["warn", "error", "info"],
+        },
+      ],
+
+      "no-throw-literal": "error",
+    },
+  },
+
+  // TypeScript
   {
     files: ["**/*.ts", "**/*.tsx"],
+
+    ...tseslint.configs.recommendedTypeChecked,
 
     languageOptions: {
       globals: {
@@ -34,10 +84,6 @@ export default [
     },
 
     rules: {
-      // ─────────────────────────────────────────────
-      // TypeScript
-      // ─────────────────────────────────────────────
-
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
@@ -93,8 +139,6 @@ export default [
 
       "@typescript-eslint/await-thenable": "error",
 
-      "@typescript-eslint/no-unnecessary-await": "error",
-
       "@typescript-eslint/prefer-nullish-coalescing": "error",
 
       "@typescript-eslint/prefer-optional-chain": "error",
@@ -103,10 +147,6 @@ export default [
 
       "@typescript-eslint/switch-exhaustiveness-check": "error",
 
-      // ─────────────────────────────────────────────
-      // General
-      // ─────────────────────────────────────────────
-
       "no-undef": "error",
 
       "no-unreachable": "error",
@@ -134,61 +174,7 @@ export default [
 
       "no-throw-literal": "error",
 
-      "no-return-await": "off",
-    },
-  },
-
-  {
-    files: ["**/*.js"],
-
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-
-      globals: {
-        ...globals.node,
-      },
-    },
-
-    rules: {
-      "no-undef": "error",
-
-      "no-unreachable": "error",
-
-      "no-constant-condition": "error",
-
-      "no-async-promise-executor": "error",
-
-      eqeqeq: ["error", "always"],
-
-      "no-var": "error",
-
-      "prefer-const": "error",
-
-      "prefer-template": "error",
-
-      "no-unused-vars": [
-        "error",
-        {
-          args: "all",
-          argsIgnorePattern: "^_$",
-          vars: "all",
-          varsIgnorePattern: "^_$",
-          caughtErrors: "all",
-          caughtErrorsIgnorePattern: "^_$",
-        },
-      ],
-
-      "no-trailing-spaces": "error",
-
-      "no-console": [
-        "error",
-        {
-          allow: ["warn", "error", "info"],
-        },
-      ],
-
-      "no-throw-literal": "error",
+      "no-return-await": "error",
     },
   },
 

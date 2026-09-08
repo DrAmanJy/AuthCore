@@ -7,10 +7,13 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "clean": "rimraf dist",
     "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@authcore/config": "workspace:*",

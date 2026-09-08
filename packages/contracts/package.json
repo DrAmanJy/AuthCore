@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "clean": "rimraf dist",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
