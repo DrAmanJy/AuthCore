@@ -1,17 +1,10 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-
-    "allowSyntheticDefaultImports": true,
-
-    "sourceMap": true,
-    "declaration": true,
-
-    "noEmitOnError": true
+    "sourceMap": true
   },
-
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "coverage"]
+  "exclude": ["node_modules", "dist", "tests"]
 }

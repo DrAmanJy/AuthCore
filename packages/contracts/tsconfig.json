@@ -1,17 +1,12 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
 
-    "types": ["node"],
-
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
-
-    "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true
+    "sourceMap": true
   },
 
   "include": ["src/**/*.ts"],

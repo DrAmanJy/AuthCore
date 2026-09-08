@@ -4,13 +4,16 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
 
+    "types": ["node"],
+
     "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
 
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
 
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "skipLibCheck": true
   }
 }
