@@ -1,5 +1,11 @@
+import { UserService } from "../users/users.service.js";
+import type { RegisterType } from "./auth.types.js";
+
 export class AuthService {
-  async registerUser() {}
+  constructor(private readonly userService: UserService) {}
+  async registerUser(data: RegisterType) {
+    const isEmailExists = await this.userService;
+  }
   async loginUser() {}
   async logoutUser() {}
   async refreshAccessToken() {}

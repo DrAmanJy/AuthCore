@@ -1,11 +1,5 @@
 import { Router } from "express";
-import { UserService } from "./users.service.js";
-import { UserController } from "./users.controller.js";
-import { MongoUserRepository } from "@authcore/database";
-
-const userRepository = new MongoUserRepository();
-const userService = new UserService(userRepository);
-const userController = new UserController(userService);
+import { userController } from "../../container.js";
 
 const userRouter = Router();
 

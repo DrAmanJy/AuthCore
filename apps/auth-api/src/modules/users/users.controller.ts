@@ -127,7 +127,7 @@ export class UserController {
       return; // TODO: throw BadRequestError
     }
 
-    const user = this.userService.deactivateUser(userId);
+    const user = await this.userService.deactivateUser(userId);
 
     return res.status(200).json({
       message: "User status deactivated successfully",

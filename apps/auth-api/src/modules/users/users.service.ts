@@ -30,6 +30,10 @@ export class UserService {
     return this.userRepository.findAllUsers();
   }
 
+  async isUserExists()Promise<Boolean>{
+    return false
+  }
+
   async updateProfile(userId: UserId, data: UpdateProfile): Promise<User> {
     await this.getAuthenticatedUser(userId);
 
