@@ -1,6 +1,23 @@
-export type SessionId = string;
-export type UserId = string;
-export type OrganizationId = string;
+import type { UserId } from "../user/user.types.js";
+
+export type SessionId = string & {
+  readonly __brand: "SessionId";
+};
+
+export type OrganizationId = string & {
+  readonly __brand: "OrganizationId";
+};
+
+export type RefreshTokenHash = string & {
+  readonly __brand: "RefreshTokenHash";
+};
+
+export const asSessionId = (id: string): SessionId => id as SessionId;
+
+export const asOrganizationId = (id: string): OrganizationId => id as OrganizationId;
+
+export const asRefreshTokenHash = (hash: string): RefreshTokenHash =>
+  hash as RefreshTokenHash;
 
 export type Device = {
   name: string;
@@ -14,7 +31,7 @@ export type Session = {
   userId: UserId;
   organizationId: OrganizationId;
 
-  refreshTokenHash: string;
+  refreshTokenHash: RefreshTokenHash;
 
   device: Device;
 
@@ -32,7 +49,7 @@ export type CreateSessionData = {
   userId: UserId;
   organizationId: OrganizationId;
 
-  refreshTokenHash: string;
+  refreshTokenHash: RefreshTokenHash;
 
   device: Device;
 
@@ -40,9 +57,23 @@ export type CreateSessionData = {
 };
 
 export type UpdateSessionData = {
-  refreshTokenHash?: string;
+  refreshTokenHash?: RefreshTokenHash;
   expiresAt?: Date;
   lastUsedAt?: Date;
-  revokedAt?: Date;
-  revokedReason?: string;
 };
+
+export type FindSessionCriteria =
+  | {
+      type: "id";
+      value: SessionId;
+    }
+  | {
+      type: "refreshTokenHash";
+      value: RefreshTokenHash;
+    }
+  | {
+      type: "user";
+      userId: UserId;
+      organizationId: OrganizationId;
+      activeOnly?: boolean;
+    };

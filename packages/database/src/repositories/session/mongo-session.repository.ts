@@ -1,28 +1,37 @@
-import { Types } from "mongoose";
-import { SessionRepository } from "./session.repository.js";
+import type { Types } from "mongoose";
+import { type QueryFilter } from "mongoose";
+
+import { toObjectId } from "../../utils/object-id.utils.js";
+
+import type { SessionRepository } from "./session.repository.js";
+
+import { asUserId, type UserId } from "../user/user.types.js";
+
 import {
-  CreateSessionData,
-  Device,
-  OrganizationId,
-  Session,
-  SessionId,
-  UpdateSessionData,
-  UserId,
+  asOrganizationId,
+  asRefreshTokenHash,
+  asSessionId,
+  type CreateSessionData,
+  type FindSessionCriteria,
+  type OrganizationId,
+  type Session,
+  type SessionId,
+  type UpdateSessionData,
 } from "./session.types.js";
-import SessionModel from "../../models/session.model.js";
+
+import SessionModel, { type ISession } from "../../models/session.model.js";
+
 import { mapDatabaseError } from "../../errors/database-error.utils.js";
 
-type ObjectId = Types.ObjectId;
-
 type MongoSessionRecord = {
-  _id: ObjectId;
+  _id: Types.ObjectId;
 
-  userId: ObjectId;
-  organizationId: ObjectId;
+  userId: Types.ObjectId;
+  organizationId: Types.ObjectId;
 
   refreshTokenHash: string;
 
-  device: Device;
+  device: ISession["device"];
 
   lastUsedAt: Date;
   expiresAt: Date;
@@ -35,9 +44,89 @@ type MongoSessionRecord = {
 };
 
 export class MongoSessionRepository implements SessionRepository {
+  async findSession(
+    criteria: Extract<FindSessionCriteria, { type: "id" }>,
+  ): Promise<Session | null>;
+
+  async findSession(
+    criteria: Extract<FindSessionCriteria, { type: "refreshTokenHash" }>,
+  ): Promise<Session | null>;
+
+  async findSession(
+    criteria: Extract<FindSessionCriteria, { type: "user" }>,
+  ): Promise<Session[]>;
+
+  async findSession(criteria: FindSessionCriteria): Promise<Session | Session[] | null> {
+    try {
+      switch (criteria.type) {
+        case "id": {
+          const sessionId = toObjectId(criteria.value);
+
+          const session = await SessionModel.findById(sessionId)
+            .select("+refreshTokenHash")
+            .lean()
+            .exec();
+
+          return session ? this.toSessionType(session) : null;
+        }
+
+        case "refreshTokenHash": {
+          const session = await SessionModel.findOne({
+            refreshTokenHash: criteria.value,
+          })
+            .select("+refreshTokenHash")
+            .lean()
+            .exec();
+
+          return session ? this.toSessionType(session) : null;
+        }
+
+        case "user": {
+          const userId = toObjectId(criteria.userId);
+
+          const organizationId = toObjectId(criteria.organizationId);
+
+          const filter: QueryFilter<ISession> = {
+            userId,
+            organizationId,
+          };
+
+          if (criteria.activeOnly) {
+            filter.revokedAt = {
+              $exists: false,
+            };
+
+            filter.expiresAt = {
+              $gt: new Date(),
+            };
+          }
+
+          const sessions = await SessionModel.find(filter)
+            .select("+refreshTokenHash")
+            .lean()
+            .exec();
+
+          return sessions.map(session => this.toSessionType(session));
+        }
+      }
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
+
   async create(data: CreateSessionData): Promise<Session> {
     try {
-      const session = await SessionModel.create(data).lean().exec();
+      const session = await SessionModel.create({
+        userId: toObjectId(data.userId),
+
+        organizationId: toObjectId(data.organizationId),
+
+        refreshTokenHash: data.refreshTokenHash,
+
+        device: data.device,
+
+        expiresAt: data.expiresAt,
+      });
 
       return this.toSessionType(session);
     } catch (error) {
@@ -45,79 +134,164 @@ export class MongoSessionRepository implements SessionRepository {
     }
   }
 
-  async findById(sessionId: SessionId): Promise<Session | null> {
-    const objectId = this.toObjectId(sessionId);
-    if (!objectId) {
-      return null;
-    }
-
-    const session = await SessionModel.findOne(objectId).lean().exec();
-    return this.toSessionType(session);
-  }
-
-  async findByRefreshTokenHash(refreshTokenHash: string): Promise<Session | null> {}
-
-  async findByUserId(
-    userId: UserId,
-    organizationId: OrganizationId,
-  ): Promise<Session[]> {}
-
-  async findActiveByUserId(
-    userId: UserId,
-    organizationId: OrganizationId,
-  ): Promise<Session[]> {}
-
-  async updateLastUsedAt(
-    sessionId: SessionId,
-    lastUsedAt: Date,
-  ): Promise<Session | null> {}
-
-  async updateRefreshToken(
+  async updateSession(
     sessionId: SessionId,
     data: UpdateSessionData,
-  ): Promise<Session | null> {}
+  ): Promise<Session | null> {
+    const objectId = toObjectId(sessionId);
 
-  async revoke(sessionId: SessionId, reason?: string): Promise<Session | null> {}
+    try {
+      const session = await SessionModel.findByIdAndUpdate(
+        objectId,
+        {
+          $set: data,
+        },
+        {
+          new: true,
+          runValidators: true,
+        },
+      )
+        .select("+refreshTokenHash")
+        .lean()
+        .exec();
+
+      return session ? this.toSessionType(session) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
+
+  async revoke(sessionId: SessionId, reason?: string): Promise<Session | null> {
+    const objectId = toObjectId(sessionId);
+
+    try {
+      const session = await SessionModel.findOneAndUpdate(
+        {
+          _id: objectId,
+          revokedAt: {
+            $exists: false,
+          },
+        },
+        {
+          $set: this.buildRevokeUpdate(reason),
+        },
+        {
+          new: true,
+          runValidators: true,
+        },
+      )
+        .select("+refreshTokenHash")
+        .lean()
+        .exec();
+
+      return session ? this.toSessionType(session) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
 
   async revokeAllByUserId(
     userId: UserId,
     organizationId: OrganizationId,
     reason?: string,
-  ): Promise<number> {}
+  ): Promise<number> {
+    const userObjectId = toObjectId(userId);
+
+    const organizationObjectId = toObjectId(organizationId);
+
+    try {
+      const result = await SessionModel.updateMany(
+        {
+          userId: userObjectId,
+          organizationId: organizationObjectId,
+          revokedAt: {
+            $exists: false,
+          },
+        },
+        {
+          $set: this.buildRevokeUpdate(reason),
+        },
+      ).exec();
+
+      return result.modifiedCount;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
 
   async revokeAllExcept(
     userId: UserId,
     organizationId: OrganizationId,
     sessionId: SessionId,
     reason?: string,
-  ): Promise<number> {}
+  ): Promise<number> {
+    const userObjectId = toObjectId(userId);
 
-  async deleteById(sessionId: SessionId): Promise<boolean> {}
+    const organizationObjectId = toObjectId(organizationId);
 
-  private toObjectId(id: string): Types.ObjectId | null {
-    if (!Types.ObjectId.isValid(id)) {
-      return null;
+    const sessionObjectId = toObjectId(sessionId);
+
+    try {
+      const result = await SessionModel.updateMany(
+        {
+          userId: userObjectId,
+          organizationId: organizationObjectId,
+
+          _id: {
+            $ne: sessionObjectId,
+          },
+
+          revokedAt: {
+            $exists: false,
+          },
+        },
+        {
+          $set: this.buildRevokeUpdate(reason),
+        },
+      ).exec();
+
+      return result.modifiedCount;
+    } catch (error) {
+      throw mapDatabaseError(error);
     }
+  }
 
-    return new Types.ObjectId(id);
+  private buildRevokeUpdate(reason?: string) {
+    return {
+      revokedAt: new Date(),
+
+      ...(reason !== undefined && {
+        revokedReason: reason,
+      }),
+    };
   }
 
   private toSessionType(record: MongoSessionRecord): Session {
     return {
-      id: record._id.toString(),
-      userId: record.userId.toString(),
-      organizationId: record.organizationId.toString(),
-      refreshTokenHash: record.refreshTokenHash,
+      id: asSessionId(record._id.toString()),
+
+      userId: asUserId(record.userId.toString()),
+
+      organizationId: asOrganizationId(record.organizationId.toString()),
+
+      refreshTokenHash: asRefreshTokenHash(record.refreshTokenHash),
+
       device: record.device,
+
       lastUsedAt: record.lastUsedAt,
+
       expiresAt: record.expiresAt,
+
       ...(record.revokedAt !== undefined && {
-        lastLoginAt: record.revokedAt,
+        revokedAt: record.revokedAt,
       }),
+
       ...(record.revokedReason !== undefined && {
         revokedReason: record.revokedReason,
       }),
+
       createdAt: record.createdAt,
+
       updatedAt: record.updatedAt,
     };
   }
