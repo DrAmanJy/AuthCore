@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { ConnectionStates } from "mongoose";
 
 import { config } from "@authcore/config";
 import { DatabaseConnectionError } from "../errors/database.errors.js";
@@ -6,7 +6,7 @@ import { DatabaseConnectionError } from "../errors/database.errors.js";
 let connectionPromise: Promise<typeof mongoose> | null = null;
 
 export async function connectDatabase(): Promise<void> {
-  if (mongoose.connection.readyState === 1) {
+  if (mongoose.connection.readyState === ConnectionStates.connected) {
     return;
   }
 
@@ -33,7 +33,7 @@ export async function connectDatabase(): Promise<void> {
 }
 
 export async function disconnectDatabase(): Promise<void> {
-  if (mongoose.connection.readyState === 0) {
+  if (mongoose.connection.readyState === ConnectionStates.disconnected) {
     return;
   }
 
