@@ -8,6 +8,7 @@ export {
 
 export { mapDatabaseError } from "./errors/database-error.utils.js";
 
+// User
 export type {
   User,
   UserId,
@@ -20,3 +21,19 @@ export type {
 export type { UserRepository } from "./repositories/user/user.repository.js";
 
 export { MongoUserRepository } from "./repositories/user/mongo-user.repository.js";
+
+// Session
+export type {
+  Session,
+  SessionId,
+  OrganizationId,
+  RefreshTokenHash,
+  Device,
+  CreateSessionData,
+  UpdateSessionData,
+  FindSessionCriteria,
+} from "./repositories/session/session.types.js";
+
+export type { SessionRepository } from "./repositories/session/session.repository.js";
+
+export { MongoSessionRepository } from "./repositories/session/mongo-session.repository.js";
