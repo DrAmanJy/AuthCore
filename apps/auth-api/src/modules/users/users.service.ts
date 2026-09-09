@@ -1,4 +1,4 @@
-import type { UserId } from "./users.types.js";
+import type { UserId, CreateUserData } from "@authcore/database";
 
 import type { User, UserRepository } from "@authcore/database";
 import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
@@ -30,8 +30,17 @@ export class UserService {
     return this.userRepository.findAllUsers();
   }
 
-  async isUserExists()Promise<Boolean>{
-    return false
+  async create(data: CreateUserData): Promise<User> {
+    const existingUser = await this.userRepository.exists({
+      type: "email",
+      value: data.email,
+    });
+
+    if (existingUser) {
+      throw new Error("Invalid Email or a user exists with this email");
+    }
+
+    return this.userRepository.create(data);
   }
 
   async updateProfile(userId: UserId, data: UpdateProfile): Promise<User> {
