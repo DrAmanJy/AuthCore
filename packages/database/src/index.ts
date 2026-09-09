@@ -9,6 +9,7 @@ export {
 export { mapDatabaseError } from "./errors/database-error.utils.js";
 
 // User
+export { asUserId } from "./repositories/user/user.types.js";
 export type {
   User,
   UserId,
@@ -16,6 +17,7 @@ export type {
   CreateUserData,
   UpdateUserData,
   UserStatus,
+  ExistsUserCriteria,
 } from "./repositories/user/user.types.js";
 
 export type { UserRepository } from "./repositories/user/user.repository.js";
@@ -23,6 +25,7 @@ export type { UserRepository } from "./repositories/user/user.repository.js";
 export { MongoUserRepository } from "./repositories/user/mongo-user.repository.js";
 
 // Session
+export { asRefreshTokenHash } from "./repositories/session/session.types.js";
 export type {
   Session,
   SessionId,
