@@ -1,6 +1,16 @@
+import type { StringValue } from "ms";
 import z from "zod";
-
 const environments = ["development", "production"] as const;
+
+const jwtExpirySchema = z
+  .string()
+  .trim()
+  .min(1, "JWT expiry is required")
+  .regex(
+    /^\d+(s|m|h|d|w|y)$/,
+    "JWT expiry must use a valid format such as 15m, 1h, or 7d",
+  )
+  .transform(value => value as StringValue);
 
 const portSchema = z.coerce
   .number("PORT must be a number")
@@ -50,9 +60,11 @@ export const EnvironmentSchema = z
 
     REDIS_URL: redisUrlSchema,
 
-    ACCESS_TOKEN_EXPIRY: z.string().trim().min(1, "ACCESS_TOKEN_EXPIRY is required"),
+    ACCESS_TOKEN_EXPIRY: jwtExpirySchema,
 
-    REFRESH_TOKEN_EXPIRY: z.string().trim().min(1, "REFRESH_TOKEN_EXPIRY is required"),
+    REFRESH_TOKEN_EXPIRY: jwtExpirySchema,
+
+    JWT_ISSUER: z.string().trim().min(1, "JWT_ISSUER is required"),
 
     JWT_PRIVATE_KEY: z.string().min(1, "JWT_PRIVATE_KEY is required"),
 
