@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { asUserId } from "@authcore/database";
 
 import type { UserService } from "./users.service.js";
 
@@ -12,7 +13,7 @@ export class UserController {
       return; // TODO: throw BadRequestError
     }
 
-    const user = await this.userService.getUserById(userId);
+    const user = await this.userService.getUserById(asUserId(userId));
 
     return res.status(200).json({
       message: "User retrieved successfully",
@@ -25,7 +26,7 @@ export class UserController {
   async getAuthenticatedUser(req: Request, res: Response) {
     const { userId } = req.user;
 
-    const user = await this.userService.getUserById(userId);
+    const user = await this.userService.getUserById(asUserId(userId));
 
     return res.status(200).json({
       message: "Authenticated user retrieved successfully",
@@ -43,7 +44,7 @@ export class UserController {
       return; // TODO: throw BadRequestError
     }
 
-    const user = await this.userService.updateProfile(userId, {
+    const user = await this.userService.updateProfile(asUserId(userId), {
       displayName,
     });
 
@@ -63,7 +64,7 @@ export class UserController {
       return; // TODO: throw BadRequestError
     }
 
-    const user = await this.userService.changeEmail(userId, {
+    const user = await this.userService.changeEmail(asUserId(userId), {
       email,
     });
 
@@ -82,7 +83,7 @@ export class UserController {
       return; // TODO: throw BadRequestError
     }
 
-    await this.userService.deleteUser(userId);
+    await this.userService.deleteUser(asUserId(userId));
 
     return res.status(200).json({
       message: "User deleted successfully",
@@ -108,7 +109,7 @@ export class UserController {
       return; // TODO: throw BadRequestError
     }
 
-    const user = await this.userService.changeStatus(userId, {
+    const user = await this.userService.changeStatus(asUserId(userId), {
       status,
     });
 
@@ -127,7 +128,7 @@ export class UserController {
       return; // TODO: throw BadRequestError
     }
 
-    const user = await this.userService.deactivateUser(userId);
+    const user = await this.userService.deactivateUser(asUserId(userId));
 
     return res.status(200).json({
       message: "User status deactivated successfully",
