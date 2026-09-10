@@ -1,4 +1,4 @@
-import type { UserId, CreateUserData } from "@authcore/database";
+import type { UserId, CreateUserData, UserCredentials } from "@authcore/database";
 
 import type { User, UserRepository } from "@authcore/database";
 import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
@@ -13,7 +13,7 @@ export class UserService {
       throw new Error("User not found");
     }
 
-    this.assertAccountActive(user);
+    this.validateAccountStatus(user);
 
     return user;
   }
@@ -21,6 +21,13 @@ export class UserService {
   async getUserById(userId: UserId): Promise<User> {
     const user = await this.userRepository.findById(userId);
 
+    if (!user) throw new Error("User not found");
+
+    return user;
+  }
+
+  async getUserCredentialsByEmail(email: string): Promise<UserCredentials> {
+    const user = await this.userRepository.findCredentialsByEmail(email);
     if (!user) throw new Error("User not found");
 
     return user;
@@ -51,6 +58,19 @@ export class UserService {
     });
 
     if (!user) throw new Error("User not found");
+    return user;
+  }
+  async updateLastLoginAt(userId: UserId): Promise<User> {
+    await this.getAuthenticatedUser(userId);
+
+    const user = await this.userRepository.update(userId, {
+      lastLoginAt: new Date(),
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     return user;
   }
 
@@ -94,7 +114,11 @@ export class UserService {
     return this.changeStatus(userId, { status: "deactivated" });
   }
 
-  private assertAccountActive(user: User): void {
+  public validateAccountStatus(user: User | UserCredentials): void {
+    if ("emailVerified" in user && !user.emailVerified) {
+      throw new Error("User email is not verified");
+    }
+
     switch (user.status) {
       case "deactivated":
         throw new Error("User account is deactivated");
