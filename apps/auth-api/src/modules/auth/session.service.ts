@@ -1,8 +1,6 @@
 import {
-  RefreshTokenHash,
   SessionId,
   SessionRepository,
-  asRefreshTokenHash,
   Session,
   OrganizationId,
   UserId,
@@ -164,7 +162,7 @@ export class SessionService {
 
   private generateRefreshToken(): {
     refreshToken: RefreshToken;
-    refreshTokenHash: RefreshTokenHash;
+    refreshTokenHash: string;
   } {
     const refreshToken = randomBytes(64).toString("base64url");
 
@@ -172,7 +170,7 @@ export class SessionService {
 
     return {
       refreshToken,
-      refreshTokenHash: asRefreshTokenHash(refreshTokenHash),
+      refreshTokenHash,
     };
   }
 }
