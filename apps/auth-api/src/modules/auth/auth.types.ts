@@ -1,8 +1,25 @@
-import { Device, OrganizationId, SessionId, UserId } from "@authcore/database";
+import type { Device, OrganizationId, SessionId, User, UserId } from "@authcore/database";
 
-export type RegisterType = { displayName: string; email: string; password: string };
+export type RegisterType = {
+  displayName: string;
+  email: string;
+  password: string;
+};
 
-export type RefreshToken = String;
+export type LoginType = {
+  email: string;
+  password: string;
+  organizationId: OrganizationId;
+  device: Device;
+};
+
+export type LoginResult = {
+  user: User;
+  accessToken: string;
+  refreshToken: RefreshToken;
+};
+
+export type RefreshToken = string;
 
 export type CreateSessionResult = {
   accessToken: string;
@@ -13,7 +30,6 @@ export type CreateSessionType = {
   userId: UserId;
   organizationId: OrganizationId;
   device: Device;
-  expiresAt: Date;
 };
 
 export type RevokeSessionType = {
@@ -34,4 +50,9 @@ export type AccessTokenPayload = {
   orgId: OrganizationId;
   jti: string;
   type: "access";
+};
+
+export type LogoutType = {
+  userId: UserId;
+  organizationId: OrganizationId;
 };
