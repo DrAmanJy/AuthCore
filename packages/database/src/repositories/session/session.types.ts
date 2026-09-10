@@ -8,10 +8,6 @@ export type OrganizationId = string & {
   readonly __brand: "OrganizationId";
 };
 
-// export type RefreshTokenHash = string & {
-//   readonly __brand: "RefreshTokenHash";
-// };
-
 export const asSessionId = (id: string): SessionId => id as SessionId;
 
 export const asOrganizationId = (id: string): OrganizationId => id as OrganizationId;
