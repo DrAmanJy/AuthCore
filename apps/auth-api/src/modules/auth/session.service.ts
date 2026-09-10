@@ -5,14 +5,18 @@ import {
   OrganizationId,
   UserId,
   UpdateSessionData,
+  RefreshTokenRepository,
+  asTokenFamilyId,
+  RefreshToken,
+  asRefreshToken,
+  RefreshTokenHash,
+  asRefreshTokenHash,
 } from "@authcore/database";
 import {
   CreateSessionType,
-  RefreshToken,
   AccessTokenPayload,
   CreateSessionResult,
   FindUserAllSessionType,
-  RevokeSessionType,
 } from "./auth.types.js";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
@@ -21,14 +25,33 @@ import { config } from "@authcore/config";
 export class SessionService {
   constructor(
     private readonly sessionRepository: SessionRepository,
-    // private readonly refreshTokenRepository: RefreshTokenRepository,
+    private readonly refreshTokenRepository: RefreshTokenRepository,
   ) {}
 
   async createSession(data: CreateSessionType): Promise<CreateSessionResult> {
     const { refreshToken, refreshTokenHash } = this.generateRefreshToken();
 
+    const sessionExpiresAt = this.getExpiryTime(config.auth.sessionExpiry);
+
     const session = await this.sessionRepository.create({
       ...data,
+      expiresAt: sessionExpiresAt,
+    });
+
+    const tokenFamilyId = asTokenFamilyId(randomUUID());
+
+    const refreshTokenExpiresAt = new Date(
+      Math.min(
+        this.getExpiryTime(config.auth.refreshTokenExpiry).getTime(),
+        session.expiresAt.getTime(),
+      ),
+    );
+
+    await this.refreshTokenRepository.create({
+      sessionId: session.id,
+      tokenHash: refreshTokenHash,
+      tokenFamilyId,
+      expiresAt: refreshTokenExpiresAt,
     });
 
     const accessToken = this.generateAccessToken({
@@ -44,7 +67,6 @@ export class SessionService {
       accessToken,
     };
   }
-
   async getSessionById(sessionId: SessionId): Promise<Session> {
     return this.assertSession(
       await this.sessionRepository.findSession({
@@ -102,20 +124,85 @@ export class SessionService {
     );
   }
 
-  async rotateRefreshToken(sessionId: SessionId) {
+  async rotateRefreshToken(
+    sessionId: SessionId,
+    refreshToken: RefreshToken,
+  ): Promise<CreateSessionResult> {
     const session = await this.sessionRepository.findSession({
       type: "id",
       value: sessionId,
     });
+
     if (!session) {
-      throw new Error("Invalid session id");
+      throw new Error("Invalid session");
     }
 
-    if (session.revokedAt || session.expiresAt < new Date()) {
-      throw new Error("Invalid session id");
+    if (session.revokedAt || session.expiresAt <= new Date()) {
+      throw new Error("Invalid session");
     }
 
-    //todo create new refresh token put new token id new old token parentTokenId and use same tokenFamilyId
+    const refreshTokenHash = this.hashRefreshToken(refreshToken);
+
+    const currentRefreshTokenRecord =
+      await this.refreshTokenRepository.findByHash(refreshTokenHash);
+
+    if (!currentRefreshTokenRecord) {
+      throw new Error("Invalid refresh token");
+    }
+
+    if (currentRefreshTokenRecord.sessionId !== session.id) {
+      throw new Error("Invalid refresh token");
+    }
+
+    if (
+      currentRefreshTokenRecord.revokedAt ||
+      currentRefreshTokenRecord.expiresAt <= new Date()
+    ) {
+      throw new Error("Invalid refresh token");
+    }
+
+    if (currentRefreshTokenRecord.usedAt) {
+      await this.refreshTokenRepository.markReuseDetected(currentRefreshTokenRecord.id);
+
+      await this.refreshTokenRepository.revokeFamily(
+        currentRefreshTokenRecord.tokenFamilyId,
+      );
+
+      throw new Error("Refresh token reuse detected");
+    }
+
+    await this.refreshTokenRepository.markAsUsed(currentRefreshTokenRecord.id);
+
+    const { refreshToken: newRefreshToken, refreshTokenHash: newRefreshTokenHash } =
+      this.generateRefreshToken();
+
+    const refreshTokenExpiresAt = new Date(
+      Math.min(
+        this.getExpiryTime(config.auth.refreshTokenExpiry).getTime(),
+        session.expiresAt.getTime(),
+      ),
+    );
+
+    await this.refreshTokenRepository.create({
+      sessionId: session.id,
+      parentTokenId: currentRefreshTokenRecord.id,
+      tokenFamilyId: currentRefreshTokenRecord.tokenFamilyId,
+      tokenHash: newRefreshTokenHash,
+      expiresAt: refreshTokenExpiresAt,
+    });
+
+    const accessToken = this.generateAccessToken({
+      sub: session.userId,
+      sid: session.id,
+      orgId: session.organizationId,
+      jti: randomUUID(),
+      type: "access",
+    });
+
+    return {
+      refreshToken: newRefreshToken,
+      accessToken,
+    };
   }
 
   async validateSession(sessionId: SessionId): Promise<boolean> {
@@ -160,17 +247,25 @@ export class SessionService {
     return session;
   }
 
+  private getExpiryTime(duration: StringValue): Date {
+    return new Date(Date.now() + ms(duration));
+  }
+
   private generateRefreshToken(): {
     refreshToken: RefreshToken;
-    refreshTokenHash: string;
+    refreshTokenHash: RefreshTokenHash;
   } {
-    const refreshToken = randomBytes(64).toString("base64url");
+    const refreshToken = asRefreshToken(randomBytes(64).toString("base64url"));
 
-    const refreshTokenHash = createHash("sha256").update(refreshToken).digest("hex");
+    const refreshTokenHash = this.hashRefreshToken(refreshToken);
 
     return {
       refreshToken,
       refreshTokenHash,
     };
+  }
+
+  private hashRefreshToken(refreshToken: RefreshToken): RefreshTokenHash {
+    return asRefreshTokenHash(createHash("sha256").update(refreshToken).digest("hex"));
   }
 }
