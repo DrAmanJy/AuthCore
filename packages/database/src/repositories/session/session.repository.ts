@@ -15,10 +15,6 @@ export interface SessionRepository {
   ): Promise<Session | null>;
 
   findSession(
-    criteria: Extract<FindSessionCriteria, { type: "refreshTokenHash" }>,
-  ): Promise<Session | null>;
-
-  findSession(
     criteria: Extract<FindSessionCriteria, { type: "user" }>,
   ): Promise<Session[]>;
 

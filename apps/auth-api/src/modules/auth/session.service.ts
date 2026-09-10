@@ -31,7 +31,6 @@ export class SessionService {
 
     const session = await this.sessionRepository.create({
       ...data,
-      refreshTokenHash,
     });
 
     const accessToken = this.generateAccessToken({
@@ -57,14 +56,14 @@ export class SessionService {
     );
   }
 
-  async getSessionByRefreshToken(refreshTokenHash: RefreshTokenHash): Promise<Session> {
-    return this.assertSession(
-      await this.sessionRepository.findSession({
-        type: "refreshTokenHash",
-        value: refreshTokenHash,
-      }),
-    );
-  }
+  // async getSessionByRefreshToken(refreshTokenHash: RefreshTokenHash): Promise<Session> {
+  //   return this.assertSession(
+  //     await this.sessionRepository.findSession({
+  //       type: "refreshTokenHash",
+  //       value: refreshTokenHash,
+  //     }),
+  //   );
+  // }
 
   async getUserSessions(data: FindUserAllSessionType): Promise<Session[]> {
     return this.sessionRepository.findSession({

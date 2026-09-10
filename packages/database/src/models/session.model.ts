@@ -10,8 +10,6 @@ export interface ISession {
   userId: Types.ObjectId;
   organizationId: Types.ObjectId;
 
-  refreshTokenHash: string;
-
   device: IDevice;
 
   lastUsedAt: Date;
@@ -67,15 +65,6 @@ export const SessionSchema = new Schema<ISession>(
       type: Types.ObjectId,
       ref: "Organization",
       required: true,
-    },
-
-    refreshTokenHash: {
-      type: String,
-      required: true,
-      select: false,
-      trim: true,
-      minlength: 1,
-      maxlength: 255,
     },
 
     device: {

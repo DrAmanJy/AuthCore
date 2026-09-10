@@ -9,7 +9,6 @@ import { asUserId, type UserId } from "../user/user.types.js";
 
 import {
   asOrganizationId,
-  asRefreshTokenHash,
   asSessionId,
   type CreateSessionData,
   type FindSessionCriteria,
@@ -28,8 +27,6 @@ type MongoSessionRecord = {
 
   userId: Types.ObjectId;
   organizationId: Types.ObjectId;
-
-  refreshTokenHash: string;
 
   device: ISession["device"];
 
@@ -63,17 +60,6 @@ export class MongoSessionRepository implements SessionRepository {
           const sessionId = toObjectId(criteria.value);
 
           const session = await SessionModel.findById(sessionId)
-            .select("+refreshTokenHash")
-            .lean()
-            .exec();
-
-          return session ? this.toSessionType(session) : null;
-        }
-
-        case "refreshTokenHash": {
-          const session = await SessionModel.findOne({
-            refreshTokenHash: criteria.value,
-          })
             .select("+refreshTokenHash")
             .lean()
             .exec();
@@ -120,8 +106,6 @@ export class MongoSessionRepository implements SessionRepository {
         userId: toObjectId(data.userId),
 
         organizationId: toObjectId(data.organizationId),
-
-        refreshTokenHash: data.refreshTokenHash,
 
         device: data.device,
 
@@ -273,8 +257,6 @@ export class MongoSessionRepository implements SessionRepository {
       userId: asUserId(record.userId.toString()),
 
       organizationId: asOrganizationId(record.organizationId.toString()),
-
-      refreshTokenHash: asRefreshTokenHash(record.refreshTokenHash),
 
       device: record.device,
 
