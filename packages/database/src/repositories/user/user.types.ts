@@ -21,7 +21,13 @@ export type User = {
 export type UserCredentials = {
   id: UserId;
   email: string;
+  emailVerified: boolean;
+  displayName: string;
   passwordHash: string;
+  status: UserStatus;
+  lastLoginAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type CreateUserData = {

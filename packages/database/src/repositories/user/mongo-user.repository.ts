@@ -20,17 +20,13 @@ import { mapDatabaseError } from "../../errors/database-error.utils.js";
 type MongoUserRecord = {
   _id: Types.ObjectId;
   email: string;
+  emailVerified: boolean;
+  passwordHash: string;
   displayName: string;
   status: UserStatus;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-};
-
-type MongoUserCredentialsRecord = {
-  _id: Types.ObjectId;
-  email: string;
-  passwordHash: string;
 };
 
 export class MongoUserRepository implements UserRepository {
@@ -218,11 +214,17 @@ export class MongoUserRepository implements UserRepository {
     };
   }
 
-  private toUserCredentials(record: MongoUserCredentialsRecord): UserCredentials {
+  private toUserCredentials(record: MongoUserRecord): UserCredentials {
     return {
       id: asUserId(record._id.toString()),
       email: record.email,
+      emailVerified: record.emailVerified,
       passwordHash: record.passwordHash,
+      displayName: record.displayName,
+      status: record.status,
+      lastLoginAt: record.lastLoginAt,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
     };
   }
 }
