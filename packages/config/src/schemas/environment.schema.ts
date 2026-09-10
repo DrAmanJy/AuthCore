@@ -60,6 +60,8 @@ export const EnvironmentSchema = z
 
     REDIS_URL: redisUrlSchema,
 
+    SESSION_EXPIRY: jwtExpirySchema,
+
     ACCESS_TOKEN_EXPIRY: jwtExpirySchema,
 
     REFRESH_TOKEN_EXPIRY: jwtExpirySchema,

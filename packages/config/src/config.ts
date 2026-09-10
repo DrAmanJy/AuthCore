@@ -27,6 +27,7 @@ export const config = {
 
   auth: {
     jwtIssuer: env.JWT_ISSUER,
+    sessionExpiry: env.SESSION_EXPIRY,
     accessTokenExpiry: env.ACCESS_TOKEN_EXPIRY,
     refreshTokenExpiry: env.REFRESH_TOKEN_EXPIRY,
     jwtPrivateKey: env.JWT_PRIVATE_KEY,
