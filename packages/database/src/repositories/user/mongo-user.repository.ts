@@ -181,6 +181,23 @@ export class MongoUserRepository implements UserRepository {
     }
   }
 
+  async updatePassword(userId: UserId, passwordHash: string): Promise<User | null> {
+    const record = await UserModel.findByIdAndUpdate(
+      toObjectId(userId),
+      {
+        $set: { passwordHash },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    )
+      .lean()
+      .exec();
+
+    return record ? this.toUserType(record) : null;
+  }
+
   async delete(userId: UserId): Promise<User | null> {
     const objectId = toObjectId(userId);
 
