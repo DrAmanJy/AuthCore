@@ -56,3 +56,21 @@ export type LogoutType = {
   userId: UserId;
   organizationId: OrganizationId;
 };
+
+export type RecoveryTokenType = "EMAIL_VERIFICATION" | "PASSWORD_RESET";
+
+export type CreateRecoveryTokenData = {
+  userId: UserId;
+  type: RecoveryTokenType;
+  expiresAt: Date;
+};
+
+export type RecoveryTokenResult = {
+  token: string;
+  expiresAt: Date;
+};
+
+export type verifyEmailType = {
+  token: string;
+  email: string;
+};
