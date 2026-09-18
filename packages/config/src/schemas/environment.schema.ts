@@ -1,14 +1,15 @@
 import type { StringValue } from "ms";
 import z from "zod";
+
 const environments = ["development", "production"] as const;
 
-const jwtExpirySchema = z
+const durationSchema = z
   .string()
   .trim()
-  .min(1, "JWT expiry is required")
+  .min(1, "Duration is required")
   .regex(
-    /^\d+(s|m|h|d|w|y)$/,
-    "JWT expiry must use a valid format such as 15m, 1h, or 7d",
+    /^\d+(?:s|m|h|d|w|y)$/,
+    "Duration must use a valid format such as 15m, 1h, or 7d",
   )
   .transform(value => value as StringValue);
 
@@ -38,6 +39,9 @@ const redisUrlSchema = z
     "REDIS_URL must be a valid Redis connection string",
   );
 
+const requiredStringSchema = (name: string) =>
+  z.string().trim().min(1, `${name} is required`);
+
 export const EnvironmentSchema = z
   .strictObject({
     NODE_ENV: z.enum(environments, {
@@ -60,43 +64,49 @@ export const EnvironmentSchema = z
 
     REDIS_URL: redisUrlSchema,
 
-    SESSION_EXPIRY: jwtExpirySchema,
+    SESSION_EXPIRY: durationSchema,
 
-    ACCESS_TOKEN_EXPIRY: jwtExpirySchema,
+    ACCESS_TOKEN_EXPIRY: durationSchema,
 
-    REFRESH_TOKEN_EXPIRY: jwtExpirySchema,
+    REFRESH_TOKEN_EXPIRY: durationSchema,
 
-    JWT_ISSUER: z.string().trim().min(1, "JWT_ISSUER is required"),
+    EMAIL_VERIFICATION_TOKEN_EXPIRY: durationSchema,
+
+    PASSWORD_RESET_TOKEN_EXPIRY: durationSchema,
+
+    JWT_ISSUER: requiredStringSchema("JWT_ISSUER"),
 
     JWT_PRIVATE_KEY: z.string().min(1, "JWT_PRIVATE_KEY is required"),
 
     JWT_PUBLIC_KEY: z.string().min(1, "JWT_PUBLIC_KEY is required"),
 
-    JWT_KEY_ID: z.string().trim().min(1, "JWT_KEY_ID is required"),
+    JWT_KEY_ID: requiredStringSchema("JWT_KEY_ID"),
 
-    AWS_REGION: z.string().trim().min(1, "AWS_REGION is required"),
+    AWS_REGION: requiredStringSchema("AWS_REGION"),
 
-    AWS_ACCESS_KEY_ID: z.string().trim().min(1, "AWS_ACCESS_KEY_ID is required"),
+    AWS_ACCESS_KEY_ID: requiredStringSchema("AWS_ACCESS_KEY_ID"),
 
     AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY is required"),
   })
   .superRefine((env, ctx) => {
-    if (env.NODE_ENV === "production") {
-      if (!env.JWT_PRIVATE_KEY.includes("-----BEGIN")) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["JWT_PRIVATE_KEY"],
-          message: "JWT_PRIVATE_KEY must be a valid PEM-formatted private key",
-        });
-      }
+    if (env.NODE_ENV !== "production") {
+      return;
+    }
 
-      if (!env.JWT_PUBLIC_KEY.includes("-----BEGIN")) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["JWT_PUBLIC_KEY"],
-          message: "JWT_PUBLIC_KEY must be a valid PEM-formatted public key",
-        });
-      }
+    if (!env.JWT_PRIVATE_KEY.includes("-----BEGIN")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["JWT_PRIVATE_KEY"],
+        message: "JWT_PRIVATE_KEY must be a valid PEM-formatted private key",
+      });
+    }
+
+    if (!env.JWT_PUBLIC_KEY.includes("-----BEGIN")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["JWT_PUBLIC_KEY"],
+        message: "JWT_PUBLIC_KEY must be a valid PEM-formatted public key",
+      });
     }
   });
 
