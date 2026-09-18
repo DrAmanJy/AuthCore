@@ -1,5 +1,15 @@
 import type { UserId } from "../user/user.types.js";
 
+export const asVerificationTokenId = (id: string): VerificationTokenId =>
+  id as VerificationTokenId;
+
+export const asVerificationTokenHash = (hash: string): VerificationTokenHash =>
+  hash as VerificationTokenHash;
+
+export const asVerificationTokenType = (
+  type: VerificationTokenType,
+): VerificationTokenType => type;
+
 export type VerificationToken = {
   id: VerificationTokenId;
   userId: UserId;
