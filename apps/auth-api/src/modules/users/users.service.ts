@@ -9,10 +9,6 @@ export class UserService {
   async getAuthenticatedUser(userId: UserId): Promise<User> {
     const user = await this.getUserById(userId);
 
-    if (!user) {
-      throw new Error("User not found");
-    }
-
     this.validateAccountStatus(user);
 
     return user;
@@ -68,6 +64,7 @@ export class UserService {
     if (!user) throw new Error("User not found");
     return user;
   }
+
   async updateLastLoginAt(userId: UserId): Promise<User> {
     await this.getAuthenticatedUser(userId);
 
@@ -88,6 +85,16 @@ export class UserService {
 
     if (!user) {
       throw new Error("Failed to update Password");
+    }
+
+    return user;
+  }
+
+  async verifyEmail(userId: UserId): Promise<User> {
+    const user = await this.userRepository.update(userId, { emailVerified: true });
+
+    if (!user) {
+      throw new Error("User not found");
     }
 
     return user;
