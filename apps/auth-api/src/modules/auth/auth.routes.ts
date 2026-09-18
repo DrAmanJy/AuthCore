@@ -1,18 +1,31 @@
 import { Router } from "express";
 
+import { authController } from "../../container.js";
+
 const authRouter = Router();
 
-authRouter.post("/register");
-authRouter.post("/login");
-authRouter.post("/logout");
-authRouter.post("/refresh-token");
-authRouter.post("/verify-email");
-authRouter.post("/resend-verification");
-authRouter.post("/forgot-password");
-authRouter.post("/reset-password");
-authRouter.post("/change-password");
+authRouter.post("/register", authController.register);
 
-authRouter.get("/sessions");
+authRouter.post("/login", authController.login);
 
-authRouter.delete("/sessions/:sessionId");
-authRouter.delete("/sessions");
+authRouter.post("/logout", authController.logout);
+
+authRouter.post("/refresh-token", authController.refreshAccessToken);
+
+authRouter.post("/verify-email", authController.verifyEmail);
+
+authRouter.post("/resend-verification", authController.resendVerification);
+
+authRouter.post("/forgot-password", authController.forgotPassword);
+
+authRouter.post("/reset-password", authController.resetPassword);
+
+authRouter.post("/change-password", authController.changePassword);
+
+authRouter.get("/sessions", authController.getSessions);
+
+authRouter.delete("/sessions/:sessionId", authController.revokeSession);
+
+authRouter.delete("/sessions", authController.revokeAllSessions);
+
+export { authRouter };
