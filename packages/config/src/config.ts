@@ -33,6 +33,8 @@ export const config = {
     jwtPrivateKey: env.JWT_PRIVATE_KEY,
     jwtPublicKey: env.JWT_PUBLIC_KEY,
     jwtKeyId: env.JWT_KEY_ID,
+    passwordResetTokenExpiry: env.PASSWORD_RESET_TOKEN_EXPIRY,
+    emailVerificationTokenExpiry: env.EMAIL_VERIFICATION_TOKEN_EXPIRY,
   },
 
   aws: {
