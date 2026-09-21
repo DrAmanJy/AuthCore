@@ -1,9 +1,9 @@
-import { Types } from "mongoose";
+import type { Types } from "mongoose";
 
 import { VerificationTokenModel } from "../../models/verification-token.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
-import { VerificationTokenRepository } from "./verification-repository.js";
-import {
+import type { VerificationTokenRepository } from "./verification-repository.js";
+import type {
   CreateVerificationTokenData,
   DeleteVerificationTokenCriteria,
   FindVerificationTokenCriteria,

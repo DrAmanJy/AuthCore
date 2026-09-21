@@ -1,4 +1,4 @@
-import { SessionId } from "../session/session.types.js";
+import type { SessionId } from "../session/session.types.js";
 import type {
   CreateRefreshTokenData,
   RefreshTokenHash,

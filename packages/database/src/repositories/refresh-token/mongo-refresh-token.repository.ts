@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import type { Types } from "mongoose";
 
 import { RefreshTokenModel } from "../../models/refresh-token.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
@@ -150,10 +150,6 @@ export class MongoRefreshTokenRepository implements RefreshTokenRepository {
     revokedAt: Date = new Date(),
   ): Promise<number> {
     const objectId = toObjectId(sessionId);
-
-    if (!objectId) {
-      return 0;
-    }
 
     const result = await RefreshTokenModel.updateMany(
       {

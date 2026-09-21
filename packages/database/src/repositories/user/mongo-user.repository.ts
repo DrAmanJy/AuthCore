@@ -2,15 +2,15 @@ import type { Types } from "mongoose";
 
 import { toObjectId } from "../../utils/object-id.utils.js";
 
-import {
-  asUserId,
+import { asUserId } from "./user.types.js";
+import type {
   ExistsUserCriteria,
-  type CreateUserData,
-  type UpdateUserData,
-  type User,
-  type UserCredentials,
-  type UserId,
-  type UserStatus,
+  CreateUserData,
+  UpdateUserData,
+  User,
+  UserCredentials,
+  UserId,
+  UserStatus,
 } from "./user.types.js";
 
 import type { UserRepository } from "./user.repository.js";
