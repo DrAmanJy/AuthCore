@@ -1,7 +1,21 @@
 import type { Request, Response } from "express";
 
 import { config } from "@authcore/config";
-import { asRefreshToken, asSessionId, getDurationMs } from "@authcore/database";
+import {
+  asOrganizationId,
+  asRefreshToken,
+  asSessionId,
+  getDurationMs,
+} from "@authcore/database";
+import type {
+  Register,
+  Login,
+  VerifyEmail,
+  ForgotPassword,
+  ResetPassword,
+  ChangePassword,
+  SessionParams,
+} from "@authcore/contracts";
 
 import type { AuthService } from "./auth.service.js";
 
@@ -24,7 +38,7 @@ export class AuthController {
     this.revokeAllSessions = this.revokeAllSessions.bind(this);
   }
 
-  async register(req: Request, res: Response) {
+  async register(req: Request<unknown, unknown, Register>, res: Response) {
     const { displayName, email, password } = req.body;
 
     const user = await this.authService.registerUser({
@@ -39,12 +53,12 @@ export class AuthController {
     });
   }
 
-  async login(req: Request, res: Response) {
+  async login(req: Request<unknown, unknown, Login>, res: Response) {
     const { organizationId, email, password } = req.body;
     const { device } = req;
 
     const { user, accessToken, refreshToken } = await this.authService.loginUser({
-      organizationId,
+      organizationId: asOrganizationId(organizationId),
       email,
       password,
       device,
@@ -79,7 +93,8 @@ export class AuthController {
   async refreshAccessToken(req: Request, res: Response) {
     const { sid } = req.token;
 
-    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE];
+    const cookies = req.cookies as Record<string, unknown>;
+    const refreshToken: unknown = cookies[REFRESH_TOKEN_COOKIE];
 
     if (typeof refreshToken !== "string") {
       throw new Error("Refresh token is required");
@@ -100,7 +115,7 @@ export class AuthController {
     });
   }
 
-  async verifyEmail(req: Request, res: Response) {
+  async verifyEmail(req: Request<unknown, unknown, VerifyEmail>, res: Response) {
     const { token } = req.body;
 
     await this.authService.verifyEmail(token);
@@ -120,7 +135,7 @@ export class AuthController {
     });
   }
 
-  async forgotPassword(req: Request, res: Response) {
+  async forgotPassword(req: Request<unknown, unknown, ForgotPassword>, res: Response) {
     const { email } = req.body;
 
     await this.authService.forgotPassword(email);
@@ -130,7 +145,7 @@ export class AuthController {
     });
   }
 
-  async resetPassword(req: Request, res: Response) {
+  async resetPassword(req: Request<unknown, unknown, ResetPassword>, res: Response) {
     const { token, password } = req.body;
 
     await this.authService.resetPassword(token, password);
@@ -140,7 +155,7 @@ export class AuthController {
     });
   }
 
-  async changePassword(req: Request, res: Response) {
+  async changePassword(req: Request<unknown, unknown, ChangePassword>, res: Response) {
     const { currentPassword, newPassword } = req.body;
     const { sub } = req.token;
 
@@ -165,12 +180,8 @@ export class AuthController {
     });
   }
 
-  async revokeSession(req: Request, res: Response) {
+  async revokeSession(req: Request<SessionParams>, res: Response) {
     const { sessionId } = req.params;
-
-    if (typeof sessionId !== "string") {
-      throw new Error("Session ID is required");
-    }
 
     const session = await this.authService.revokeSession(asSessionId(sessionId));
 
