@@ -27,7 +27,7 @@ export type { UserRepository } from "./repositories/user/user.repository.js";
 export { MongoUserRepository } from "./repositories/user/mongo-user.repository.js";
 
 // Session
-export { asSessionId } from "./repositories/session/session.types.js";
+export { asSessionId, asOrganizationId } from "./repositories/session/session.types.js";
 export type {
   Session,
   SessionId,

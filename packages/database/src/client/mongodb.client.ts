@@ -20,7 +20,7 @@ export async function connectDatabase(): Promise<void> {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5_000,
       socketTimeoutMS: 45_000,
-    } as mongoose.ConnectOptions)
+    })
     .catch((error: unknown) => {
       connectionPromise = null;
 
