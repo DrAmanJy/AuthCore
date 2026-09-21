@@ -1,4 +1,5 @@
-import { model, Schema, Types } from "mongoose";
+import { Schema, model } from "mongoose";
+import type { Types } from "mongoose";
 
 export const VERIFICATION_TOKEN_TYPES = ["EMAIL_VERIFICATION", "PASSWORD_RESET"] as const;
 
