@@ -2,7 +2,6 @@ import type {
   CreateVerificationTokenData,
   DeleteVerificationTokenCriteria,
   FindVerificationTokenCriteria,
-  UpdateVerificationTokenData,
   VerificationToken,
   VerificationTokenId,
 } from "./verification-token.types.js";
