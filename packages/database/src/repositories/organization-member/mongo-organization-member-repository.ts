@@ -17,6 +17,7 @@ import {
   type OrganizationMember,
   type OrganizationMemberId,
   type OrganizationMemberStatus,
+  type UpdateOrganizationMemberData,
 } from "./organization-member.types.js";
 
 type MongoOrganizationMemberRecord = {
@@ -92,6 +93,52 @@ export default class OrganizationMemberRepository {
     });
 
     return this.toOrganizationMember(organizationMember);
+  }
+
+  async update(
+    memberId: OrganizationMemberId,
+    data: UpdateOrganizationMemberData,
+  ): Promise<OrganizationMember | null> {
+    const organizationMember = await OrganizationMemberModel.findOneAndUpdate(
+      {
+        _id: toObjectId(memberId),
+        deletedAt: { $exists: false },
+      },
+      {
+        $set: data,
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    )
+      .lean<MongoOrganizationMemberRecord>()
+      .exec();
+
+    return organizationMember ? this.toOrganizationMember(organizationMember) : null;
+  }
+
+  async remove(memberId: OrganizationMemberId): Promise<OrganizationMember | null> {
+    const organizationMember = await OrganizationMemberModel.findOneAndUpdate(
+      {
+        _id: toObjectId(memberId),
+        deletedAt: { $exists: false },
+      },
+      {
+        $set: {
+          status: "removed",
+          deletedAt: new Date(),
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    )
+      .lean<MongoOrganizationMemberRecord>()
+      .exec();
+
+    return organizationMember ? this.toOrganizationMember(organizationMember) : null;
   }
 
   private toOrganizationMember(
