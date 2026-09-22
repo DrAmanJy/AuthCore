@@ -22,5 +22,7 @@ export interface UserRepository {
 
   update(userId: UserId, data: UpdateUserData): Promise<User | null>;
 
+  updatePassword(userId: UserId, passwordHash: string): Promise<User | null>;
+
   delete(userId: UserId): Promise<User | null>;
 }

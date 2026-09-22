@@ -2,15 +2,15 @@ import type { Types } from "mongoose";
 
 import { toObjectId } from "../../utils/object-id.utils.js";
 
-import {
-  asUserId,
+import { asUserId } from "./user.types.js";
+import type {
   ExistsUserCriteria,
-  type CreateUserData,
-  type UpdateUserData,
-  type User,
-  type UserCredentials,
-  type UserId,
-  type UserStatus,
+  CreateUserData,
+  UpdateUserData,
+  User,
+  UserCredentials,
+  UserId,
+  UserStatus,
 } from "./user.types.js";
 
 import type { UserRepository } from "./user.repository.js";
@@ -179,6 +179,23 @@ export class MongoUserRepository implements UserRepository {
     } catch (error) {
       throw mapDatabaseError(error);
     }
+  }
+
+  async updatePassword(userId: UserId, passwordHash: string): Promise<User | null> {
+    const record = await UserModel.findByIdAndUpdate(
+      toObjectId(userId),
+      {
+        $set: { passwordHash },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    )
+      .lean()
+      .exec();
+
+    return record ? this.toUserType(record) : null;
   }
 
   async delete(userId: UserId): Promise<User | null> {

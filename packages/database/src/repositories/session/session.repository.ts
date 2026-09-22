@@ -26,7 +26,7 @@ export interface SessionRepository {
 
   revokeAllByUserId(
     userId: UserId,
-    organizationId: OrganizationId,
+    organizationId?: OrganizationId,
     reason?: string,
   ): Promise<number>;
 

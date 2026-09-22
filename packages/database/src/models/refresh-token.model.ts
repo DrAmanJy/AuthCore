@@ -1,4 +1,5 @@
-import { model, Schema, Types } from "mongoose";
+import { model, Schema } from "mongoose";
+import type { Types } from "mongoose";
 
 export type RefreshTokenDocument = {
   sessionId: Types.ObjectId;

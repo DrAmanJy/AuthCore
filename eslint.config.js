@@ -1,9 +1,10 @@
+import { defineConfig } from "eslint/config";
 import js from "@eslint/js";
 import globals from "globals";
 import prettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 
-export default [
+export default defineConfig(
   {
     ignores: [
       "**/node_modules/**",
@@ -19,7 +20,7 @@ export default [
   {
     files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
 
-    ...js.configs.recommended,
+    extends: [js.configs.recommended],
 
     languageOptions: {
       ecmaVersion: "latest",
@@ -70,7 +71,7 @@ export default [
   {
     files: ["**/*.ts", "**/*.tsx"],
 
-    ...tseslint.configs.recommendedTypeChecked,
+    extends: [tseslint.configs.recommendedTypeChecked],
 
     languageOptions: {
       globals: {
@@ -84,21 +85,21 @@ export default [
     },
 
     rules: {
+      "@typescript-eslint/unbound-method": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
           args: "all",
-          argsIgnorePattern: "^_$",
+          argsIgnorePattern: "^_",
           vars: "all",
-          varsIgnorePattern: "^_$",
+          varsIgnorePattern: "^_",
           caughtErrors: "all",
-          caughtErrorsIgnorePattern: "^_$",
+          caughtErrorsIgnorePattern: "^_",
           ignoreRestSiblings: false,
         },
       ],
 
       "@typescript-eslint/no-explicit-any": "error",
-
       "@typescript-eslint/no-non-null-assertion": "error",
 
       "@typescript-eslint/consistent-type-imports": [
@@ -110,11 +111,8 @@ export default [
       ],
 
       "@typescript-eslint/consistent-type-exports": "error",
-
       "@typescript-eslint/no-inferrable-types": "error",
-
       "@typescript-eslint/no-unnecessary-condition": "error",
-
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
 
       "@typescript-eslint/no-misused-promises": [
@@ -127,7 +125,6 @@ export default [
       ],
 
       "@typescript-eslint/require-await": "error",
-
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
 
       "@typescript-eslint/no-floating-promises": [
@@ -138,31 +135,20 @@ export default [
       ],
 
       "@typescript-eslint/await-thenable": "error",
-
       "@typescript-eslint/prefer-nullish-coalescing": "error",
-
       "@typescript-eslint/prefer-optional-chain": "error",
-
       "@typescript-eslint/no-confusing-void-expression": "error",
-
       "@typescript-eslint/switch-exhaustiveness-check": "error",
 
       "no-undef": "error",
-
       "no-unreachable": "error",
-
       "no-constant-condition": "error",
-
       "no-async-promise-executor": "error",
 
       eqeqeq: ["error", "always"],
-
       "no-var": "error",
-
       "prefer-const": "error",
-
       "prefer-template": "error",
-
       "no-trailing-spaces": "error",
 
       "no-console": [
@@ -173,10 +159,9 @@ export default [
       ],
 
       "no-throw-literal": "error",
-
       "no-return-await": "error",
     },
   },
 
   prettier,
-];
+);

@@ -1,4 +1,4 @@
-import {
+import type {
   SessionId,
   SessionRepository,
   Session,
@@ -6,13 +6,16 @@ import {
   UserId,
   UpdateSessionData,
   RefreshTokenRepository,
-  asTokenFamilyId,
   RefreshToken,
-  asRefreshToken,
   RefreshTokenHash,
-  asRefreshTokenHash,
 } from "@authcore/database";
 import {
+  asTokenFamilyId,
+  asRefreshToken,
+  asRefreshTokenHash,
+  getExpiryTime,
+} from "@authcore/database";
+import type {
   CreateSessionType,
   AccessTokenPayload,
   CreateSessionResult,
@@ -31,7 +34,7 @@ export class SessionService {
   async createSession(data: CreateSessionType): Promise<CreateSessionResult> {
     const { refreshToken, refreshTokenHash } = this.generateRefreshToken();
 
-    const sessionExpiresAt = this.getExpiryTime(config.auth.sessionExpiry);
+    const sessionExpiresAt = getExpiryTime(config.auth.sessionExpiry);
 
     const session = await this.sessionRepository.create({
       ...data,
@@ -42,7 +45,7 @@ export class SessionService {
 
     const refreshTokenExpiresAt = new Date(
       Math.min(
-        this.getExpiryTime(config.auth.refreshTokenExpiry).getTime(),
+        getExpiryTime(config.auth.refreshTokenExpiry).getTime(),
         session.expiresAt.getTime(),
       ),
     );
@@ -104,10 +107,10 @@ export class SessionService {
 
   async revokeAllUserSessions(
     userId: UserId,
-    organizationId: OrganizationId,
+    organizationId?: OrganizationId,
     reason?: string,
   ): Promise<number> {
-    return await this.sessionRepository.revokeAllByUserId(userId, organizationId, reason);
+    return this.sessionRepository.revokeAllByUserId(userId, organizationId, reason);
   }
 
   async revokeAllExceptCurrent(
@@ -116,7 +119,7 @@ export class SessionService {
     organizationId: OrganizationId,
     reason?: string,
   ) {
-    return await this.sessionRepository.revokeAllExcept(
+    return this.sessionRepository.revokeAllExcept(
       userId,
       organizationId,
       sessionId,
@@ -178,7 +181,7 @@ export class SessionService {
 
     const refreshTokenExpiresAt = new Date(
       Math.min(
-        this.getExpiryTime(config.auth.refreshTokenExpiry).getTime(),
+        getExpiryTime(config.auth.refreshTokenExpiry).getTime(),
         session.expiresAt.getTime(),
       ),
     );
@@ -245,10 +248,6 @@ export class SessionService {
     }
 
     return session;
-  }
-
-  private getExpiryTime(duration: StringValue): Date {
-    return new Date(Date.now() + ms(duration));
   }
 
   private generateRefreshToken(): {

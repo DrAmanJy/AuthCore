@@ -357,7 +357,13 @@ importers:
       mongoose:
         specifier: ^9.9.4
         version: 9.9.4
+      ms:
+        specifier: ^2.1.3
+        version: 2.1.3
     devDependencies:
+      '@types/ms':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1

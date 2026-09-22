@@ -9,10 +9,6 @@ export class UserService {
   async getAuthenticatedUser(userId: UserId): Promise<User> {
     const user = await this.getUserById(userId);
 
-    if (!user) {
-      throw new Error("User not found");
-    }
-
     this.validateAccountStatus(user);
 
     return user;
@@ -26,9 +22,17 @@ export class UserService {
     return user;
   }
 
-  async getUserCredentialsByEmail(email: string): Promise<UserCredentials> {
-    const user = await this.userRepository.findCredentialsByEmail(email);
-    if (!user) throw new Error("User not found");
+  async getUserCredentials(
+    criteria: { type: "email"; value: string } | { type: "id"; value: UserId },
+  ): Promise<UserCredentials> {
+    const user =
+      criteria.type === "email"
+        ? await this.userRepository.findCredentialsByEmail(criteria.value)
+        : await this.userRepository.findCredentialsById(criteria.value);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
 
     return user;
   }
@@ -60,12 +64,34 @@ export class UserService {
     if (!user) throw new Error("User not found");
     return user;
   }
+
   async updateLastLoginAt(userId: UserId): Promise<User> {
     await this.getAuthenticatedUser(userId);
 
     const user = await this.userRepository.update(userId, {
       lastLoginAt: new Date(),
     });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  }
+
+  async updatePassword(userId: UserId, passwordHash: string): Promise<User> {
+    await this.getAuthenticatedUser(userId);
+    const user = await this.userRepository.updatePassword(userId, passwordHash);
+
+    if (!user) {
+      throw new Error("Failed to update Password");
+    }
+
+    return user;
+  }
+
+  async verifyEmail(userId: UserId): Promise<User> {
+    const user = await this.userRepository.update(userId, { emailVerified: true });
 
     if (!user) {
       throw new Error("User not found");

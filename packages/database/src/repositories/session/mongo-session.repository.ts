@@ -176,26 +176,23 @@ export class MongoSessionRepository implements SessionRepository {
 
   async revokeAllByUserId(
     userId: UserId,
-    organizationId: OrganizationId,
+    organizationId?: OrganizationId,
     reason?: string,
   ): Promise<number> {
-    const userObjectId = toObjectId(userId);
-
-    const organizationObjectId = toObjectId(organizationId);
+    const filter = {
+      userId: toObjectId(userId),
+      ...(organizationId && {
+        organizationId: toObjectId(organizationId),
+      }),
+      revokedAt: {
+        $exists: false,
+      },
+    };
 
     try {
-      const result = await SessionModel.updateMany(
-        {
-          userId: userObjectId,
-          organizationId: organizationObjectId,
-          revokedAt: {
-            $exists: false,
-          },
-        },
-        {
-          $set: this.buildRevokeUpdate(reason),
-        },
-      ).exec();
+      const result = await SessionModel.updateMany(filter, {
+        $set: this.buildRevokeUpdate(reason),
+      }).exec();
 
       return result.modifiedCount;
     } catch (error) {
