@@ -1,13 +1,13 @@
 import type {
   CreateSessionData,
   FindSessionCriteria,
-  OrganizationId,
   Session,
   SessionId,
   UpdateSessionData,
 } from "./session.types.js";
 
 import type { UserId } from "../user/user.types.js";
+import type { OrganizationId } from "../organization/organization.types.js";
 
 export interface SessionRepository {
   findSession(
