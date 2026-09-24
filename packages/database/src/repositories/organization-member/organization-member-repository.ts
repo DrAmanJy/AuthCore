@@ -1,4 +1,4 @@
-import type { OrganizationId } from "../session/session.types.js";
+import type { OrganizationId } from "../organization/organization.types.js";
 import type { UserId } from "../user/user.types.js";
 import type {
   CreateOrganizationMemberData,
