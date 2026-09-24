@@ -22,7 +22,7 @@ type MongoOrganizationRecord = {
   updatedAt: Date;
 };
 
-export default class MongoOrganizationRepository {
+export class MongoOrganizationRepository {
   async findById(organizationId: OrganizationId): Promise<Organization | null> {
     const organization = await OrganizationModel.findOne({
       _id: toObjectId(organizationId),

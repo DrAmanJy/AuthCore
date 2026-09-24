@@ -23,7 +23,7 @@ type Record = {
   updatedAt: Date;
 };
 
-export default class RoleRepository {
+export class MongoRoleRepository {
   async findById(roleId: RoleId): Promise<Role | null> {
     const role = await RoleModel.findById(toObjectId(roleId)).lean().exec();
 
