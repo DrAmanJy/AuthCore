@@ -63,3 +63,5 @@ userRouter.patch(
   validateBody(changeStatusSchema),
   userController.changeUserStatus,
 );
+
+export { userRouter };
