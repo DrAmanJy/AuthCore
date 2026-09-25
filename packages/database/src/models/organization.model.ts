@@ -1,4 +1,5 @@
 import { model, Schema } from "mongoose";
+import type { Types } from "mongoose";
 
 export const ORGANIZATION_STATUSES = ["active", "suspended", "inactive"] as const;
 
@@ -9,6 +10,7 @@ export interface IOrganization {
   slug: string;
   status: OrganizationStatus;
   deletedAt?: Date;
+  createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +45,12 @@ const OrganizationSchema = new Schema<IOrganization>(
       type: Date,
       default: undefined,
     },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      immutable: true,
+    },
   },
   {
     timestamps: true,
@@ -59,6 +67,8 @@ OrganizationSchema.index(
     },
   },
 );
+
+OrganizationSchema.index({ createdBy: 1 });
 
 const OrganizationModel = model<IOrganization>("Organization", OrganizationSchema);
 export default OrganizationModel;
