@@ -1,12 +1,15 @@
-import mongoose, { ConnectionStates } from "mongoose";
+import mongoose from "mongoose";
 
 import { config } from "@authcore/config";
 import { DatabaseConnectionError } from "../errors/database.errors.js";
 
+const CONNECTED_STATE = 1 as mongoose.Connection["readyState"];
+const DISCONNECTED_STATE = 0 as mongoose.Connection["readyState"];
+
 let connectionPromise: Promise<typeof mongoose> | null = null;
 
 export async function connectDatabase(): Promise<void> {
-  if (mongoose.connection.readyState === ConnectionStates.connected) {
+  if (mongoose.connection.readyState === CONNECTED_STATE) {
     return;
   }
 
@@ -33,7 +36,7 @@ export async function connectDatabase(): Promise<void> {
 }
 
 export async function disconnectDatabase(): Promise<void> {
-  if (mongoose.connection.readyState === ConnectionStates.disconnected) {
+  if (mongoose.connection.readyState === DISCONNECTED_STATE) {
     return;
   }
 
@@ -43,9 +46,7 @@ export async function disconnectDatabase(): Promise<void> {
   } catch (error: unknown) {
     throw new DatabaseConnectionError(
       "Failed to close the database connection gracefully.",
-      {
-        cause: error,
-      },
+      { cause: error },
     );
   }
 }

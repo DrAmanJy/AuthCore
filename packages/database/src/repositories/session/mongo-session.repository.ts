@@ -8,11 +8,9 @@ import type { SessionRepository } from "./session.repository.js";
 import { asUserId, type UserId } from "../user/user.types.js";
 
 import {
-  asOrganizationId,
   asSessionId,
   type CreateSessionData,
   type FindSessionCriteria,
-  type OrganizationId,
   type Session,
   type SessionId,
   type UpdateSessionData,
@@ -21,6 +19,10 @@ import {
 import SessionModel, { type ISession } from "../../models/session.model.js";
 
 import { mapDatabaseError } from "../../errors/database-error.utils.js";
+import {
+  asOrganizationId,
+  type OrganizationId,
+} from "../organization/organization.types.js";
 
 type MongoSessionRecord = {
   _id: Types.ObjectId;
