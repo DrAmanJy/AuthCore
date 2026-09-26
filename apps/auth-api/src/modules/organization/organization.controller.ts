@@ -1,6 +1,11 @@
 import type { Request, Response } from "express";
 
-import { asOrganizationId, asOrganizationMemberId, asRoleId } from "@authcore/database";
+import {
+  asActorId,
+  asOrganizationId,
+  asOrganizationMemberId,
+  asRoleId,
+} from "@authcore/database";
 
 import type {
   CreateOrganizationData,
@@ -71,8 +76,11 @@ export class OrganizationController {
   // Organization
   // ─────────────────────────────────────────────
 
-  async getOrganizations(_req: Request, res: Response) {
-    const organizations = await this.organizationService.getOrganizations();
+  async getOrganizations(req: Request, res: Response) {
+    const { sub } = req.token;
+    const organizations = await this.organizationService.getOrganizationsByActor(
+      asActorId(sub),
+    );
 
     return res.status(200).json({
       data: { organizations },
@@ -83,7 +91,12 @@ export class OrganizationController {
     req: OrganizationRequest<CreateOrganizationData>,
     res: Response,
   ) {
-    const organization = await this.organizationService.createOrganization(req.body);
+    const { sub } = req.token;
+
+    const organization = await this.organizationService.createOrganization(
+      asActorId(sub),
+      req.body,
+    );
 
     return res.status(201).json({
       message: "Organization created successfully",
@@ -119,8 +132,10 @@ export class OrganizationController {
     req: OrganizationByIdRequest<UpdateOrganizationData>,
     res: Response,
   ) {
+    const { sub } = req.token;
     const organization = await this.organizationService.updateOrganization(
       asOrganizationId(req.params.organizationId),
+      asActorId(sub),
       req.body,
     );
 
@@ -131,8 +146,11 @@ export class OrganizationController {
   }
 
   async deleteOrganization(req: OrganizationByIdRequest, res: Response) {
+    const { sub } = req.token;
+
     const organization = await this.organizationService.deleteOrganization(
       asOrganizationId(req.params.organizationId),
+      asActorId(sub),
     );
 
     return res.status(200).json({
@@ -159,10 +177,12 @@ export class OrganizationController {
     req: OrganizationByIdRequest<Omit<CreateOrganizationMemberData, "organizationId">>,
     res: Response,
   ) {
-    const member = await this.organizationService.addMember({
-      organizationId: asOrganizationId(req.params.organizationId),
-      ...req.body,
-    });
+    const { sub } = req.token;
+    const member = await this.organizationService.addMember(
+      asOrganizationId(req.params.organizationId),
+      asActorId(sub),
+      req.body,
+    );
 
     return res.status(201).json({
       message: "Organization member created successfully",
@@ -182,9 +202,11 @@ export class OrganizationController {
   }
 
   async updateMember(req: MemberRequest<UpdateOrganizationMemberData>, res: Response) {
+    const { sub } = req.token;
     const member = await this.organizationService.updateMember(
       asOrganizationId(req.params.organizationId),
       asOrganizationMemberId(req.params.memberId),
+      asActorId(sub),
       req.body,
     );
 
@@ -195,9 +217,11 @@ export class OrganizationController {
   }
 
   async activateMember(req: MemberRequest, res: Response) {
+    const { sub } = req.token;
     const member = await this.organizationService.activateMember(
       asOrganizationId(req.params.organizationId),
       asOrganizationMemberId(req.params.memberId),
+      asActorId(sub),
     );
 
     return res.status(200).json({
@@ -207,9 +231,11 @@ export class OrganizationController {
   }
 
   async suspendMember(req: MemberRequest, res: Response) {
+    const { sub } = req.token;
     const member = await this.organizationService.suspendMember(
       asOrganizationId(req.params.organizationId),
       asOrganizationMemberId(req.params.memberId),
+      asActorId(sub),
     );
 
     return res.status(200).json({
@@ -219,9 +245,11 @@ export class OrganizationController {
   }
 
   async removeMember(req: MemberRequest, res: Response) {
+    const { sub } = req.token;
     const member = await this.organizationService.removeMember(
       asOrganizationId(req.params.organizationId),
       asOrganizationMemberId(req.params.memberId),
+      asActorId(sub),
     );
 
     return res.status(200).json({
@@ -248,10 +276,12 @@ export class OrganizationController {
     req: OrganizationByIdRequest<Omit<CreateRoleData, "organizationId">>,
     res: Response,
   ) {
-    const role = await this.organizationService.createRole({
-      organizationId: asOrganizationId(req.params.organizationId),
-      ...req.body,
-    });
+    const { sub } = req.token;
+    const role = await this.organizationService.createRole(
+      asOrganizationId(req.params.organizationId),
+      asActorId(sub),
+      req.body,
+    );
 
     return res.status(201).json({
       message: "Role created successfully",
@@ -271,9 +301,11 @@ export class OrganizationController {
   }
 
   async updateRole(req: RoleRequest<UpdateRoleData>, res: Response) {
+    const { sub } = req.token;
     const role = await this.organizationService.updateRole(
       asOrganizationId(req.params.organizationId),
       asRoleId(req.params.roleId),
+      asActorId(sub),
       req.body,
     );
 
@@ -284,9 +316,11 @@ export class OrganizationController {
   }
 
   async deleteRole(req: RoleRequest, res: Response) {
+    const { sub } = req.token;
     const role = await this.organizationService.deleteRole(
       asOrganizationId(req.params.organizationId),
       asRoleId(req.params.roleId),
+      asActorId(sub),
     );
 
     return res.status(200).json({

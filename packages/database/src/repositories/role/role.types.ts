@@ -1,4 +1,5 @@
 import type { OrganizationId } from "../organization/organization.types.js";
+import type { CreatedBy } from "../user/user.types.js";
 
 export type RoleId = string & {
   readonly __brand: "RoleId";
@@ -10,6 +11,7 @@ export type Role = {
   id: RoleId;
   organizationId: OrganizationId;
   name: string;
+  createdBy: CreatedBy;
   isSystemRole: boolean;
   deletedAt?: Date;
   createdAt: Date;
@@ -17,7 +19,6 @@ export type Role = {
 };
 
 export type CreateRoleData = {
-  organizationId: OrganizationId;
   name: string;
   isSystemRole?: boolean;
 };

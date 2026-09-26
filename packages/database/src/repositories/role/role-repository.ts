@@ -1,4 +1,5 @@
 import type { OrganizationId } from "../organization/organization.types.js";
+import type { ActorId } from "../user/user.types.js";
 import type { CreateRoleData, Role, RoleId, UpdateRoleData } from "./role.types.js";
 
 export interface RoleRepository {
@@ -8,9 +9,17 @@ export interface RoleRepository {
 
   findByOrganization(organizationId: OrganizationId): Promise<Role[]>;
 
-  create(data: CreateRoleData): Promise<Role>;
+  create(
+    organizationId: OrganizationId,
+    actorId: ActorId,
+    data: CreateRoleData,
+  ): Promise<Role>;
 
-  update(roleId: RoleId, data: UpdateRoleData): Promise<Role | null>;
+  update(
+    organizationId: OrganizationId,
+    roleId: RoleId,
+    data: UpdateRoleData,
+  ): Promise<Role | null>;
 
-  softDelete(roleId: RoleId): Promise<Role | null>;
+  softDelete(organizationId: OrganizationId, roleId: RoleId): Promise<Role | null>;
 }

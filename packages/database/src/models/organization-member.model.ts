@@ -9,13 +9,13 @@ export const ORGANIZATION_MEMBER_STATUSES = [
 ] as const;
 
 export type OrganizationMemberStatus = (typeof ORGANIZATION_MEMBER_STATUSES)[number];
-export type ObjectId = Types.ObjectId;
 
 export interface IOrganizationMember {
   organizationId: Types.ObjectId;
   userId: Types.ObjectId;
   roleId: Types.ObjectId;
   status: OrganizationMemberStatus;
+  createdBy: Types.ObjectId;
   joinedAt?: Date;
   deletedAt?: Date;
   createdAt: Date;
@@ -51,6 +51,13 @@ const OrganizationMemberSchema = new Schema<IOrganizationMember>(
       default: "invited",
     },
 
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      immutable: true,
+    },
+
     joinedAt: {
       type: Date,
       default: undefined,
@@ -82,8 +89,13 @@ OrganizationMemberSchema.index({
   status: 1,
 });
 
+OrganizationMemberSchema.index({
+  createdBy: 1,
+});
+
 const OrganizationMemberModel = model<IOrganizationMember>(
   "OrganizationMember",
   OrganizationMemberSchema,
 );
+
 export default OrganizationMemberModel;

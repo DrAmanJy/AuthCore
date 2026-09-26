@@ -20,7 +20,7 @@ import type {
 import type { AuthService } from "./auth.service.js";
 
 const REFRESH_TOKEN_COOKIE =
-  config.nodeEnv === "production" ? "__Host-refresh_token" : "__Secure-refresh_token";
+  config.nodeEnv === "production" ? "__Host-refresh_token" : "refresh_token";
 
 export class AuthController {
   constructor(private readonly authService: AuthService) {
@@ -91,9 +91,8 @@ export class AuthController {
   }
 
   async refreshAccessToken(req: Request, res: Response) {
-    const { sid } = req.token;
-
     const cookies = req.cookies as Record<string, unknown>;
+
     const refreshToken: unknown = cookies[REFRESH_TOKEN_COOKIE];
 
     if (typeof refreshToken !== "string") {
@@ -101,7 +100,6 @@ export class AuthController {
     }
 
     const result = await this.authService.refreshAccessToken(
-      sid,
       asRefreshToken(refreshToken),
     );
 
@@ -202,21 +200,28 @@ export class AuthController {
     });
   }
 
-  private setRefreshTokenCookie(res: Response, refreshToken: string): void {
-    res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, {
-      httpOnly: true,
-      secure: config.nodeEnv === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: getDurationMs(config.auth.refreshTokenExpiry),
-    });
-  }
+private setRefreshTokenCookie(
+  res: Response,
+  refreshToken: string,
+): void {
+  const isProduction = config.nodeEnv === "production";
+
+  res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: getDurationMs(config.auth.refreshTokenExpiry),
+  });
+}
 
   private clearRefreshTokenCookie(res: Response): void {
+     const isProduction = config.nodeEnv === "production";
+     
     res.clearCookie(REFRESH_TOKEN_COOKIE, {
       httpOnly: true,
       secure: config.nodeEnv === "production",
-      sameSite: "strict",
+       sameSite: isProduction ? "none" : "lax",
       path: "/",
     });
   }

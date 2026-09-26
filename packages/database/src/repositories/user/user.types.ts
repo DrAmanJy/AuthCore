@@ -4,7 +4,16 @@ export type UserId = string & {
   readonly __brand: "UserId";
 };
 
+export type ActorId = UserId;
+
+export type CreatedBy = {
+  displayName: string;
+  id: UserId;
+};
+
 export const asUserId = (id: string): UserId => id as UserId;
+
+export const asActorId = (id: string): ActorId => id as UserId;
 
 export type UserStatus = (typeof USER_STATUSES)[number];
 
