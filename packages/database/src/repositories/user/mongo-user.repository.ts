@@ -48,10 +48,7 @@ export class MongoUserRepository implements UserRepository {
   }
   async findAllUsers(): Promise<User[]> {
     try {
-      const users = await UserModel.find()
-        .select("_id email displayName status lastLoginAt createdAt updatedAt")
-        .lean()
-        .exec();
+      const users = await UserModel.find().lean().exec();
 
       return users.map(user => this.toUserType(user));
     } catch (error) {
@@ -63,10 +60,7 @@ export class MongoUserRepository implements UserRepository {
     const objectId = toObjectId(userId);
 
     try {
-      const user = await UserModel.findById(objectId)
-        .select("_id email displayName status lastLoginAt createdAt updatedAt")
-        .lean()
-        .exec();
+      const user = await UserModel.findById(objectId).lean().exec();
 
       if (!user) {
         return null;
@@ -83,7 +77,7 @@ export class MongoUserRepository implements UserRepository {
       const user = await UserModel.findOne({
         email: email.toLowerCase().trim(),
       })
-        .select("_id email +passwordHash")
+        .select(" +passwordHash")
         .lean()
         .exec();
 
@@ -102,7 +96,7 @@ export class MongoUserRepository implements UserRepository {
 
     try {
       const user = await UserModel.findById(objectId)
-        .select("_id email +passwordHash")
+        .select(" +passwordHash")
         .lean()
         .exec();
 
@@ -167,7 +161,6 @@ export class MongoUserRepository implements UserRepository {
           runValidators: true,
         },
       )
-        .select("_id email displayName status lastLoginAt createdAt updatedAt")
         .lean()
         .exec();
 
@@ -202,10 +195,7 @@ export class MongoUserRepository implements UserRepository {
     const objectId = toObjectId(userId);
 
     try {
-      const user = await UserModel.findByIdAndDelete(objectId)
-        .select("_id email displayName status lastLoginAt createdAt updatedAt")
-        .lean()
-        .exec();
+      const user = await UserModel.findByIdAndDelete(objectId).lean().exec();
 
       if (!user) {
         return null;
