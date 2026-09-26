@@ -3,15 +3,16 @@ import type { Types } from "mongoose";
 import OrganizationModel from "../../models/organization.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
 
-import {
-  asOrganizationId,
-  type CreateOrganizationData,
-  type Organization,
-  type OrganizationId,
-  type OrganizationStatus,
-  type UpdateOrganizationData,
+import type {
+  CreateOrganizationData,
+  Organization,
+  OrganizationId,
+  OrganizationStatus,
+  UpdateOrganizationData,
 } from "./organization.types.js";
-import { asUserId, type UserId } from "../user/user.types.js";
+import { asOrganizationId } from "./organization.types.js";
+import type { ActorId } from "../user/user.types.js";
+import { asUserId } from "../user/user.types.js";
 import type { OrganizationRepository } from "./organization-repository.js";
 
 type MongoOrganizationRecord = {
@@ -21,7 +22,7 @@ type MongoOrganizationRecord = {
   status: OrganizationStatus;
   createdBy: {
     _id: Types.ObjectId;
-    displayname: string;
+    displayName: string;
   };
   deletedAt?: Date;
   createdAt: Date;
@@ -36,7 +37,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     })
       .populate({
         path: "createdBy",
-        select: "_id displayname",
+        select: "_id displayName",
       })
       .lean<MongoOrganizationRecord>()
       .exec();
@@ -51,7 +52,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     })
       .populate({
         path: "createdBy",
-        select: "_id displayname",
+        select: "_id displayName",
       })
       .lean<MongoOrganizationRecord>()
       .exec();
@@ -65,7 +66,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     })
       .populate({
         path: "createdBy",
-        select: "_id displayname",
+        select: "_id displayName",
       })
       .lean<MongoOrganizationRecord[]>()
       .exec();
@@ -73,14 +74,14 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     return organizations.map(organization => this.toOrganization(organization));
   }
 
-  async findAllByUserId(userId: UserId): Promise<Organization[]> {
+  async findAllByActorId(actorId: ActorId): Promise<Organization[]> {
     const organizations = await OrganizationModel.find({
-      createdBy: toObjectId(userId),
+      createdBy: toObjectId(actorId),
       deletedAt: { $exists: false },
     })
       .populate({
         path: "createdBy",
-        select: "_id displayname",
+        select: "_id displayName",
       })
       .lean<MongoOrganizationRecord[]>()
       .exec();
@@ -88,13 +89,16 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     return organizations.map(organization => this.toOrganization(organization));
   }
 
-  async create(data: CreateOrganizationData): Promise<Organization> {
-    const organization = await OrganizationModel.create(data);
+  async create(actorId: ActorId, data: CreateOrganizationData): Promise<Organization> {
+    const organization = await OrganizationModel.create({
+      ...data,
+      createdBy: toObjectId(actorId),
+    });
 
     const populatedOrganization = await OrganizationModel.findById(organization._id)
       .populate({
         path: "createdBy",
-        select: "_id displayname",
+        select: "_id displayName",
       })
       .lean<MongoOrganizationRecord>()
       .exec();
@@ -108,6 +112,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
 
   async update(
     organizationId: OrganizationId,
+    actorId: ActorId,
     data: UpdateOrganizationData,
   ): Promise<Organization | null> {
     const update: Partial<UpdateOrganizationData> = {};
@@ -127,6 +132,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     const organization = await OrganizationModel.findOneAndUpdate(
       {
         _id: toObjectId(organizationId),
+        createdBy: toObjectId(actorId),
         deletedAt: { $exists: false },
       },
       {
@@ -139,7 +145,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     )
       .populate({
         path: "createdBy",
-        select: "_id displayname",
+        select: "_id displayName",
       })
       .lean<MongoOrganizationRecord>()
       .exec();
@@ -147,10 +153,14 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     return organization ? this.toOrganization(organization) : null;
   }
 
-  async softDelete(organizationId: OrganizationId): Promise<Organization | null> {
+  async softDelete(
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<Organization | null> {
     const organization = await OrganizationModel.findOneAndUpdate(
       {
         _id: toObjectId(organizationId),
+        createdBy: toObjectId(actorId),
         deletedAt: { $exists: false },
       },
       {
@@ -165,7 +175,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     )
       .populate({
         path: "createdBy",
-        select: "_id displayname",
+        select: "_id displayName",
       })
       .lean<MongoOrganizationRecord>()
       .exec();
@@ -179,14 +189,16 @@ export class MongoOrganizationRepository implements OrganizationRepository {
       name: record.name,
       slug: record.slug,
       status: record.status,
+
       ...(record.deletedAt !== undefined && {
         deletedAt: record.deletedAt,
       }),
 
       createdBy: {
         id: asUserId(record.createdBy._id.toString()),
-        displayname: record.createdBy.displayname,
+        displayName: record.createdBy.displayName,
       },
+
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };

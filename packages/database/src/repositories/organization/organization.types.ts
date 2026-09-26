@@ -1,4 +1,4 @@
-import type { CreatedBy, UserId } from "../user/user.types.js";
+import type { CreatedBy } from "../user/user.types.js";
 
 export type OrganizationId = string & {
   readonly __brand: "OrganizationId";
@@ -22,7 +22,6 @@ export type Organization = {
 export type CreateOrganizationData = {
   name: string;
   slug: string;
-  createdBy: UserId;
 };
 
 export type UpdateOrganizationData = {
