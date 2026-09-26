@@ -1,6 +1,6 @@
 import type { OrganizationId } from "../organization/organization.types.js";
 import type { RoleId } from "../role/role.types.js";
-import type { UserId } from "../user/user.types.js";
+import type { CreatedBy, UserId } from "../user/user.types.js";
 
 export type OrganizationMemberId = string & {
   readonly __brand: "OrganizationMemberId";
@@ -24,6 +24,7 @@ export type OrganizationMember = {
   userId: UserId;
   roleId: RoleId;
   status: OrganizationMemberStatus;
+  createdBy: CreatedBy;
   joinedAt?: Date;
   deletedAt?: Date;
   createdAt: Date;
@@ -31,10 +32,8 @@ export type OrganizationMember = {
 };
 
 export type CreateOrganizationMemberData = {
-  organizationId: OrganizationId;
   userId: UserId;
   roleId: RoleId;
-  status?: OrganizationMemberStatus;
 };
 
 export type UpdateOrganizationMemberData = {
@@ -45,6 +44,7 @@ export type UpdateOrganizationMemberData = {
 export type FindOrganizationMemberCriteria =
   | {
       type: "id";
+      organizationId: OrganizationId;
       value: OrganizationMemberId;
     }
   | {
