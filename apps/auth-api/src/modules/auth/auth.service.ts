@@ -48,7 +48,6 @@ export class AuthService {
       type: "email",
       value: data.email,
     });
-
     this.userService.validateAccountStatus(user);
 
     const isValidPassword = await this.passwordService.verify(
@@ -91,11 +90,8 @@ export class AuthService {
     return user;
   }
 
-  async refreshAccessToken(
-    sessionId: SessionId,
-    refreshToken: RefreshToken,
-  ): Promise<CreateSessionResult> {
-    return this.sessionService.rotateRefreshToken(sessionId, refreshToken);
+  async refreshAccessToken(refreshToken: RefreshToken): Promise<CreateSessionResult> {
+    return this.sessionService.rotateRefreshToken(refreshToken);
   }
 
   async verifyEmail(token: string): Promise<void> {
