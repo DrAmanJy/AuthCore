@@ -127,54 +127,42 @@ export class SessionService {
     );
   }
 
-  async rotateRefreshToken(
-    sessionId: SessionId,
-    refreshToken: RefreshToken,
-  ): Promise<CreateSessionResult> {
+  async rotateRefreshToken(refreshToken: RefreshToken): Promise<CreateSessionResult> {
+    const refreshTokenHash = this.hashRefreshToken(refreshToken);
+
+    const currentRefreshToken =
+      await this.refreshTokenRepository.findByHash(refreshTokenHash);
+
+    if (!currentRefreshToken) {
+      throw new Error("Invalid refresh token");
+    }
+
+    if (currentRefreshToken.usedAt) {
+      await this.refreshTokenRepository.markReuseDetected(currentRefreshToken.id);
+
+      await this.refreshTokenRepository.revokeFamily(currentRefreshToken.tokenFamilyId);
+
+      throw new Error("Refresh token reuse detected");
+    }
+
+    const now = new Date();
+
+    if (currentRefreshToken.revokedAt || currentRefreshToken.expiresAt <= now) {
+      throw new Error("Invalid refresh token");
+    }
+
     const session = await this.sessionRepository.findSession({
       type: "id",
-      value: sessionId,
+      value: currentRefreshToken.sessionId,
     });
 
     if (!session) {
       throw new Error("Invalid session");
     }
 
-    if (session.revokedAt || session.expiresAt <= new Date()) {
+    if (session.revokedAt || session.expiresAt <= now) {
       throw new Error("Invalid session");
     }
-
-    const refreshTokenHash = this.hashRefreshToken(refreshToken);
-
-    const currentRefreshTokenRecord =
-      await this.refreshTokenRepository.findByHash(refreshTokenHash);
-
-    if (!currentRefreshTokenRecord) {
-      throw new Error("Invalid refresh token");
-    }
-
-    if (currentRefreshTokenRecord.sessionId !== session.id) {
-      throw new Error("Invalid refresh token");
-    }
-
-    if (
-      currentRefreshTokenRecord.revokedAt ||
-      currentRefreshTokenRecord.expiresAt <= new Date()
-    ) {
-      throw new Error("Invalid refresh token");
-    }
-
-    if (currentRefreshTokenRecord.usedAt) {
-      await this.refreshTokenRepository.markReuseDetected(currentRefreshTokenRecord.id);
-
-      await this.refreshTokenRepository.revokeFamily(
-        currentRefreshTokenRecord.tokenFamilyId,
-      );
-
-      throw new Error("Refresh token reuse detected");
-    }
-
-    await this.refreshTokenRepository.markAsUsed(currentRefreshTokenRecord.id);
 
     const { refreshToken: newRefreshToken, refreshTokenHash: newRefreshTokenHash } =
       this.generateRefreshToken();
@@ -186,10 +174,12 @@ export class SessionService {
       ),
     );
 
+    await this.refreshTokenRepository.markAsUsed(currentRefreshToken.id);
+
     await this.refreshTokenRepository.create({
       sessionId: session.id,
-      parentTokenId: currentRefreshTokenRecord.id,
-      tokenFamilyId: currentRefreshTokenRecord.tokenFamilyId,
+      parentTokenId: currentRefreshToken.id,
+      tokenFamilyId: currentRefreshToken.tokenFamilyId,
       tokenHash: newRefreshTokenHash,
       expiresAt: refreshTokenExpiresAt,
     });
