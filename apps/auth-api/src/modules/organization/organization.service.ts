@@ -17,6 +17,9 @@ import type {
   UpdateRoleData,
   UserId,
 } from "@authcore/database";
+import { ResourceError } from "../../errors/resource-error.js";
+import { ERROR_CODES } from "../../errors/error-codes.js";
+import { InternalServerError } from "../../errors/internal-server-error.js";
 
 export class OrganizationService {
   constructor(
@@ -72,7 +75,7 @@ export class OrganizationService {
     );
 
     if (!updatedOrganization) {
-      throw new Error("Organization not found or modification is not allowed.");
+      throw new InternalServerError();
     }
 
     return updatedOrganization;
@@ -92,7 +95,7 @@ export class OrganizationService {
     );
 
     if (!organizationDeleted) {
-      throw new Error("Organization could not be deleted.");
+      throw new InternalServerError();
     }
 
     return organizationDeleted;
@@ -125,7 +128,7 @@ export class OrganizationService {
     );
 
     if (!member) {
-      throw new Error("Organization member not found");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
     }
 
     return member;
@@ -152,7 +155,7 @@ export class OrganizationService {
     );
 
     if (existingMember) {
-      throw new Error("User is already a member of this organization");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_ALREADY_EXISTS);
     }
 
     return this.organizationMemberRepository.create(actorId, organizationId, data);
@@ -179,7 +182,7 @@ export class OrganizationService {
     );
 
     if (!updatedMember) {
-      throw new Error("Organization member not found or modification is not allowed.");
+      throw new InternalServerError();
     }
 
     return updatedMember;
@@ -193,7 +196,7 @@ export class OrganizationService {
     const member = await this.getMember(organizationId, memberId);
 
     if (member.status !== "active") {
-      throw new Error("Only active members can be removed");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
     return this.updateMember(organizationId, memberId, actorId, {
@@ -209,7 +212,7 @@ export class OrganizationService {
     const member = await this.getMember(organizationId, memberId);
 
     if (member.status !== "active") {
-      throw new Error("Only active members can be suspended");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
     return this.updateMember(organizationId, memberId, actorId, {
@@ -225,7 +228,7 @@ export class OrganizationService {
     const member = await this.getMember(organizationId, memberId);
 
     if (member.status !== "suspended") {
-      throw new Error("Only suspended members can be activated");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_SUSPENDED);
     }
 
     return this.updateMember(organizationId, memberId, actorId, {
@@ -251,7 +254,7 @@ export class OrganizationService {
     const role = await this.roleRepository.findByName(organizationId, name);
 
     if (!role) {
-      throw new Error("Role not found");
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     return role;
@@ -275,7 +278,7 @@ export class OrganizationService {
     const existingRole = await this.roleRepository.findByName(organizationId, data.name);
 
     if (existingRole) {
-      throw new Error("Role already exists");
+      throw new ResourceError(ERROR_CODES.ROLE_ALREADY_EXISTS);
     }
 
     return this.roleRepository.create(organizationId, actorId, data);
@@ -298,7 +301,7 @@ export class OrganizationService {
     const updatedRole = await this.roleRepository.update(organizationId, roleId, data);
 
     if (!updatedRole) {
-      throw new Error("Role not found or modification is not allowed.");
+      throw new InternalServerError();
     }
 
     return updatedRole;
@@ -320,7 +323,7 @@ export class OrganizationService {
     const deletedRole = await this.roleRepository.softDelete(organizationId, roleId);
 
     if (!deletedRole) {
-      throw new Error("Role not found or deletion is not allowed.");
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     return deletedRole;
@@ -332,13 +335,13 @@ export class OrganizationService {
 
   private requireOrganizationCreator(actorId: ActorId, organization: Organization): void {
     if (organization.createdBy.id !== actorId) {
-      throw new Error("Only the organization creator can modify this resource.");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_CREATOR_ONLY);
     }
   }
 
   private requireModifiableRole(role: Role): void {
     if (role.isSystemRole) {
-      throw new Error("System roles cannot be modified.");
+      throw new ResourceError(ERROR_CODES.ROLE_SYSTEM_PROTECTED);
     }
   }
 
@@ -356,11 +359,11 @@ export class OrganizationService {
 
   private requireActiveOrganization(organization: Organization | null): Organization {
     if (!organization) {
-      throw new Error("Organization not found");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
     }
 
     if (organization.status !== "active") {
-      throw new Error("Organization is not active");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_INACTIVE);
     }
 
     return organization;
@@ -375,11 +378,11 @@ export class OrganizationService {
     organizationId: OrganizationId,
   ): OrganizationMember {
     if (!member) {
-      throw new Error("Organization member not found");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
     }
 
     if (member.organizationId !== organizationId) {
-      throw new Error("Organization member not found");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
     }
 
     return member;
@@ -390,19 +393,19 @@ export class OrganizationService {
     data: UpdateOrganizationMemberData,
   ): void {
     if (member.status === "removed") {
-      throw new Error("Removed members cannot be updated");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_REMOVED);
     }
 
     if (data.status === "active" && member.status !== "suspended") {
-      throw new Error("Only suspended members can be activated");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_SUSPENDED);
     }
 
     if (data.status === "suspended" && member.status !== "active") {
-      throw new Error("Only active members can be suspended");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
     if (data.status === "removed") {
-      throw new Error("Use removeMember to remove a member");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_REMOVE_DIRECTLY);
     }
   }
 
@@ -415,11 +418,11 @@ export class OrganizationService {
     organizationId: OrganizationId,
   ): Role {
     if (!role) {
-      throw new Error("Role not found");
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     if (role.organizationId !== organizationId) {
-      throw new Error("Role not found");
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     return role;

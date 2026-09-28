@@ -20,6 +20,8 @@ import type {
 import type { PasswordService } from "./password.service.js";
 import type { RecoveryService } from "./recovery.service.js";
 import type { SessionService } from "./session.service.js";
+import { AuthenticationError } from "../../errors/authentication-error.js";
+import { ERROR_CODES } from "../../errors/error-codes.js";
 
 export class AuthService {
   constructor(
@@ -56,7 +58,7 @@ export class AuthService {
     );
 
     if (!isValidPassword) {
-      throw new Error("Invalid credentials");
+      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
     const session = await this.sessionService.createSession({
@@ -161,7 +163,7 @@ export class AuthService {
     );
 
     if (!isValidPassword) {
-      throw new Error("Invalid password");
+      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
     const passwordHash = await this.passwordService.hash(data.newPassword);

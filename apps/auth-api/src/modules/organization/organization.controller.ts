@@ -17,6 +17,7 @@ import type {
 } from "@authcore/database";
 
 import type { OrganizationService } from "./organization.service.js";
+import { sendCreated, sendSuccess } from "../../utils/response.utils.js";
 
 type OrganizationParams = {
   organizationId: string;
@@ -82,9 +83,7 @@ export class OrganizationController {
       asActorId(sub),
     );
 
-    return res.status(200).json({
-      data: { organizations },
-    });
+    sendSuccess(res, organizations, "Organizations successfully retrieved");
   }
 
   async createOrganization(
@@ -98,10 +97,7 @@ export class OrganizationController {
       req.body,
     );
 
-    return res.status(201).json({
-      message: "Organization created successfully",
-      data: { organization },
-    });
+    sendCreated(res, organization, "Organization successfully created");
   }
 
   async getOrganizationBySlug(req: Request, res: Response) {
@@ -113,9 +109,7 @@ export class OrganizationController {
 
     const organization = await this.organizationService.getOrganizationBySlug(slug);
 
-    return res.status(200).json({
-      data: { organization },
-    });
+    sendSuccess(res, organization, "Organization successfully retrieved");
   }
 
   async getOrganization(req: OrganizationByIdRequest, res: Response) {
@@ -123,9 +117,7 @@ export class OrganizationController {
       asOrganizationId(req.params.organizationId),
     );
 
-    return res.status(200).json({
-      data: { organization },
-    });
+    sendSuccess(res, organization, "Organization successfully retrieved");
   }
 
   async updateOrganization(
@@ -139,10 +131,7 @@ export class OrganizationController {
       req.body,
     );
 
-    return res.status(200).json({
-      message: "Organization updated successfully",
-      data: { organization },
-    });
+    sendSuccess(res, organization, "Organization successfully updated");
   }
 
   async deleteOrganization(req: OrganizationByIdRequest, res: Response) {
@@ -152,11 +141,7 @@ export class OrganizationController {
       asOrganizationId(req.params.organizationId),
       asActorId(sub),
     );
-
-    return res.status(200).json({
-      message: "Organization deleted successfully",
-      data: { organization },
-    });
+    sendSuccess(res, organization, "Organization successfully deleted");
   }
 
   // ─────────────────────────────────────────────
@@ -168,9 +153,7 @@ export class OrganizationController {
       asOrganizationId(req.params.organizationId),
     );
 
-    return res.status(200).json({
-      data: { members },
-    });
+    sendSuccess(res, members, "Organization Members successfully retrieved");
   }
 
   async createMember(
@@ -184,10 +167,7 @@ export class OrganizationController {
       req.body,
     );
 
-    return res.status(201).json({
-      message: "Organization member created successfully",
-      data: { member },
-    });
+    sendCreated(res, member, "Organization Member successfully created");
   }
 
   async getMember(req: MemberRequest, res: Response) {
@@ -196,9 +176,7 @@ export class OrganizationController {
       asOrganizationMemberId(req.params.memberId),
     );
 
-    return res.status(200).json({
-      data: { member },
-    });
+    sendSuccess(res, member, "Organization Member successfully retrieved");
   }
 
   async updateMember(req: MemberRequest<UpdateOrganizationMemberData>, res: Response) {
@@ -210,10 +188,7 @@ export class OrganizationController {
       req.body,
     );
 
-    return res.status(200).json({
-      message: "Organization member updated successfully",
-      data: { member },
-    });
+    sendSuccess(res, member, "Organization Member successfully updated");
   }
 
   async activateMember(req: MemberRequest, res: Response) {
@@ -224,10 +199,7 @@ export class OrganizationController {
       asActorId(sub),
     );
 
-    return res.status(200).json({
-      message: "Organization member activated successfully",
-      data: { member },
-    });
+    sendSuccess(res, member, "Organization Member successfully activated");
   }
 
   async suspendMember(req: MemberRequest, res: Response) {
@@ -238,10 +210,7 @@ export class OrganizationController {
       asActorId(sub),
     );
 
-    return res.status(200).json({
-      message: "Organization member suspended successfully",
-      data: { member },
-    });
+    sendSuccess(res, member, "Organization Member successfully suspended");
   }
 
   async removeMember(req: MemberRequest, res: Response) {
@@ -252,10 +221,7 @@ export class OrganizationController {
       asActorId(sub),
     );
 
-    return res.status(200).json({
-      message: "Organization member removed successfully",
-      data: { member },
-    });
+    sendSuccess(res, member, "Organization Member successfully removed");
   }
 
   // ─────────────────────────────────────────────
@@ -267,9 +233,7 @@ export class OrganizationController {
       asOrganizationId(req.params.organizationId),
     );
 
-    return res.status(200).json({
-      data: { roles },
-    });
+    sendSuccess(res, roles, "Roles successfully retrieved");
   }
 
   async createRole(
@@ -283,10 +247,7 @@ export class OrganizationController {
       req.body,
     );
 
-    return res.status(201).json({
-      message: "Role created successfully",
-      data: { role },
-    });
+    sendCreated(res, role, "Role successfully created");
   }
 
   async getRole(req: RoleRequest, res: Response) {
@@ -295,9 +256,7 @@ export class OrganizationController {
       asRoleId(req.params.roleId),
     );
 
-    return res.status(200).json({
-      data: { role },
-    });
+    sendSuccess(res, role, "Role successfully retrieved");
   }
 
   async updateRole(req: RoleRequest<UpdateRoleData>, res: Response) {
@@ -309,10 +268,7 @@ export class OrganizationController {
       req.body,
     );
 
-    return res.status(200).json({
-      message: "Role updated successfully",
-      data: { role },
-    });
+    sendSuccess(res, role, "Role successfully updated");
   }
 
   async deleteRole(req: RoleRequest, res: Response) {
@@ -323,9 +279,6 @@ export class OrganizationController {
       asActorId(sub),
     );
 
-    return res.status(200).json({
-      message: "Role deleted successfully",
-      data: { role },
-    });
+    sendSuccess(res, role, "Role successfully deleted");
   }
 }
