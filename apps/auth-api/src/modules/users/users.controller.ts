@@ -5,6 +5,7 @@ import { asUserId } from "@authcore/database";
 import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
 
 import type { UserService } from "./users.service.js";
+import { sendSuccess } from "../../utils/response.utils.js";
 
 type UserParams = {
   userId: string;
@@ -27,38 +28,21 @@ export class UserController {
   async getUserById(req: UserRequest, res: Response) {
     const user = await this.userService.getUserById(asUserId(req.params.userId));
 
-    return res.status(200).json({
-      message: "User retrieved successfully",
-      data: {
-        user,
-      },
-    });
+    sendSuccess(res, user, "User successfully retrieved");
   }
 
   async getAuthenticatedUser(req: Request, res: Response) {
     const { userId } = req.user;
 
     const user = await this.userService.getUserById(asUserId(userId));
-
-    return res.status(200).json({
-      message: "Authenticated user retrieved successfully",
-      data: {
-        user,
-      },
-    });
+    sendSuccess(res, user, "Authenticated user successfully retrieved");
   }
 
   async updateUserProfile(req: UserRequest<UpdateProfile>, res: Response) {
     const user = await this.userService.updateProfile(asUserId(req.params.userId), {
       displayName: req.body.displayName,
     });
-
-    return res.status(200).json({
-      message: "User profile updated successfully",
-      data: {
-        user,
-      },
-    });
+    sendSuccess(res, user, "User profile successfully updated");
   }
 
   async updateUserEmail(req: UserRequest<ChangeEmail>, res: Response) {
@@ -66,54 +50,29 @@ export class UserController {
       email: req.body.email,
     });
 
-    return res.status(200).json({
-      message: "User email updated successfully",
-      data: {
-        user,
-      },
-    });
+    sendSuccess(res, user, "User email successfully updated");
   }
 
   async deleteUser(req: UserRequest, res: Response) {
-    await this.userService.deleteUser(asUserId(req.params.userId));
+    const user = await this.userService.deleteUser(asUserId(req.params.userId));
 
-    return res.status(200).json({
-      message: "User deleted successfully",
-    });
+    sendSuccess(res, user, "User successfully deleted");
   }
 
   async getAllUsers(_req: Request, res: Response) {
     const users = await this.userService.getAllUsers();
-
-    return res.status(200).json({
-      message: "Users retrieved successfully",
-      data: {
-        users,
-      },
-    });
+    sendSuccess(res, users, "Users successfully retrieved");
   }
 
   async changeUserStatus(req: UserRequest<ChangeStatus>, res: Response) {
     const user = await this.userService.changeStatus(asUserId(req.params.userId), {
       status: req.body.status,
     });
-
-    return res.status(200).json({
-      message: "User status updated successfully",
-      data: {
-        user,
-      },
-    });
+    sendSuccess(res, user, "User status successfully updated");
   }
 
   async deactivateUser(req: UserRequest, res: Response) {
     const user = await this.userService.deactivateUser(asUserId(req.params.userId));
-
-    return res.status(200).json({
-      message: "User status deactivated successfully",
-      data: {
-        user,
-      },
-    });
+    sendSuccess(res, user, "User successfully deactivated");
   }
 }

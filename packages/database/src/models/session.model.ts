@@ -103,8 +103,6 @@ export const SessionSchema = new Schema<ISession>(
   },
 );
 
-SessionSchema.index({ refreshTokenHash: 1 }, { unique: true });
-
 SessionSchema.index({
   userId: 1,
   organizationId: 1,

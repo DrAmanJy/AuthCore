@@ -1,5 +1,5 @@
 import type { OrganizationId } from "../organization/organization.types.js";
-import type { UserId } from "../user/user.types.js";
+import type { ActorId, UserId } from "../user/user.types.js";
 import type {
   CreateOrganizationMemberData,
   OrganizationMember,
@@ -19,12 +19,20 @@ export interface OrganizationMemberRepository {
 
   findAll(): Promise<OrganizationMember[]>;
 
-  create(data: CreateOrganizationMemberData): Promise<OrganizationMember>;
+  create(
+    actorId: ActorId,
+    organizationId: OrganizationId,
+    data: CreateOrganizationMemberData,
+  ): Promise<OrganizationMember>;
 
   update(
+    organizationId: OrganizationId,
     memberId: OrganizationMemberId,
     data: UpdateOrganizationMemberData,
   ): Promise<OrganizationMember | null>;
 
-  remove(memberId: OrganizationMemberId): Promise<OrganizationMember | null>;
+  softDelete(
+    organizationId: OrganizationId,
+    memberId: OrganizationMemberId,
+  ): Promise<OrganizationMember | null>;
 }

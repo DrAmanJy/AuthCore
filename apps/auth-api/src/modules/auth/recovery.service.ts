@@ -1,8 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { config } from "@authcore/config";
-import { asVerificationTokenHash } from "@authcore/database";
-import { getExpiryTime } from "@authcore/database";
+import { asVerificationTokenHash, getExpiryTime } from "@authcore/database";
+
 import type {
   VerificationTokenId,
   UserId,
@@ -10,7 +10,15 @@ import type {
   VerificationTokenRepository,
   VerificationTokenType,
 } from "@authcore/database";
+
 import type { CreateRecoveryTokenData, RecoveryTokenResult } from "./auth.types.js";
+
+import {
+  AuthenticationError,
+  TokenExpiredError,
+} from "../../errors/authentication-error.js";
+
+import { ERROR_CODES } from "../../errors/error-codes.js";
 
 export class RecoveryService {
   constructor(
@@ -45,7 +53,7 @@ export class RecoveryService {
     const token = await this.verificationTokenRepository.markAsUsed(tokenId);
 
     if (!token) {
-      throw new Error("Verification token not found");
+      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_NOT_FOUND);
     }
   }
 
@@ -61,19 +69,22 @@ export class RecoveryService {
     });
 
     if (!verificationToken) {
-      throw new Error("Invalid or expired token");
+      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_INVALID);
     }
 
     if (verificationToken.type !== type) {
-      throw new Error("Invalid token");
+      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_INVALID);
     }
 
     if (verificationToken.usedAt) {
-      throw new Error("Token has already been used");
+      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_USED);
     }
 
     if (verificationToken.expiresAt <= new Date()) {
-      throw new Error("Token has expired");
+      throw new TokenExpiredError(
+        ERROR_CODES.AUTH_VERIFICATION_TOKEN_EXPIRED,
+        verificationToken.expiresAt,
+      );
     }
 
     return verificationToken;

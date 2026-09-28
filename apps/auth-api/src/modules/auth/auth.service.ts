@@ -20,6 +20,8 @@ import type {
 import type { PasswordService } from "./password.service.js";
 import type { RecoveryService } from "./recovery.service.js";
 import type { SessionService } from "./session.service.js";
+import { AuthenticationError } from "../../errors/authentication-error.js";
+import { ERROR_CODES } from "../../errors/error-codes.js";
 
 export class AuthService {
   constructor(
@@ -48,7 +50,6 @@ export class AuthService {
       type: "email",
       value: data.email,
     });
-
     this.userService.validateAccountStatus(user);
 
     const isValidPassword = await this.passwordService.verify(
@@ -57,7 +58,7 @@ export class AuthService {
     );
 
     if (!isValidPassword) {
-      throw new Error("Invalid credentials");
+      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
     const session = await this.sessionService.createSession({
@@ -91,11 +92,8 @@ export class AuthService {
     return user;
   }
 
-  async refreshAccessToken(
-    sessionId: SessionId,
-    refreshToken: RefreshToken,
-  ): Promise<CreateSessionResult> {
-    return this.sessionService.rotateRefreshToken(sessionId, refreshToken);
+  async refreshAccessToken(refreshToken: RefreshToken): Promise<CreateSessionResult> {
+    return this.sessionService.rotateRefreshToken(refreshToken);
   }
 
   async verifyEmail(token: string): Promise<void> {
@@ -165,7 +163,7 @@ export class AuthService {
     );
 
     if (!isValidPassword) {
-      throw new Error("Invalid password");
+      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
     const passwordHash = await this.passwordService.hash(data.newPassword);

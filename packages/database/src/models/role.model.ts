@@ -4,6 +4,7 @@ import { model, Schema } from "mongoose";
 export interface IRole {
   organizationId: Types.ObjectId;
   name: string;
+  createdBy: Types.ObjectId;
   isSystemRole: boolean;
   deletedAt?: Date;
   createdAt: Date;
@@ -25,6 +26,13 @@ const RoleSchema = new Schema<IRole>(
       trim: true,
       minlength: 2,
       maxlength: 64,
+    },
+
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      immutable: true,
     },
 
     isSystemRole: {
@@ -53,5 +61,9 @@ RoleSchema.index(
     },
   },
 );
+
+RoleSchema.index({
+  createdBy: 1,
+});
 
 export const RoleModel = model<IRole>("Role", RoleSchema);
