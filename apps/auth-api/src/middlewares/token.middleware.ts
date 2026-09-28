@@ -1,8 +1,13 @@
-import { config } from "@authcore/config";
-import { asOrganizationId, asSessionId, asUserId } from "@authcore/database";
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
+import { ERROR_CODES } from "../errors/error-codes.js";
+import {
+  AuthenticationError,
+  TokenExpiredError,
+} from "../errors/authentication-error.js";
+import { config } from "@authcore/config";
+import { asOrganizationId, asSessionId, asUserId } from "@authcore/database";
 import type { AccessTokenPayload } from "../modules/auth/auth.types.js";
 
 export function validateAccessToken(
@@ -13,41 +18,53 @@ export function validateAccessToken(
   const authorization = req.headers.authorization;
 
   if (!authorization) {
-    throw new Error("Authorization header not provided");
+    throw new AuthenticationError(ERROR_CODES.AUTHORIZATION_HEADER_MISSING);
   }
 
   const [scheme, token, ...extra] = authorization.trim().split(/\s+/);
 
   if (scheme !== "Bearer" || !token || extra.length > 0) {
-    throw new Error("Invalid authorization header");
+    throw new AuthenticationError(ERROR_CODES.AUTHORIZATION_HEADER_INVALID);
   }
 
-  const decoded = jwt.verify(token, config.auth.jwtPublicKey, {
-    algorithms: ["RS256"],
-    issuer: config.auth.jwtIssuer,
-  });
+  let decoded: string | jwt.JwtPayload;
+
+  try {
+    decoded = jwt.verify(token, config.auth.jwtPublicKey, {
+      algorithms: ["RS256"],
+      issuer: config.auth.jwtIssuer,
+    });
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new TokenExpiredError(ERROR_CODES.AUTH_TOKEN_EXPIRED, error.expiredAt, {
+        cause: error,
+      });
+    }
+
+    throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_TOKEN, {
+      cause: error,
+    });
+  }
 
   if (typeof decoded === "string") {
-    throw new Error("Invalid access token");
+    throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_TOKEN);
   }
 
-  const payload = decoded;
-
   if (
-    typeof payload.sub !== "string" ||
-    typeof payload.sid !== "string" ||
-    typeof payload.orgId !== "string" ||
-    typeof payload.jti !== "string" ||
-    payload.type !== "access"
+    typeof decoded.sub !== "string" ||
+    typeof decoded.sid !== "string" ||
+    typeof decoded.orgId !== "string" ||
+    typeof decoded.jti !== "string" ||
+    decoded.type !== "access"
   ) {
-    throw new Error("Invalid access token payload");
+    throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_TOKEN);
   }
 
   const accessToken: AccessTokenPayload = {
-    sub: asUserId(payload.sub),
-    sid: asSessionId(payload.sid),
-    orgId: asOrganizationId(payload.orgId),
-    jti: payload.jti,
+    sub: asUserId(decoded.sub),
+    sid: asSessionId(decoded.sid),
+    orgId: asOrganizationId(decoded.orgId),
+    jti: decoded.jti,
     type: "access",
   };
 
