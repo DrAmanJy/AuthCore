@@ -60,6 +60,8 @@ export const EnvironmentSchema = z
 
     CORS_ORIGIN: z.url("CORS_ORIGIN must be a valid URL"),
 
+    FRONTEND_URL: z.url("FRONTEND_URL must be a valid URL"),
+
     DATABASE_URL: databaseUrlSchema,
 
     REDIS_URL: redisUrlSchema,
@@ -87,6 +89,22 @@ export const EnvironmentSchema = z
     AWS_ACCESS_KEY_ID: requiredStringSchema("AWS_ACCESS_KEY_ID"),
 
     AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY is required"),
+
+    AWS_EMAIL_QUEUE_URL: z.string().min(1, "AWS_EMAIL_QUEUE_URL is required"),
+
+    RESEND_API_KEY: z
+      .string()
+      .min(1, "RESEND_API is required")
+      .refine(val => val.startsWith("re_"), {
+        error: "RESEND_API is invalid API key",
+      }),
+
+    EMAIL_FROM: z.email({
+      error: iss =>
+        iss.input === "" || iss.input === undefined
+          ? "EMAIL_FROM is required"
+          : "EMAIL_FROM is invalid email",
+    }),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") {
