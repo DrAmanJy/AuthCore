@@ -20,6 +20,7 @@ import type {
 import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { InternalServerError } from "../../errors/internal-server-error.js";
+import { logger } from "@authcore/logger";
 
 export class OrganizationService {
   constructor(
@@ -56,7 +57,12 @@ export class OrganizationService {
     actorId: ActorId,
     data: CreateOrganizationData,
   ): Promise<Organization> {
-    return this.organizationRepository.create(actorId, data);
+    const organization = await this.organizationRepository.create(actorId, data);
+    logger.info(
+      { event: "organization.create.success", actorId, orgId: organization.id },
+      "Organization created successfully",
+    );
+    return organization;
   }
 
   async updateOrganization(
@@ -78,6 +84,15 @@ export class OrganizationService {
       throw new InternalServerError();
     }
 
+    logger.info(
+      {
+        event: "organization.update.success",
+        actorId,
+        organizationId: organization.id,
+      },
+      "Organization updated successfully",
+    );
+
     return updatedOrganization;
   }
 
@@ -97,6 +112,10 @@ export class OrganizationService {
     if (!organizationDeleted) {
       throw new InternalServerError();
     }
+    logger.info(
+      { event: "organization.delete.success", actorId, orgId: organization.id },
+      "Organization deleted successfully",
+    );
 
     return organizationDeleted;
   }
