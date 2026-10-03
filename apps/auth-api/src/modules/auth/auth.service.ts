@@ -43,7 +43,22 @@ export class AuthService {
       passwordHash,
     });
 
-    // TODO: Push verify-email job to SQS.
+    const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
+
+    await this.emailQueue.publishVerificationEmail({
+      userId: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      verificationToken: token,
+    });
+
+    logger.info(
+      {
+        event: "auth.register.success",
+        userId: user.id,
+      },
+      "User registered successfully",
+    );
 
     return user;
   }
