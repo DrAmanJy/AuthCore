@@ -144,13 +144,26 @@ export class AuthService {
   }
 
   async resendVerification(userId: UserId): Promise<void> {
-    const { token, expiresAt } =
-      await this.recoveryService.createEmailVerificationToken(userId);
+    const user = await this.userService.getUserById(userId);
+    if (user.status !== "pending") {
+      throw new AuthenticationError("USER_ACCOUNT_PENDING");
+    }
+    const { token } = await this.recoveryService.createEmailVerificationToken(userId);
 
-    // TODO: Push verify-email job to SQS.
+    await this.emailQueue.publishVerificationEmail({
+      displayName: user.displayName,
+      email: user.email,
+      userId,
+      verificationToken: token,
+    });
 
-    void token;
-    void expiresAt;
+    logger.info(
+      {
+        event: "auth.email.verification.resend.requested",
+        userId,
+      },
+      "Verification email resend requested",
+    );
   }
 
   async forgotPassword(email: string): Promise<void> {
@@ -165,8 +178,19 @@ export class AuthService {
       user.id,
     );
 
-    // TODO: Push password-reset email job to SQS.
+    await this.emailQueue.publishPasswordResetEmail({
+      displayName: user.displayName,
+      email: user.email,
+      resetToken: token,
+      userId: user.id,
+    });
 
+    logger.info(
+      {
+        event: "auth.password.reset.requested",
+      },
+      "Password reset requested",
+    );
     void token;
     void expiresAt;
   }
