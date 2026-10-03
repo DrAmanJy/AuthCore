@@ -85,6 +85,10 @@ export class AuthService {
       device: data.device,
     });
 
+    logger.info(
+      { event: "auth.login.success", userId: user.id },
+      "User logged in successfully",
+    );
     const {
       passwordHash: _passwordHash,
       emailVerified: _emailVerified,
@@ -105,6 +109,11 @@ export class AuthService {
       data.userId,
       data.organizationId,
       "User logout",
+    );
+
+    logger.info(
+      { event: "auth.logout.success", userId: user.id },
+      "User logged out successfully",
     );
 
     return user;
