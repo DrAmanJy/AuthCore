@@ -208,7 +208,10 @@ export class AuthService {
     await this.sessionService.revokeAllUserSessions(user.id, undefined, "Password reset");
 
     await this.recoveryService.markTokenAsUsed(verificationToken.id);
-
+    logger.info(
+      { event: "auth.password.reset.success", userId: user.id },
+      "Password reset successfully",
+    );
     return user;
   }
 
@@ -233,7 +236,17 @@ export class AuthService {
 
     await this.sessionService.revokeAllUserSessions(userId);
 
-    return this.userService.updatePassword(userId, passwordHash);
+    const updatedUser = await this.userService.updatePassword(userId, passwordHash);
+
+    logger.info(
+      {
+        event: "auth.password.change.success",
+        userId: updatedUser.id,
+      },
+      "Password changed successfully",
+    );
+
+    return updatedUser;
   }
 
   async getSessions(organizationId: OrganizationId, userId: UserId): Promise<Session[]> {
@@ -245,13 +258,32 @@ export class AuthService {
   }
 
   async revokeSession(sessionId: SessionId): Promise<Session> {
-    return this.sessionService.revokeSession(sessionId);
+    const session = await this.sessionService.revokeSession(sessionId);
+    logger.info(
+      {
+        event: "auth.session.revoked",
+        organizationId: session.organizationId,
+        sessionId: session.id,
+        userId: session.userId,
+      },
+      "Session revoked successfully",
+    );
+    return session;
   }
 
   async revokeAllSessions(
     organizationId: OrganizationId,
     userId: UserId,
   ): Promise<number> {
-    return this.sessionService.revokeAllUserSessions(userId, organizationId);
+    const count = await this.sessionService.revokeAllUserSessions(userId, organizationId);
+    logger.info(
+      {
+        event: "auth.sessions.revoked_all",
+        organizationId,
+        userId,
+      },
+      "All user sessions revoked successfully",
+    );
+    return count;
   }
 }
