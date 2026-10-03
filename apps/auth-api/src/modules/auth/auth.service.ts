@@ -6,6 +6,7 @@ import type {
   User,
   UserId,
 } from "@authcore/database";
+import { logger } from "@authcore/logger";
 
 import type { ChangePassword } from "@authcore/contracts";
 
@@ -22,6 +23,7 @@ import type { RecoveryService } from "./recovery.service.js";
 import type { SessionService } from "./session.service.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
+import type { EmailQueue } from "@authcore/queue";
 
 export class AuthService {
   constructor(
@@ -29,6 +31,7 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly passwordService: PasswordService,
     private readonly recoveryService: RecoveryService,
+    private readonly emailQueue: EmailQueue,
   ) {}
 
   async registerUser(data: RegisterType): Promise<User> {
