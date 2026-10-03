@@ -120,7 +120,14 @@ export class AuthService {
   }
 
   async refreshAccessToken(refreshToken: RefreshToken): Promise<CreateSessionResult> {
-    return this.sessionService.rotateRefreshToken(refreshToken);
+    const result = await this.sessionService.rotateRefreshToken(refreshToken);
+    logger.info(
+      {
+        event: "auth.token.refresh.success",
+      },
+      "Access token refreshed successfully",
+    );
+    return result;
   }
 
   async verifyEmail(token: string): Promise<void> {
@@ -129,6 +136,11 @@ export class AuthService {
     await this.userService.verifyEmail(verificationToken.userId);
 
     await this.recoveryService.markTokenAsUsed(verificationToken.id);
+
+    logger.info(
+      { event: "auth.email.verify.success", userId: verificationToken.userId },
+      "Email verified successfully",
+    );
   }
 
   async resendVerification(userId: UserId): Promise<void> {
