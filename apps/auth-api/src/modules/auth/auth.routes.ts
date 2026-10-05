@@ -13,6 +13,7 @@ import {
 import { authController } from "../../container.js";
 import { validateAccessToken } from "../../middlewares/token.middleware.js";
 import { validateBody, validateParams } from "../../middlewares/validate.middleware.js";
+import { attachDevice } from "../../middlewares/device.middleware.js";
 
 const authRouter = Router();
 
@@ -22,7 +23,7 @@ const authRouter = Router();
 
 authRouter.post("/register", validateBody(registerSchema), authController.register);
 
-authRouter.post("/login", validateBody(loginSchema), authController.login);
+authRouter.post("/login", attachDevice, validateBody(loginSchema), authController.login);
 
 authRouter.post("/refresh-token", authController.refreshAccessToken);
 

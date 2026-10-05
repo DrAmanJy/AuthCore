@@ -7,6 +7,7 @@ declare global {
     interface Request {
       device: Device;
       token: AccessTokenPayload;
+      requestId: string;
       user: {
         userId: UserId;
       };

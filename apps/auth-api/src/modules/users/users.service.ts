@@ -2,6 +2,8 @@ import type { UserId, CreateUserData, UserCredentials } from "@authcore/database
 
 import type { User, UserRepository } from "@authcore/database";
 import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
+import { ResourceError } from "../../errors/resource-error.js";
+import { ERROR_CODES } from "../../errors/error-codes.js";
 
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
@@ -17,7 +19,7 @@ export class UserService {
   async getUserById(userId: UserId): Promise<User> {
     const user = await this.userRepository.findById(userId);
 
-    if (!user) throw new Error("User not found");
+    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
 
     return user;
   }
@@ -31,7 +33,7 @@ export class UserService {
         : await this.userRepository.findCredentialsById(criteria.value);
 
     if (!user) {
-      throw new Error("User not found");
+      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     return user;
@@ -48,7 +50,7 @@ export class UserService {
     });
 
     if (existingUser) {
-      throw new Error("Invalid Email or a user exists with this email");
+      throw new ResourceError(ERROR_CODES.USER_EMAIL_ALREADY_EXISTS);
     }
 
     return this.userRepository.create(data);
@@ -61,7 +63,7 @@ export class UserService {
       displayName: data.displayName,
     });
 
-    if (!user) throw new Error("User not found");
+    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     return user;
   }
 
@@ -73,7 +75,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     return user;
@@ -84,7 +86,7 @@ export class UserService {
     const user = await this.userRepository.updatePassword(userId, passwordHash);
 
     if (!user) {
-      throw new Error("Failed to update Password");
+      throw new ResourceError(ERROR_CODES.USER_PASSWORD_UPDATE_FAILED);
     }
 
     return user;
@@ -94,7 +96,7 @@ export class UserService {
     const user = await this.userRepository.update(userId, { emailVerified: true });
 
     if (!user) {
-      throw new Error("User not found");
+      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     return user;
@@ -107,7 +109,7 @@ export class UserService {
       email: data.email,
     });
 
-    if (!user) throw new Error("User not found");
+    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     return user;
   }
 
@@ -119,7 +121,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     return user;
@@ -130,7 +132,7 @@ export class UserService {
 
     const user = await this.userRepository.delete(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     }
     return user;
   }
@@ -142,21 +144,21 @@ export class UserService {
 
   public validateAccountStatus(user: User | UserCredentials): void {
     if ("emailVerified" in user && !user.emailVerified) {
-      throw new Error("User email is not verified");
+      throw new ResourceError(ERROR_CODES.USER_EMAIL_NOT_VERIFIED);
     }
 
     switch (user.status) {
       case "deactivated":
-        throw new Error("User account is deactivated");
+        throw new ResourceError(ERROR_CODES.USER_ACCOUNT_DEACTIVATED);
 
       case "inactive":
-        throw new Error("User account is inactive");
+        throw new ResourceError(ERROR_CODES.USER_ACCOUNT_INACTIVE);
 
       case "pending":
-        throw new Error("User account is pending");
+        throw new ResourceError(ERROR_CODES.USER_ACCOUNT_PENDING);
 
       case "suspended":
-        throw new Error("User account is suspended");
+        throw new ResourceError(ERROR_CODES.USER_ACCOUNT_SUSPENDED);
 
       case "active":
         return;

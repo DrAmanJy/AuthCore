@@ -1,4 +1,5 @@
 import type {
+  ActorId,
   CreateOrganizationData,
   CreateOrganizationMemberData,
   CreateRoleData,
@@ -16,6 +17,9 @@ import type {
   UpdateRoleData,
   UserId,
 } from "@authcore/database";
+import { ResourceError } from "../../errors/resource-error.js";
+import { ERROR_CODES } from "../../errors/error-codes.js";
+import { InternalServerError } from "../../errors/internal-server-error.js";
 
 export class OrganizationService {
   constructor(
@@ -40,35 +44,61 @@ export class OrganizationService {
     return this.requireActiveOrganization(organization);
   }
 
-  async getOrganizations(): Promise<Organization[]> {
+  async getOrganizationsByActor(actorId: ActorId): Promise<Organization[]> {
+    return this.organizationRepository.findAllByActorId(actorId);
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
     return this.organizationRepository.findAll();
   }
 
-  async createOrganization(data: CreateOrganizationData): Promise<Organization> {
-    return this.organizationRepository.create(data);
+  async createOrganization(
+    actorId: ActorId,
+    data: CreateOrganizationData,
+  ): Promise<Organization> {
+    return this.organizationRepository.create(actorId, data);
   }
 
   async updateOrganization(
     organizationId: OrganizationId,
+    actorId: ActorId,
     data: UpdateOrganizationData,
   ): Promise<Organization> {
-    const organization = await this.organizationRepository.update(organizationId, data);
+    const organization = await this.requireActiveOrganizationById(organizationId);
 
-    if (!organization) {
-      throw new Error("Organization not found");
+    this.requireOrganizationCreator(actorId, organization);
+
+    const updatedOrganization = await this.organizationRepository.update(
+      organizationId,
+      actorId,
+      data,
+    );
+
+    if (!updatedOrganization) {
+      throw new InternalServerError();
     }
 
-    return organization;
+    return updatedOrganization;
   }
 
-  async deleteOrganization(organizationId: OrganizationId): Promise<Organization> {
-    const organization = await this.organizationRepository.softDelete(organizationId);
+  async deleteOrganization(
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<Organization> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
 
-    if (!organization) {
-      throw new Error("Organization not found");
+    this.requireOrganizationCreator(actorId, organization);
+
+    const organizationDeleted = await this.organizationRepository.softDelete(
+      organizationId,
+      actorId,
+    );
+
+    if (!organizationDeleted) {
+      throw new InternalServerError();
     }
 
-    return organization;
+    return organizationDeleted;
   }
 
   // ─────────────────────────────────────────────
@@ -98,7 +128,7 @@ export class OrganizationService {
     );
 
     if (!member) {
-      throw new Error("Organization member not found");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
     }
 
     return member;
@@ -110,34 +140,49 @@ export class OrganizationService {
     return this.organizationMemberRepository.findByOrganization(organizationId);
   }
 
-  async addMember(data: CreateOrganizationMemberData): Promise<OrganizationMember> {
-    await this.requireActiveOrganizationById(data.organizationId);
+  async addMember(
+    organizationId: OrganizationId,
+    actorId: ActorId,
+    data: CreateOrganizationMemberData,
+  ): Promise<OrganizationMember> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+
+    this.requireOrganizationCreator(actorId, organization);
 
     const existingMember = await this.organizationMemberRepository.findByUser(
       data.userId,
-      data.organizationId,
+      organizationId,
     );
 
     if (existingMember) {
-      throw new Error("User is already a member of this organization");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_ALREADY_EXISTS);
     }
 
-    return this.organizationMemberRepository.create(data);
+    return this.organizationMemberRepository.create(actorId, organizationId, data);
   }
 
   async updateMember(
     organizationId: OrganizationId,
     memberId: OrganizationMemberId,
+    actorId: ActorId,
     data: UpdateOrganizationMemberData,
   ): Promise<OrganizationMember> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+
+    this.requireOrganizationCreator(actorId, organization);
+
     const member = await this.getMember(organizationId, memberId);
 
     this.validateMemberUpdate(member, data);
 
-    const updatedMember = await this.organizationMemberRepository.update(memberId, data);
+    const updatedMember = await this.organizationMemberRepository.update(
+      organizationId,
+      memberId,
+      data,
+    );
 
     if (!updatedMember) {
-      throw new Error("Organization member not found");
+      throw new InternalServerError();
     }
 
     return updatedMember;
@@ -146,46 +191,49 @@ export class OrganizationService {
   async removeMember(
     organizationId: OrganizationId,
     memberId: OrganizationMemberId,
+    actorId: ActorId,
   ): Promise<OrganizationMember> {
     const member = await this.getMember(organizationId, memberId);
 
-    if (member.status === "removed") {
-      throw new Error("Organization member is already removed");
+    if (member.status !== "active") {
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
-    const removedMember = await this.organizationMemberRepository.remove(memberId);
-
-    if (!removedMember) {
-      throw new Error("Organization member not found");
-    }
-
-    return removedMember;
+    return this.updateMember(organizationId, memberId, actorId, {
+      status: "removed",
+    });
   }
 
   async suspendMember(
     organizationId: OrganizationId,
     memberId: OrganizationMemberId,
+    actorId: ActorId,
   ): Promise<OrganizationMember> {
     const member = await this.getMember(organizationId, memberId);
 
     if (member.status !== "active") {
-      throw new Error("Only active members can be suspended");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
-    return this.updateMember(organizationId, memberId, { status: "suspended" });
+    return this.updateMember(organizationId, memberId, actorId, {
+      status: "suspended",
+    });
   }
 
   async activateMember(
     organizationId: OrganizationId,
     memberId: OrganizationMemberId,
+    actorId: ActorId,
   ): Promise<OrganizationMember> {
     const member = await this.getMember(organizationId, memberId);
 
     if (member.status !== "suspended") {
-      throw new Error("Only suspended members can be activated");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_SUSPENDED);
     }
 
-    return this.updateMember(organizationId, memberId, { status: "active" });
+    return this.updateMember(organizationId, memberId, actorId, {
+      status: "active",
+    });
   }
 
   // ─────────────────────────────────────────────
@@ -206,7 +254,7 @@ export class OrganizationService {
     const role = await this.roleRepository.findByName(organizationId, name);
 
     if (!role) {
-      throw new Error("Role not found");
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     return role;
@@ -218,59 +266,87 @@ export class OrganizationService {
     return this.roleRepository.findByOrganization(organizationId);
   }
 
-  async createRole(data: CreateRoleData): Promise<Role> {
-    await this.requireActiveOrganizationById(data.organizationId);
+  async createRole(
+    organizationId: OrganizationId,
+    actorId: ActorId,
+    data: CreateRoleData,
+  ): Promise<Role> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
 
-    const existingRole = await this.roleRepository.findByName(
-      data.organizationId,
-      data.name,
-    );
+    this.requireOrganizationCreator(actorId, organization);
+
+    const existingRole = await this.roleRepository.findByName(organizationId, data.name);
 
     if (existingRole) {
-      throw new Error("Role already exists");
+      throw new ResourceError(ERROR_CODES.ROLE_ALREADY_EXISTS);
     }
 
-    return this.roleRepository.create(data);
+    return this.roleRepository.create(organizationId, actorId, data);
   }
 
   async updateRole(
     organizationId: OrganizationId,
     roleId: RoleId,
+    actorId: ActorId,
     data: UpdateRoleData,
   ): Promise<Role> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+
+    this.requireOrganizationCreator(actorId, organization);
+
     const role = await this.getRole(organizationId, roleId);
 
-    if (role.isSystemRole) {
-      throw new Error("System roles cannot be modified");
-    }
+    this.requireModifiableRole(role);
 
-    const updatedRole = await this.roleRepository.update(roleId, data);
+    const updatedRole = await this.roleRepository.update(organizationId, roleId, data);
 
     if (!updatedRole) {
-      throw new Error("Role not found");
+      throw new InternalServerError();
     }
 
     return updatedRole;
   }
 
-  async deleteRole(organizationId: OrganizationId, roleId: RoleId): Promise<Role> {
+  async deleteRole(
+    organizationId: OrganizationId,
+    roleId: RoleId,
+    actorId: ActorId,
+  ): Promise<Role> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+
+    this.requireOrganizationCreator(actorId, organization);
+
     const role = await this.getRole(organizationId, roleId);
 
-    if (role.isSystemRole) {
-      throw new Error("System roles cannot be deleted");
-    }
+    this.requireModifiableRole(role);
 
-    const deletedRole = await this.roleRepository.softDelete(roleId);
+    const deletedRole = await this.roleRepository.softDelete(organizationId, roleId);
 
     if (!deletedRole) {
-      throw new Error("Role not found");
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     return deletedRole;
   }
 
   // ─────────────────────────────────────────────
-  // Private helpers
+  // Authorization helpers
+  // ─────────────────────────────────────────────
+
+  private requireOrganizationCreator(actorId: ActorId, organization: Organization): void {
+    if (organization.createdBy.id !== actorId) {
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_CREATOR_ONLY);
+    }
+  }
+
+  private requireModifiableRole(role: Role): void {
+    if (role.isSystemRole) {
+      throw new ResourceError(ERROR_CODES.ROLE_SYSTEM_PROTECTED);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // Organization helpers
   // ─────────────────────────────────────────────
 
   private async requireActiveOrganizationById(
@@ -283,44 +359,33 @@ export class OrganizationService {
 
   private requireActiveOrganization(organization: Organization | null): Organization {
     if (!organization) {
-      throw new Error("Organization not found");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
     }
 
     if (organization.status !== "active") {
-      throw new Error("Organization is not active");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_INACTIVE);
     }
 
     return organization;
   }
+
+  // ─────────────────────────────────────────────
+  // Member helpers
+  // ─────────────────────────────────────────────
 
   private requireOrganizationMember(
     member: OrganizationMember | null,
     organizationId: OrganizationId,
   ): OrganizationMember {
     if (!member) {
-      throw new Error("Organization member not found");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
     }
 
     if (member.organizationId !== organizationId) {
-      throw new Error("Organization member not found");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
     }
 
     return member;
-  }
-
-  private requireOrganizationRole(
-    role: Role | null,
-    organizationId: OrganizationId,
-  ): Role {
-    if (!role) {
-      throw new Error("Role not found");
-    }
-
-    if (role.organizationId !== organizationId) {
-      throw new Error("Role not found");
-    }
-
-    return role;
   }
 
   private validateMemberUpdate(
@@ -328,19 +393,38 @@ export class OrganizationService {
     data: UpdateOrganizationMemberData,
   ): void {
     if (member.status === "removed") {
-      throw new Error("Removed members cannot be updated");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_REMOVED);
     }
 
     if (data.status === "active" && member.status !== "suspended") {
-      throw new Error("Only suspended members can be activated");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_SUSPENDED);
     }
 
     if (data.status === "suspended" && member.status !== "active") {
-      throw new Error("Only active members can be suspended");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
     if (data.status === "removed") {
-      throw new Error("Use removeMember to remove a member");
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_REMOVE_DIRECTLY);
     }
+  }
+
+  // ─────────────────────────────────────────────
+  // Role helpers
+  // ─────────────────────────────────────────────
+
+  private requireOrganizationRole(
+    role: Role | null,
+    organizationId: OrganizationId,
+  ): Role {
+    if (!role) {
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
+    }
+
+    if (role.organizationId !== organizationId) {
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
+    }
+
+    return role;
   }
 }

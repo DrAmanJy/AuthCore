@@ -5,85 +5,54 @@ import { validateAccessToken } from "../../middlewares/token.middleware.js";
 
 const organizationRouter = Router();
 
+organizationRouter.use(validateAccessToken);
+
 // ─────────────────────────────────────────────
 // Organizations
 // ─────────────────────────────────────────────
 
-organizationRouter.get("/", validateAccessToken, organizationController.getOrganizations);
+organizationRouter.get("/", organizationController.getOrganizations);
 
-organizationRouter.post(
-  "/",
-  validateAccessToken,
-  organizationController.createOrganization,
-);
+organizationRouter.post("/", organizationController.createOrganization);
 
-organizationRouter.get(
-  "/by-slug/:slug",
-  validateAccessToken,
-  organizationController.getOrganizationBySlug,
-);
+organizationRouter.get("/by-slug/:slug", organizationController.getOrganizationBySlug);
 
-organizationRouter.get(
-  "/:organizationId",
-  validateAccessToken,
-  organizationController.getOrganization,
-);
+organizationRouter.get("/:organizationId", organizationController.getOrganization);
 
-organizationRouter.patch(
-  "/:organizationId",
-  validateAccessToken,
-  organizationController.updateOrganization,
-);
+organizationRouter.patch("/:organizationId", organizationController.updateOrganization);
 
-organizationRouter.delete(
-  "/:organizationId",
-  validateAccessToken,
-  organizationController.deleteOrganization,
-);
+organizationRouter.delete("/:organizationId", organizationController.deleteOrganization);
 
 // ─────────────────────────────────────────────
 // Organization Members
 // ─────────────────────────────────────────────
 
-organizationRouter.get(
-  "/:organizationId/members",
-  validateAccessToken,
-  organizationController.getMembers,
-);
+organizationRouter.get("/:organizationId/members", organizationController.getMembers);
 
-organizationRouter.post(
-  "/:organizationId/members",
-  validateAccessToken,
-  organizationController.createMember,
-);
+organizationRouter.post("/:organizationId/members", organizationController.createMember);
 
 organizationRouter.get(
   "/:organizationId/members/:memberId",
-  validateAccessToken,
   organizationController.getMember,
 );
 
 organizationRouter.patch(
   "/:organizationId/members/:memberId",
-  validateAccessToken,
   organizationController.updateMember,
 );
 
 organizationRouter.post(
   "/:organizationId/members/:memberId/activate",
-  validateAccessToken,
   organizationController.activateMember,
 );
 
 organizationRouter.post(
   "/:organizationId/members/:memberId/suspend",
-  validateAccessToken,
   organizationController.suspendMember,
 );
 
 organizationRouter.post(
   "/:organizationId/members/:memberId",
-  validateAccessToken,
   organizationController.removeMember,
 );
 
@@ -91,33 +60,19 @@ organizationRouter.post(
 // Organization Roles
 // ─────────────────────────────────────────────
 
-organizationRouter.get(
-  "/:organizationId/roles",
-  validateAccessToken,
-  organizationController.getRoles,
-);
+organizationRouter.get("/:organizationId/roles", organizationController.getRoles);
 
-organizationRouter.post(
-  "/:organizationId/roles",
-  validateAccessToken,
-  organizationController.createRole,
-);
+organizationRouter.post("/:organizationId/roles", organizationController.createRole);
 
-organizationRouter.get(
-  "/:organizationId/roles/:roleId",
-  validateAccessToken,
-  organizationController.getRole,
-);
+organizationRouter.get("/:organizationId/roles/:roleId", organizationController.getRole);
 
 organizationRouter.patch(
   "/:organizationId/roles/:roleId",
-  validateAccessToken,
   organizationController.updateRole,
 );
 
 organizationRouter.delete(
   "/:organizationId/roles/:roleId",
-  validateAccessToken,
   organizationController.deleteRole,
 );
 

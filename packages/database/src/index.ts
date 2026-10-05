@@ -18,11 +18,12 @@ export { mapDatabaseError } from "./errors/database-error.utils.js";
 // User
 // ─────────────────────────────────────────────
 
-export { asUserId } from "./repositories/user/user.types.js";
+export { asUserId, asActorId } from "./repositories/user/user.types.js";
 
 export type {
   User,
   UserId,
+  ActorId,
   UserCredentials,
   CreateUserData,
   UpdateUserData,

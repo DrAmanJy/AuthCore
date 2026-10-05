@@ -1,37 +1,42 @@
 import {
-  DatabaseError,
   DatabaseConnectionError,
+  DatabaseError,
   DuplicateKeyError,
 } from "./database.errors.js";
 
-export function mapDatabaseError(err: unknown): DatabaseError {
-  if (err instanceof DatabaseError) {
-    return err;
+const DATABASE_CONNECTION_ERROR_NAMES = new Set([
+  "MongoNetworkError",
+  "MongoServerSelectionError",
+  "MongoTimeoutError",
+  "MongoNotConnectedError",
+  "MongooseServerSelectionError",
+]);
+
+export function mapDatabaseError(error: unknown): DatabaseError {
+  if (error instanceof DatabaseError) {
+    return error;
   }
 
-  if (err !== null && typeof err === "object") {
-    const errorObj = err as Record<string, unknown>;
-    const errorCode = errorObj.code;
-    const errorName = typeof errorObj.name === "string" ? errorObj.name : "";
+  if (error !== null && typeof error === "object") {
+    const errorObject = error as Record<string, unknown>;
 
-    if (errorCode === 11000 || errorCode === 11001) {
-      return new DuplicateKeyError(undefined, { cause: err });
+    const code = errorObject.code;
+    const name = typeof errorObject.name === "string" ? errorObject.name : undefined;
+
+    if (code === 11000 || code === 11001) {
+      return new DuplicateKeyError(undefined, {
+        cause: error,
+      });
     }
 
-    const connectionErrorTypes = [
-      "MongoNetworkError",
-      "MongoServerSelectionError",
-      "MongoTimeoutError",
-      "MongoNotConnectedError",
-      "MongooseServerSelectionError",
-    ];
-
-    if (connectionErrorTypes.includes(errorName)) {
-      return new DatabaseConnectionError(undefined, { cause: err });
+    if (name !== undefined && DATABASE_CONNECTION_ERROR_NAMES.has(name)) {
+      return new DatabaseConnectionError(undefined, {
+        cause: error,
+      });
     }
   }
 
   return new DatabaseError("An unexpected database error occurred.", "DATABASE_ERROR", {
-    cause: err,
+    cause: error,
   });
 }
