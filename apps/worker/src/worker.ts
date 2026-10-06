@@ -10,6 +10,10 @@ const emailConsumer = new EmailConsumer(config.aws.emailQueueUrl, emailService);
 
 async function start(): Promise<void> {
   await emailConsumer.start();
+  logger.info(
+    { event: "worker.startup.success", worker: "email" },
+    "Email worker successfully started",
+  );
 }
 
 start().catch((error: unknown) => {

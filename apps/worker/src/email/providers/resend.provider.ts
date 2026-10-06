@@ -38,4 +38,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 
     throw providerError;
   }
+
+  logger.info(
+    { event: "email.send.success", provider: "resend" },
+    "Resend successfully send the email",
+  );
 }
