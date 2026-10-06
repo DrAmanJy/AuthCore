@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "clean": "rimraf dist",
-    "dev": "tsc --watch",
+    "dev": "node --env-file=../../.env ./node_modules/tsx/dist/cli.mjs watch src/worker.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -27,6 +27,7 @@
     "resend": "^6.32.0"
   },
   "devDependencies": {
-    "@types/node": "^26.4.1"
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13"
   }
 }
