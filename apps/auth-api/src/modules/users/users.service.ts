@@ -143,7 +143,10 @@ export class UserService {
   }
 
   async verifyEmail(userId: UserId): Promise<User> {
-    const user = await this.userRepository.update(userId, { emailVerified: true });
+    const user = await this.userRepository.update(userId, {
+      emailVerified: true,
+      status: "active",
+    });
 
     if (!user) {
       throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
