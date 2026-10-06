@@ -90,7 +90,12 @@ export const EnvironmentSchema = z
 
     AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY is required"),
 
-    AWS_EMAIL_QUEUE_URL: z.string().min(1, "AWS_EMAIL_QUEUE_URL is required"),
+    AWS_EMAIL_QUEUE_URL: z.url({
+      error: iss =>
+        iss.input === "" || iss.input === undefined
+          ? "AWS_EMAIL_QUEUE_URL is required"
+          : "AWS_EMAIL_QUEUE_URL is invalid",
+    }),
 
     RESEND_API_KEY: z
       .string()
