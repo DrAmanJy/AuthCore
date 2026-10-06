@@ -42,6 +42,27 @@ const redisUrlSchema = z
 const requiredStringSchema = (name: string) =>
   z.string().trim().min(1, `${name} is required`);
 
+const emailFromSchema = z
+  .string("EMAIL_FROM is required")
+  .trim()
+  .min(1, "EMAIL_FROM is required")
+  .refine(
+    value => {
+      // Name <email@example.com>
+      const namedAddress = value.match(/^(.+?)\s*<([^<>]+)>$/);
+
+      if (namedAddress?.[2]) {
+        return z.email().safeParse(namedAddress[2].trim()).success;
+      }
+
+      // email@example.com
+      return z.email().safeParse(value).success;
+    },
+    {
+      error: 'EMAIL_FROM must be an email or "Name <email@example.com>"',
+    },
+  );
+
 export const EnvironmentSchema = z
   .strictObject({
     NODE_ENV: z.enum(environments, {
@@ -104,12 +125,7 @@ export const EnvironmentSchema = z
         error: "RESEND_API is invalid API key",
       }),
 
-    EMAIL_FROM: z.email({
-      error: iss =>
-        iss.input === "" || iss.input === undefined
-          ? "EMAIL_FROM is required"
-          : "EMAIL_FROM is invalid email",
-    }),
+    EMAIL_FROM: emailFromSchema,
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") {
