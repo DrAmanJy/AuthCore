@@ -19,7 +19,22 @@ export class UserService {
   }
 
   async getUserById(userId: UserId): Promise<User> {
-    const user = await this.userRepository.findById(userId);
+    const user = await this.userRepository.find({
+      type: "id",
+      value: userId,
+      credentials: false,
+    });
+
+    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+
+    return user;
+  }
+  async getUserByEmail(email: string): Promise<User> {
+    const user = await this.userRepository.find({
+      type: "email",
+      value: email,
+      credentials: false,
+    });
 
     if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
 
@@ -27,12 +42,20 @@ export class UserService {
   }
 
   async getUserCredentials(
-    criteria: { type: "email"; value: string } | { type: "id"; value: UserId },
+    criteria: { type: "id"; value: UserId } | { type: "email"; value: string },
   ): Promise<UserCredentials> {
     const user =
-      criteria.type === "email"
-        ? await this.userRepository.findCredentialsByEmail(criteria.value)
-        : await this.userRepository.findCredentialsById(criteria.value);
+      criteria.type === "id"
+        ? await this.userRepository.find({
+            type: "id",
+            value: criteria.value,
+            credentials: true,
+          })
+        : await this.userRepository.find({
+            type: "email",
+            value: criteria.value,
+            credentials: true,
+          });
 
     if (!user) {
       throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
@@ -42,7 +65,7 @@ export class UserService {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return this.userRepository.findAllUsers();
+    return this.userRepository.find({ type: "all" });
   }
 
   async create(data: CreateUserData): Promise<User> {

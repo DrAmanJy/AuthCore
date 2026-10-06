@@ -143,24 +143,24 @@ export class AuthService {
     );
   }
 
-  async resendVerification(userId: UserId): Promise<void> {
-    const user = await this.userService.getUserById(userId);
+  async resendVerification(email: string): Promise<void> {
+    const user = await this.userService.getUserByEmail(email);
     if (user.status !== "pending") {
       throw new AuthenticationError("USER_ACCOUNT_PENDING");
     }
-    const { token } = await this.recoveryService.createEmailVerificationToken(userId);
+    const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
 
     await this.emailQueue.publishVerificationEmail({
       displayName: user.displayName,
       email: user.email,
-      userId,
+      userId: user.id,
       verificationToken: token,
     });
 
     logger.info(
       {
         event: "auth.email.verification.resend.requested",
-        userId,
+        userId: user.id,
       },
       "Verification email resend requested",
     );

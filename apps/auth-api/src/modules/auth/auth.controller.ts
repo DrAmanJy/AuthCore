@@ -25,6 +25,10 @@ import { sendCreated, sendNoContent, sendSuccess } from "../../utils/response.ut
 const REFRESH_TOKEN_COOKIE =
   config.nodeEnv === "production" ? "__Host-refresh_token" : "refresh_token";
 
+type EmailParams = {
+  email: string;
+};
+
 export class AuthController {
   constructor(private readonly authService: AuthService) {
     this.register = this.register.bind(this);
@@ -99,18 +103,18 @@ export class AuthController {
     sendSuccess(res, result.accessToken, "Access token refreshed successfully");
   }
 
-  async verifyEmail(req: Request<unknown, unknown, VerifyEmail>, res: Response) {
-    const { token } = req.body;
+  async verifyEmail(req: Request<VerifyEmail, unknown, unknown>, res: Response) {
+    const { token } = req.params;
 
     await this.authService.verifyEmail(token);
 
     sendNoContent(res);
   }
 
-  async resendVerification(req: Request, res: Response) {
-    const { sub } = req.token;
+  async resendVerification(req: Request<EmailParams, unknown, unknown>, res: Response) {
+    const { email } = req.params;
 
-    await this.authService.resendVerification(sub);
+    await this.authService.resendVerification(email);
 
     sendNoContent(res);
   }

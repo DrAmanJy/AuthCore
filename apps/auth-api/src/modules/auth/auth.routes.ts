@@ -35,7 +35,7 @@ authRouter.post("/logout", validateAccessToken, authController.logout);
 
 authRouter.post(
   "/verify-email",
-  validateBody(verifyEmailSchema),
+  validateParams(verifyEmailSchema),
   authController.verifyEmail,
 );
 
