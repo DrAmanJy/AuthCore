@@ -11,6 +11,8 @@ export const ERROR_CODES = {
   // Authorization
   AUTHORIZATION_HEADER_MISSING: "AUTHORIZATION_HEADER_MISSING",
   AUTHORIZATION_HEADER_INVALID: "AUTHORIZATION_HEADER_INVALID",
+  AUTH_VERIFICATION_TOKEN_REQUIRED: "AUTH_VERIFICATION_TOKEN_REQUIRED",
+  AUTH_EMAIL_REQUIRED: "AUTH_EMAIL_REQUIRED",
 
   // Recovery / Verification
   AUTH_VERIFICATION_TOKEN_INVALID: "AUTH_VERIFICATION_TOKEN_INVALID",
@@ -20,6 +22,7 @@ export const ERROR_CODES = {
 
   // User
   USER_NOT_FOUND: "USER_NOT_FOUND",
+  USER_ALREADY_ACTIVE: "USER_ALREADY_ACTIVE",
   USER_EMAIL_ALREADY_EXISTS: "USER_EMAIL_ALREADY_EXISTS",
   USER_EMAIL_NOT_VERIFIED: "USER_EMAIL_NOT_VERIFIED",
   USER_ACCOUNT_DEACTIVATED: "USER_ACCOUNT_DEACTIVATED",
@@ -107,6 +110,11 @@ export const ERROR_DEFINITIONS: Record<
     message: "The authorization header is invalid.",
   },
 
+  AUTH_EMAIL_REQUIRED: {
+    statusCode: 400,
+    message: "Email address is required.",
+  },
+
   // Recovery / Verification
   AUTH_VERIFICATION_TOKEN_INVALID: {
     statusCode: 400,
@@ -126,6 +134,10 @@ export const ERROR_DEFINITIONS: Record<
   AUTH_VERIFICATION_TOKEN_NOT_FOUND: {
     statusCode: 404,
     message: "The verification token could not be found.",
+  },
+  AUTH_VERIFICATION_TOKEN_REQUIRED: {
+    statusCode: 400,
+    message: "Verification token is required.",
   },
 
   // User
@@ -149,6 +161,10 @@ export const ERROR_DEFINITIONS: Record<
     message: "Your account has been deactivated.",
   },
 
+  USER_ALREADY_ACTIVE: {
+    statusCode: 403,
+    message: "Your account already active.",
+  },
   USER_ACCOUNT_INACTIVE: {
     statusCode: 403,
     message: "Your account is inactive.",
