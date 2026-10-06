@@ -65,3 +65,28 @@ export type ExistsUserCriteria =
       type: "email";
       value: string;
     };
+
+export type FindUserCriteria =
+  | {
+      type: "all";
+    }
+  | {
+      type: "email";
+      value: string;
+      credentials: false;
+    }
+  | {
+      type: "email";
+      value: string;
+      credentials: true;
+    }
+  | {
+      type: "id";
+      value: UserId;
+      credentials: false;
+    }
+  | {
+      type: "id";
+      value: UserId;
+      credentials: true;
+    };

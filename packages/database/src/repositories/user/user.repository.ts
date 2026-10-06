@@ -10,14 +10,27 @@ import type {
 export interface UserRepository {
   exists(criteria: ExistsUserCriteria): Promise<boolean>;
 
-  findAllUsers(): Promise<User[]>;
+  find(criteria: {
+    type: "id";
+    value: UserId;
+    credentials: true;
+  }): Promise<UserCredentials | null>;
 
-  findById(userId: UserId): Promise<User | null>;
+  find(criteria: { type: "id"; value: UserId; credentials: false }): Promise<User | null>;
 
-  findCredentialsByEmail(email: string): Promise<UserCredentials | null>;
+  find(criteria: {
+    type: "email";
+    value: string;
+    credentials: true;
+  }): Promise<UserCredentials | null>;
 
-  findCredentialsById(userId: UserId): Promise<UserCredentials | null>;
+  find(criteria: {
+    type: "email";
+    value: string;
+    credentials: false;
+  }): Promise<User | null>;
 
+  find(criteria: { type: "all" }): Promise<User[]>;
   create(data: CreateUserData): Promise<User>;
 
   update(userId: UserId, data: UpdateUserData): Promise<User | null>;
