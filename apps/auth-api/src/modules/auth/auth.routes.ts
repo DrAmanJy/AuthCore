@@ -7,7 +7,6 @@ import {
   registerSchema,
   resetPasswordSchema,
   sessionParamsSchema,
-  verifyEmailSchema,
 } from "@authcore/contracts";
 
 import { authController } from "../../container.js";
@@ -33,11 +32,7 @@ authRouter.post("/logout", validateAccessToken, authController.logout);
 // Email Verification
 // ─────────────────────────────────────────────
 
-authRouter.post(
-  "/verify-email",
-  validateParams(verifyEmailSchema),
-  authController.verifyEmail,
-);
+authRouter.post("/verify-email", authController.verifyEmail);
 
 authRouter.post("/resend-verification", authController.resendVerification);
 

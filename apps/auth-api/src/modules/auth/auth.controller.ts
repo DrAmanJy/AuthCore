@@ -10,7 +10,6 @@ import {
 import type {
   Register,
   Login,
-  VerifyEmail,
   ForgotPassword,
   ResetPassword,
   ChangePassword,
@@ -103,16 +102,24 @@ export class AuthController {
     sendSuccess(res, result.accessToken, "Access token refreshed successfully");
   }
 
-  async verifyEmail(req: Request<VerifyEmail, unknown, unknown>, res: Response) {
-    const { token } = req.params;
+  async verifyEmail(req: Request<unknown, unknown, unknown>, res: Response) {
+    const { token } = req.query;
+
+    if (typeof token !== "string" || !token.trim()) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_REQUIRED);
+    }
 
     await this.authService.verifyEmail(token);
 
     sendNoContent(res);
   }
 
-  async resendVerification(req: Request<EmailParams, unknown, unknown>, res: Response) {
-    const { email } = req.params;
+  async resendVerification(req: Request<unknown, unknown, EmailParams>, res: Response) {
+    const { email } = req.query;
+
+    if (typeof email !== "string" || !email.trim()) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_EMAIL_REQUIRED);
+    }
 
     await this.authService.resendVerification(email);
 

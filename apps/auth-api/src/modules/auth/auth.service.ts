@@ -146,7 +146,7 @@ export class AuthService {
   async resendVerification(email: string): Promise<void> {
     const user = await this.userService.getUserByEmail(email);
     if (user.status !== "pending") {
-      throw new AuthenticationError("USER_ACCOUNT_PENDING");
+      throw new AuthenticationError("USER_ALREADY_ACTIVE");
     }
     const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
 
