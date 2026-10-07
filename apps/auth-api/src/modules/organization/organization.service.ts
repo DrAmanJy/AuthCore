@@ -34,23 +34,29 @@ export class OrganizationService {
   // ─────────────────────────────────────────────
 
   async getOrganization(organizationId: OrganizationId): Promise<Organization> {
-    const organization = await this.organizationRepository.findById(organizationId);
+    const organization = await this.organizationRepository.find({
+      type: "id",
+      value: organizationId,
+    });
 
     return this.requireActiveOrganization(organization);
   }
 
   async getOrganizationBySlug(slug: string): Promise<Organization> {
-    const organization = await this.organizationRepository.findBySlug(slug);
+    const organization = await this.organizationRepository.find({
+      type: "slug",
+      value: slug,
+    });
 
     return this.requireActiveOrganization(organization);
   }
 
   async getOrganizationsByActor(actorId: ActorId): Promise<Organization[]> {
-    return this.organizationRepository.findAllByActorId(actorId);
+    return this.organizationRepository.find({ type: "actor", value: actorId });
   }
 
   async getAllOrganizations(): Promise<Organization[]> {
-    return this.organizationRepository.findAll();
+    return this.organizationRepository.find({ type: "all" });
   }
 
   async createOrganization(
@@ -105,7 +111,7 @@ export class OrganizationService {
     this.requireOrganizationCreator(actorId, organization);
 
     const organizationDeleted = await this.organizationRepository.softDelete(
-      organizationId,
+      { type: "id", value: organizationId },
       actorId,
     );
 
@@ -411,7 +417,10 @@ export class OrganizationService {
   private async requireActiveOrganizationById(
     organizationId: OrganizationId,
   ): Promise<Organization> {
-    const organization = await this.organizationRepository.findById(organizationId);
+    const organization = await this.organizationRepository.find({
+      type: "id",
+      value: organizationId,
+    });
 
     return this.requireActiveOrganization(organization);
   }
