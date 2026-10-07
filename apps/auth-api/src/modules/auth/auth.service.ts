@@ -43,13 +43,16 @@ export class AuthService {
       passwordHash,
     });
 
-    const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
+    const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
+      user.id,
+    );
 
     await this.emailQueue.publishVerificationEmail({
       userId: user.id,
       email: user.email,
       displayName: user.displayName,
       verificationToken: token,
+      expiresAt: expiresAt.toISOString(),
     });
 
     logger.info(
@@ -148,13 +151,16 @@ export class AuthService {
     if (user.status !== "pending") {
       throw new AuthenticationError("USER_ALREADY_ACTIVE");
     }
-    const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
+    const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
+      user.id,
+    );
 
     await this.emailQueue.publishVerificationEmail({
       displayName: user.displayName,
       email: user.email,
       userId: user.id,
       verificationToken: token,
+      expiresAt: expiresAt.toISOString(),
     });
 
     logger.info(
@@ -183,6 +189,7 @@ export class AuthService {
       email: user.email,
       resetToken: token,
       userId: user.id,
+      expiresAt: expiresAt.toISOString(),
     });
 
     logger.info(
