@@ -9,7 +9,7 @@ export interface IOrganization {
   name: string;
   slug: string;
   status: OrganizationStatus;
-  redirectUrl: string;
+  frontendUrl: string;
   deletedAt?: Date;
   createdBy: Types.ObjectId;
   createdAt: Date;
@@ -42,7 +42,7 @@ const OrganizationSchema = new Schema<IOrganization>(
       default: "active",
     },
 
-    redirectUrl: {
+    frontendUrl: {
       type: String,
       required: true,
       trim: true,

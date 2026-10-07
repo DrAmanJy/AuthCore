@@ -23,7 +23,7 @@ type MongoOrganizationRecord = {
   name: string;
   slug: string;
   status: OrganizationStatus;
-  redirectUrl: string;
+  frontendUrl: string;
   createdBy: {
     _id: Types.ObjectId;
     displayName: string;
@@ -185,7 +185,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
       name: record.name,
       slug: record.slug,
       status: record.status,
-      redirectUrl: record.redirectUrl,
+      frontendUrl: record.frontendUrl,
 
       ...(record.deletedAt !== undefined && {
         deletedAt: record.deletedAt,

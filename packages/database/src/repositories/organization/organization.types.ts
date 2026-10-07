@@ -12,17 +12,17 @@ export type Organization = {
   name: string;
   slug: string;
   status: OrganizationStatus;
-  redirectUrl: string;
+  frontendUrl: string;
   deletedAt?: Date;
   createdBy: CreatedBy;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type CreateOrganizationData = Pick<Organization, "name" | "slug" | "redirectUrl">;
+export type CreateOrganizationData = Pick<Organization, "name" | "slug" | "frontendUrl">;
 
 export type UpdateOrganizationData = Partial<
-  Pick<Organization, "name" | "slug" | "status" | "redirectUrl">
+  Pick<Organization, "name" | "slug" | "status" | "frontendUrl">
 >;
 
 export type FindOrganizationCriteria =
