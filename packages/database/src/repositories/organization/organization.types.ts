@@ -51,3 +51,5 @@ export type DeleteOrganizationCriteria =
       type: "slug";
       value: string;
     };
+
+export type { OrganizationStatus };

@@ -1,6 +1,5 @@
 import type { Types } from "mongoose";
 
-import type { OrganizationStatus } from "../../models/organization.model.js";
 import OrganizationModel from "../../models/organization.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
 
@@ -8,6 +7,7 @@ import type {
   CreateOrganizationData,
   DeleteOrganizationCriteria,
   FindOrganizationCriteria,
+  OrganizationStatus,
   Organization,
   OrganizationId,
   UpdateOrganizationData,
