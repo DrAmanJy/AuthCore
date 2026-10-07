@@ -15,7 +15,9 @@ export class EmailService {
 
     const template = verificationEmailTemplate({
       displayName: job.displayName,
+      organizationName: job.organizationName,
       verificationUrl: verificationUrl,
+      expiresAt: job.expiresAt,
     });
 
     await sendEmail({
@@ -34,6 +36,8 @@ export class EmailService {
     const template = passwordResetEmailTemplate({
       displayName: job.displayName,
       resetUrl,
+      organizationName: job.organizationName,
+      expiresAt: job.expiresAt,
     });
 
     await sendEmail({

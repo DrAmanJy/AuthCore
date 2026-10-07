@@ -10,6 +10,9 @@ export const sendVerificationEmailJobSchema = z.object({
   email: emailSchema,
   displayName: displayNameSchema,
   verificationToken: z.string(),
+
+  organizationName: z.string().trim().min(1).max(100).optional(),
+  expiresAt: z.string().trim().min(1).max(50),
 });
 
 export const sendPasswordRestJobSchema = z.object({
@@ -20,6 +23,9 @@ export const sendPasswordRestJobSchema = z.object({
   email: emailSchema,
   displayName: displayNameSchema,
   resetToken: z.string(),
+
+  organizationName: z.string().trim().min(1).max(100).optional(),
+  expiresAt: z.string().trim().min(1).max(50),
 });
 
 export const emailJobSchema = z.discriminatedUnion("type", [

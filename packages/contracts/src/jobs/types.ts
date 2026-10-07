@@ -5,7 +5,9 @@ export interface SendVerificationEmailJob {
   userId: string;
   email: string;
   displayName: string;
+  organizationName?: string;
   verificationToken: string;
+  expiresAt: string;
 }
 export interface SendPasswordResetEmailJob {
   type: "email.send_password_reset";
@@ -14,5 +16,7 @@ export interface SendPasswordResetEmailJob {
   userId: string;
   email: string;
   displayName: string;
+  organizationName?: string;
   resetToken: string;
+  expiresAt: string;
 }
