@@ -1,19 +1,20 @@
 import type { ActorId } from "../user/user.types.js";
 import type {
   CreateOrganizationData,
+  DeleteOrganizationCriteria,
   Organization,
   OrganizationId,
   UpdateOrganizationData,
 } from "./organization.types.js";
 
 export interface OrganizationRepository {
-  findById(organizationId: OrganizationId): Promise<Organization | null>;
+  find(criteria: { type: "all" }): Promise<Organization[]>;
 
-  findBySlug(slug: string): Promise<Organization | null>;
+  find(criteria: { type: "actor"; value: ActorId }): Promise<Organization[]>;
 
-  findAll(): Promise<Organization[]>;
+  find(criteria: { type: "id"; value: OrganizationId }): Promise<Organization | null>;
 
-  findAllByActorId(actorId: ActorId): Promise<Organization[]>;
+  find(criteria: { type: "slug"; value: string }): Promise<Organization | null>;
 
   create(actorId: ActorId, data: CreateOrganizationData): Promise<Organization>;
 
@@ -24,7 +25,7 @@ export interface OrganizationRepository {
   ): Promise<Organization | null>;
 
   softDelete(
-    organizationId: OrganizationId,
+    criteria: DeleteOrganizationCriteria,
     actorId: ActorId,
   ): Promise<Organization | null>;
 }
