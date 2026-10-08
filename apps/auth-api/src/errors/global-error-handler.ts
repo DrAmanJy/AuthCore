@@ -1,10 +1,10 @@
-import type { ErrorRequestHandler, NextFunction, Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { AppError } from "./app-error.js";
 import { ZodError } from "zod";
 import { ERROR_CODES, ERROR_DEFINITIONS } from "./error-codes.js";
 
 export function globalErrorHandler(
-  error: ErrorRequestHandler,
+  error: Error,
   req: Request,
   res: Response,
   next: NextFunction,
