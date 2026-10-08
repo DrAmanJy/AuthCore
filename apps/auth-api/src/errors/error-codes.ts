@@ -1,5 +1,6 @@
 export const ERROR_CODES = {
   // Authentication
+  AUTH_UNAUTHORIZED: "AUTH_UNAUTHORIZED",
   AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS",
   AUTH_INVALID_TOKEN: "AUTH_INVALID_TOKEN",
   AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
@@ -64,6 +65,11 @@ export const ERROR_DEFINITIONS: Record<
   }
 > = {
   // Authentication
+  AUTH_UNAUTHORIZED: {
+    statusCode: 401,
+    message: "Authentication is required to access this resource.",
+  },
+
   AUTH_INVALID_CREDENTIALS: {
     statusCode: 401,
     message: "Invalid email or password.",
