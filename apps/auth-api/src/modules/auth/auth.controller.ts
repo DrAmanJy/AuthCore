@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 
 import { config } from "@authcore/config";
+import type { Device } from "@authcore/database";
 import {
   asOrganizationId,
   asRefreshToken,
@@ -59,7 +60,11 @@ export class AuthController {
 
   async login(req: Request<unknown, unknown, Login>, res: Response) {
     const { organizationId, email, password } = req.body;
-    const { device } = req;
+    const device: Device = req.device ?? {
+      name: req.get("user-agent") ?? "Unknown Device",
+      userAgent: req.get("user-agent") ?? "unknown",
+      ip: req.ip ?? "unknown",
+    };
 
     const { user, accessToken, refreshToken } = await this.authService.loginUser({
       organizationId: asOrganizationId(organizationId),
