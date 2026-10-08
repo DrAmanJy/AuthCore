@@ -17,6 +17,7 @@ import type {
 } from "@authcore/contracts";
 
 import type { AuthService } from "./auth.service.js";
+import type { AccessTokenPayload } from "./auth.types.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { sendCreated, sendNoContent, sendSuccess } from "../../utils/response.utils.js";
@@ -73,7 +74,7 @@ export class AuthController {
   }
 
   async logout(req: Request, res: Response) {
-    const { orgId, sub } = req.token;
+    const { orgId, sub } = this.getAuthToken(req);
 
     const user = await this.authService.logoutUser({
       organizationId: orgId,
@@ -144,7 +145,7 @@ export class AuthController {
 
   async changePassword(req: Request<unknown, unknown, ChangePassword>, res: Response) {
     const { currentPassword, newPassword } = req.body;
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
 
     await this.authService.changePassword(sub, {
       currentPassword,
@@ -155,7 +156,7 @@ export class AuthController {
   }
 
   async getSessions(req: Request, res: Response) {
-    const { orgId, sub } = req.token;
+    const { orgId, sub } = this.getAuthToken(req);
 
     const sessions = await this.authService.getSessions(orgId, sub);
 
@@ -171,11 +172,18 @@ export class AuthController {
   }
 
   async revokeAllSessions(req: Request, res: Response) {
-    const { orgId, sub } = req.token;
+    const { orgId, sub } = this.getAuthToken(req);
 
     const count = await this.authService.revokeAllSessions(orgId, sub);
 
     sendSuccess(res, count, "Sessions successfully revoked");
+  }
+
+  private getAuthToken(req: { token?: AccessTokenPayload }): AccessTokenPayload {
+    if (!req.token) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
+    }
+    return req.token;
   }
 
   private setRefreshTokenCookie(res: Response, refreshToken: string): void {
