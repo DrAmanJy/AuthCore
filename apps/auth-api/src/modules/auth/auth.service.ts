@@ -22,6 +22,7 @@ import type { PasswordService } from "./password.service.js";
 import type { RecoveryService } from "./recovery.service.js";
 import type { SessionService } from "./session.service.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
+import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import type { EmailQueue } from "@authcore/queue";
 
@@ -149,7 +150,7 @@ export class AuthService {
   async resendVerification(email: string): Promise<void> {
     const user = await this.userService.getUserByEmail(email);
     if (user.status !== "pending") {
-      throw new AuthenticationError("USER_ALREADY_ACTIVE");
+      throw new ResourceError(ERROR_CODES.USER_ALREADY_ACTIVE);
     }
     const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
       user.id,
@@ -198,8 +199,7 @@ export class AuthService {
       },
       "Password reset requested",
     );
-    void token;
-    void expiresAt;
+
   }
 
   async resetPassword(token: string, password: string): Promise<User> {
