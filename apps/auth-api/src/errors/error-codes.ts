@@ -168,8 +168,8 @@ export const ERROR_DEFINITIONS: Record<
   },
 
   USER_ALREADY_ACTIVE: {
-    statusCode: 403,
-    message: "Your account already active.",
+    statusCode: 409,
+    message: "Your account is already active.",
   },
   USER_ACCOUNT_INACTIVE: {
     statusCode: 403,
