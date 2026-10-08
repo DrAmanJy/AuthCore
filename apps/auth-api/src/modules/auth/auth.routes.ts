@@ -46,7 +46,11 @@ authRouter.post(
   authController.forgotPassword,
 );
 
-authRouter.post("/reset-password", validateBody(resetPasswordSchema));
+authRouter.post(
+  "/reset-password",
+  validateBody(resetPasswordSchema),
+  authController.resetPassword,
+);
 
 authRouter.post(
   "/change-password",
