@@ -220,12 +220,12 @@ export const ERROR_DEFINITIONS: Record<
 
   ORGANIZATION_MEMBER_NOT_ACTIVE: {
     statusCode: 409,
-    message: "Only active members can be modified in this way.",
+    message: "The member must be active to perform this action.",
   },
 
   ORGANIZATION_MEMBER_NOT_SUSPENDED: {
     statusCode: 409,
-    message: "Only suspended members can be activated.",
+    message: "The member must be suspended before they can be activated.",
   },
 
   ORGANIZATION_MEMBER_REMOVED: {
