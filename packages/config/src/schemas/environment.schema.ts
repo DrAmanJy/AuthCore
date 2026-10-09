@@ -126,6 +126,14 @@ export const EnvironmentSchema = z
       }),
 
     EMAIL_FROM: emailFromSchema,
+    HASH_PEPPER: z
+      .string({
+        error: iss =>
+          iss.input === undefined || iss.input === ""
+            ? "HASH_PEPPER is required"
+            : "HASH_PEPPER must be a string",
+      })
+      .min(32, "HASH_PEPPER must be at least 32 characters"),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") {
