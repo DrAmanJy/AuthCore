@@ -157,3 +157,22 @@ export type {
 export type { RoleRepository } from "./repositories/role/role-repository.js";
 
 export { MongoRoleRepository } from "./repositories/role/mongo-role-repository.js";
+
+// ─────────────────────────────────────────────
+// Api Keys
+// ─────────────────────────────────────────────
+
+export { asApiKeyId, asKeyHash } from "./repositories/api-key/api-key.types.js";
+export type {
+  ApiKey,
+  ApiKeyCredentials,
+  ApiKeyId,
+  CreateApiKey,
+  DeleteApiKeyCriteria,
+  FindApiKeyCriteria,
+  KeyHash,
+  UpdateApiKey,
+  UpdateApiKeyCriteria,
+} from "./repositories/api-key/api-key.types.js";
+export type { ApiKeyRepository } from "./repositories/api-key/api-key-repository.js";
+export { MongoApiKeyRepository } from "./repositories/api-key/mongo-api-key-repository.js";
