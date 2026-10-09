@@ -28,6 +28,7 @@ const parsedEnvironment = EnvironmentSchema.safeParse({
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   AWS_EMAIL_QUEUE_URL: process.env.AWS_EMAIL_QUEUE_URL,
+  HASH_PEPPER: process.env.HASH_PEPPER,
 });
 
 if (!parsedEnvironment.success) {
@@ -76,6 +77,7 @@ export const config = {
     resendApiKey: env.RESEND_API_KEY,
     from: env.EMAIL_FROM,
   },
+  hashPepper: env.HASH_PEPPER,
 } as const;
 
 export type Config = typeof config;
