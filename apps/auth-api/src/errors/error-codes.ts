@@ -52,6 +52,11 @@ export const ERROR_CODES = {
   ROLE_ALREADY_EXISTS: "ROLE_ALREADY_EXISTS",
   ROLE_SYSTEM_PROTECTED: "ROLE_SYSTEM_PROTECTED",
 
+  // API Key
+  API_KEY_NOT_FOUND: "API_KEY_NOT_FOUND",
+  API_KEY_REVOKED: "API_KEY_REVOKED",
+  API_KEY_UNAUTHORIZED: "API_KEY_UNAUTHORIZED",
+
   VALIDATION_FAILED: "VALIDATION_FAILED",
   INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR",
 } as const;
@@ -262,6 +267,22 @@ export const ERROR_DEFINITIONS: Record<
   ROLE_SYSTEM_PROTECTED: {
     statusCode: 403,
     message: "System roles cannot be modified.",
+  },
+
+  // API Key
+  API_KEY_NOT_FOUND: {
+    statusCode: 404,
+    message: "The requested API key could not be found.",
+  },
+
+  API_KEY_REVOKED: {
+    statusCode: 403,
+    message: "The API key has been revoked and is no longer valid.",
+  },
+
+  API_KEY_UNAUTHORIZED: {
+    statusCode: 403,
+    message: "The API key does not belong to the requested organization.",
   },
 
   VALIDATION_FAILED: {
