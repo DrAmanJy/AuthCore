@@ -441,6 +441,43 @@ export class OrganizationService {
 
     return apiKey;
   }
+  async revokeApiKeyByKey(
+    organizationId: OrganizationId,
+    key: string,
+    actorId: ActorId,
+  ): Promise<boolean> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+
+    this.requireOrganizationCreator(actorId, organization);
+
+    await this.apiKeyService.revokeByKey(key, organizationId, actorId);
+
+    return true;
+  }
+
+  async markUseApiKeyByKey(
+    key: string,
+    organizationId: OrganizationId,
+  ): Promise<boolean> {
+    await this.requireActiveOrganizationById(organizationId);
+
+    await this.apiKeyService.markUsedByKey(key, organizationId);
+
+    return true;
+  }
+
+  async deleteApiKeyById(
+    apiKeyId: ApiKeyId,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<ApiKey> {
+    const apiKey = await this.apiKeyService.softDelete(
+      { type: "id", value: apiKeyId, organizationId: organizationId },
+      actorId,
+    );
+
+    return apiKey;
+  }
   // ─────────────────────────────────────────────
   // Authorization helpers
   // ─────────────────────────────────────────────
