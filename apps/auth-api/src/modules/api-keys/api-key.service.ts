@@ -52,4 +52,15 @@ export class ApiKeyService {
 
     return apiKey;
   }
+
+  async create(
+    name: string,
+    organizationId: OrganizationId,
+    key: string,
+    actorId: ActorId,
+  ): Promise<ApiKey> {
+    const keyHash = asKeyHash(hashString(key));
+
+    return this.apiKeyRepository.create({ name, organizationId, keyHash }, actorId);
+  }
 }
