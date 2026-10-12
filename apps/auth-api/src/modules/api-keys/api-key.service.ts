@@ -63,4 +63,41 @@ export class ApiKeyService {
 
     return this.apiKeyRepository.create({ name, organizationId, keyHash }, actorId);
   }
+
+  async revokeByKey(
+    rawKey: string,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<ApiKey> {
+    const keyHash = asKeyHash(hashString(rawKey));
+    const apiKey = await this.apiKeyRepository.update(
+      { type: "key", value: keyHash, organizationId },
+      { status: "revoked", revokedAt: new Date() },
+      actorId,
+    );
+
+    if (!apiKey) {
+      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+    }
+
+    return apiKey;
+  }
+
+  async revokeById(
+    id: ApiKeyId,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<ApiKey> {
+    const apiKey = await this.apiKeyRepository.update(
+      { type: "id", value: id, organizationId },
+      { status: "revoked", revokedAt: new Date() },
+      actorId,
+    );
+
+    if (!apiKey) {
+      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+    }
+
+    return apiKey;
+  }
 }
