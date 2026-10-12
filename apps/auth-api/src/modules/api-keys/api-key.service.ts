@@ -100,4 +100,45 @@ export class ApiKeyService {
 
     return apiKey;
   }
+
+  async markUsedById(id: ApiKeyId, organizationId: OrganizationId): Promise<ApiKey> {
+    const apiKey = await this.apiKeyRepository.update(
+      { type: "id", value: id, organizationId },
+      {
+        lastUsedAt: new Date(),
+      },
+    );
+
+    if (!apiKey) {
+      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+    }
+
+    return apiKey;
+  }
+  async markUsedByKey(rawKey: string, organizationId: OrganizationId): Promise<ApiKey> {
+    const keyHash = asKeyHash(hashString(rawKey));
+    const apiKey = await this.apiKeyRepository.update(
+      { type: "key", value: keyHash, organizationId },
+      {
+        lastUsedAt: new Date(),
+      },
+    );
+
+    if (!apiKey) {
+      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+    }
+
+    return apiKey;
+  }
+
+  async softDelete(criteria: DeleteApiKeyCriteria, actorId: ActorId): Promise<ApiKey> {
+    const apiKey = await this.apiKeyRepository.delete(criteria, actorId);
+
+    if (!apiKey) {
+      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+    }
+
+    return apiKey;
+  }
 }
+
