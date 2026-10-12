@@ -417,6 +417,30 @@ export class OrganizationService {
     }
     return apiKey;
   }
+  async getAllApiKeyByOrganizationId(
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<ApiKey[]> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+
+    this.requireOrganizationCreator(actorId, organization);
+
+    const apiKeys = await this.apiKeyService.getALl(organizationId);
+
+    return apiKeys;
+  }
+
+  async createApiKey(organizationId: OrganizationId, actorId: ActorId): Promise<string> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+
+    this.requireOrganizationCreator(actorId, organization);
+
+    const apiKey = `ac_live_${randomBytes(32).toString("hex")}`;
+
+    await this.apiKeyService.create(organization.name, organizationId, apiKey, actorId);
+
+    return apiKey;
+  }
   // ─────────────────────────────────────────────
   // Authorization helpers
   // ─────────────────────────────────────────────
