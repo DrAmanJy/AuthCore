@@ -57,7 +57,9 @@ export const ERROR_CODES = {
   API_KEY_REVOKED: "API_KEY_REVOKED",
   API_KEY_UNAUTHORIZED: "API_KEY_UNAUTHORIZED",
 
+  // Validation
   VALIDATION_FAILED: "VALIDATION_FAILED",
+  SLUG_REQUIRED: "SLUG_REQUIRED",
   INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR",
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
@@ -285,9 +287,15 @@ export const ERROR_DEFINITIONS: Record<
     message: "The API key does not belong to the requested organization.",
   },
 
+  // Validation
   VALIDATION_FAILED: {
     statusCode: 400,
     message: "The request contains invalid data.",
+  },
+
+  SLUG_REQUIRED: {
+    statusCode: 400,
+    message: "Organization slug is required.",
   },
 
   INTERNAL_SERVER_ERROR: {
