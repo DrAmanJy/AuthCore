@@ -1,5 +1,7 @@
 import type {
   ActorId,
+  ApiKey,
+  ApiKeyId,
   CreateOrganizationData,
   CreateOrganizationMemberData,
   CreateRoleData,
@@ -29,6 +31,7 @@ export class OrganizationService {
     private readonly organizationRepository: OrganizationRepository,
     private readonly organizationMemberRepository: OrganizationMemberRepository,
     private readonly roleRepository: RoleRepository,
+    private readonly apiKeyService: ApiKeyService,
   ) {}
 
   // ─────────────────────────────────────────────
@@ -184,12 +187,12 @@ export class OrganizationService {
     if (existingMember) {
       logger.warn(
         {
-          event: "organization.member.create.field",
+          event: "organization.member.create.failed",
           reason: "organization_already_exists",
           actorId,
           organizationId,
         },
-        "Field to create user ",
+        "Failed to create member: already exists",
       );
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_ALREADY_EXISTS);
     }
@@ -232,7 +235,7 @@ export class OrganizationService {
 
     logger.info(
       {
-        event: "organization.member.create.success",
+        event: "organization.member.update.success",
         actorId,
         memberId: updatedMember.id,
       },
@@ -396,9 +399,9 @@ export class OrganizationService {
     return deletedRole;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────
   // Members
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────
 
   async getApiKeyById(organizationId: OrganizationId, id: ApiKeyId): Promise<ApiKey> {
     const organization = await this.requireActiveOrganizationById(organizationId);
@@ -417,6 +420,7 @@ export class OrganizationService {
     }
     return apiKey;
   }
+
   async getAllApiKeyByOrganizationId(
     organizationId: OrganizationId,
     actorId: ActorId,
@@ -441,6 +445,7 @@ export class OrganizationService {
 
     return apiKey;
   }
+
   async revokeApiKeyByKey(
     organizationId: OrganizationId,
     key: string,
@@ -478,6 +483,7 @@ export class OrganizationService {
 
     return apiKey;
   }
+
   // ─────────────────────────────────────────────
   // Authorization helpers
   // ─────────────────────────────────────────────
