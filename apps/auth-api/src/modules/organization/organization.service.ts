@@ -21,6 +21,8 @@ import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { InternalServerError } from "../../errors/internal-server-error.js";
 import { logger } from "@authcore/logger";
+import type { ApiKeyService } from "../api-keys/api-key.service.js";
+import { randomBytes } from "crypto";
 
 export class OrganizationService {
   constructor(
@@ -394,6 +396,27 @@ export class OrganizationService {
     return deletedRole;
   }
 
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Members
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  async getApiKeyById(organizationId: OrganizationId, id: ApiKeyId): Promise<ApiKey> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+    const apiKey = await this.apiKeyService.getById(id);
+    if (apiKey.organizationId !== organization.id) {
+      throw new ResourceError(ERROR_CODES.API_KEY_UNAUTHORIZED);
+    }
+    return apiKey;
+  }
+
+  async getApiKeyByKey(organizationId: OrganizationId, key: string): Promise<ApiKey> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+    const apiKey = await this.apiKeyService.getByKey(key);
+    if (apiKey.organizationId !== organization.id) {
+      throw new ResourceError(ERROR_CODES.API_KEY_UNAUTHORIZED);
+    }
+    return apiKey;
+  }
   // ─────────────────────────────────────────────
   // Authorization helpers
   // ─────────────────────────────────────────────
