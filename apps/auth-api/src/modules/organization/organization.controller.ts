@@ -313,6 +313,36 @@ export class OrganizationController {
     sendSuccess(res, apiKeys, "All api key successfully retrieved");
   }
 
+  async getApiKeyById(
+    req: Request<{ apiKeyId: ApiKeyId }, unknown, unknown>,
+    res: Response,
+  ) {
+    const { orgId } = this.getAuthToken(req);
+    const { apiKeyId } = req.params;
+    const apiKeys = await this.organizationService.getApiKeyById(orgId, apiKeyId);
+
+    sendSuccess(res, apiKeys, "Api key successfully retrieved");
+  }
+
+  async revokeApiKey(req: Request<{ key: string }, unknown, unknown>, res: Response) {
+    const { sub, orgId } = this.getAuthToken(req);
+    const { key } = req.params;
+    await this.organizationService.revokeApiKeyByKey(orgId, key, asActorId(sub));
+
+    sendNoContent(res);
+  }
+
+  async deleteApiKey(
+    req: Request<{ apiKeyId: ApiKeyId }, unknown, unknown>,
+    res: Response,
+  ) {
+    const { sub, orgId } = this.getAuthToken(req);
+    const { apiKeyId } = req.params;
+    const apiKey = await this.organizationService.deleteApiKeyById(apiKeyId, orgId, asActorId(sub));
+
+    sendSuccess(res, apiKey, "Api key successfully deleted");
+  }
+
   private getAuthToken(req: { token?: AccessTokenPayload }): AccessTokenPayload {
     if (!req.token) {
       throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
