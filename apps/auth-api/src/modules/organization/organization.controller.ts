@@ -8,6 +8,7 @@ import {
 } from "@authcore/database";
 
 import type {
+  ApiKeyId,
   CreateOrganizationData,
   CreateOrganizationMemberData,
   CreateRoleData,
@@ -17,7 +18,11 @@ import type {
 } from "@authcore/database";
 
 import type { OrganizationService } from "./organization.service.js";
-import { sendCreated, sendSuccess } from "../../utils/response.utils.js";
+import type { AccessTokenPayload } from "../auth/auth.types.js";
+import { sendCreated, sendNoContent, sendSuccess } from "../../utils/response.utils.js";
+import { AuthenticationError } from "../../errors/authentication-error.js";
+import { ResourceError } from "../../errors/resource-error.js";
+import { ERROR_CODES } from "../../errors/error-codes.js";
 
 type OrganizationParams = {
   organizationId: string;
@@ -71,6 +76,11 @@ export class OrganizationController {
     this.getRole = this.getRole.bind(this);
     this.updateRole = this.updateRole.bind(this);
     this.deleteRole = this.deleteRole.bind(this);
+    this.createApiKey = this.createApiKey.bind(this);
+    this.getALlApiKey = this.getALlApiKey.bind(this);
+    this.getApiKeyById = this.getApiKeyById.bind(this);
+    this.revokeApiKey = this.revokeApiKey.bind(this);
+    this.deleteApiKey = this.deleteApiKey.bind(this);
   }
 
   // ─────────────────────────────────────────────
@@ -78,7 +88,7 @@ export class OrganizationController {
   // ─────────────────────────────────────────────
 
   async getOrganizations(req: Request, res: Response) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const organizations = await this.organizationService.getOrganizationsByActor(
       asActorId(sub),
     );
@@ -90,7 +100,7 @@ export class OrganizationController {
     req: OrganizationRequest<CreateOrganizationData>,
     res: Response,
   ) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
 
     const organization = await this.organizationService.createOrganization(
       asActorId(sub),
@@ -103,8 +113,8 @@ export class OrganizationController {
   async getOrganizationBySlug(req: Request, res: Response) {
     const { slug } = req.query;
 
-    if (typeof slug !== "string") {
-      throw new Error("Slug is required");
+    if (typeof slug !== "string" || !slug.trim()) {
+      throw new ResourceError(ERROR_CODES.SLUG_REQUIRED);
     }
 
     const organization = await this.organizationService.getOrganizationBySlug(slug);
@@ -124,7 +134,7 @@ export class OrganizationController {
     req: OrganizationByIdRequest<UpdateOrganizationData>,
     res: Response,
   ) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const organization = await this.organizationService.updateOrganization(
       asOrganizationId(req.params.organizationId),
       asActorId(sub),
@@ -135,7 +145,7 @@ export class OrganizationController {
   }
 
   async deleteOrganization(req: OrganizationByIdRequest, res: Response) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
 
     const organization = await this.organizationService.deleteOrganization(
       asOrganizationId(req.params.organizationId),
@@ -160,7 +170,7 @@ export class OrganizationController {
     req: OrganizationByIdRequest<Omit<CreateOrganizationMemberData, "organizationId">>,
     res: Response,
   ) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const member = await this.organizationService.addMember(
       asOrganizationId(req.params.organizationId),
       asActorId(sub),
@@ -180,7 +190,7 @@ export class OrganizationController {
   }
 
   async updateMember(req: MemberRequest<UpdateOrganizationMemberData>, res: Response) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const member = await this.organizationService.updateMember(
       asOrganizationId(req.params.organizationId),
       asOrganizationMemberId(req.params.memberId),
@@ -192,7 +202,7 @@ export class OrganizationController {
   }
 
   async activateMember(req: MemberRequest, res: Response) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const member = await this.organizationService.activateMember(
       asOrganizationId(req.params.organizationId),
       asOrganizationMemberId(req.params.memberId),
@@ -203,7 +213,7 @@ export class OrganizationController {
   }
 
   async suspendMember(req: MemberRequest, res: Response) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const member = await this.organizationService.suspendMember(
       asOrganizationId(req.params.organizationId),
       asOrganizationMemberId(req.params.memberId),
@@ -214,7 +224,7 @@ export class OrganizationController {
   }
 
   async removeMember(req: MemberRequest, res: Response) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const member = await this.organizationService.removeMember(
       asOrganizationId(req.params.organizationId),
       asOrganizationMemberId(req.params.memberId),
@@ -240,7 +250,7 @@ export class OrganizationController {
     req: OrganizationByIdRequest<Omit<CreateRoleData, "organizationId">>,
     res: Response,
   ) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const role = await this.organizationService.createRole(
       asOrganizationId(req.params.organizationId),
       asActorId(sub),
@@ -260,7 +270,7 @@ export class OrganizationController {
   }
 
   async updateRole(req: RoleRequest<UpdateRoleData>, res: Response) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const role = await this.organizationService.updateRole(
       asOrganizationId(req.params.organizationId),
       asRoleId(req.params.roleId),
@@ -272,7 +282,7 @@ export class OrganizationController {
   }
 
   async deleteRole(req: RoleRequest, res: Response) {
-    const { sub } = req.token;
+    const { sub } = this.getAuthToken(req);
     const role = await this.organizationService.deleteRole(
       asOrganizationId(req.params.organizationId),
       asRoleId(req.params.roleId),
@@ -280,5 +290,33 @@ export class OrganizationController {
     );
 
     sendSuccess(res, role, "Role successfully deleted");
+  }
+
+  // ─────────────────────────────────────────────
+  // Members
+  // ─────────────────────────────────────────────
+
+  async createApiKey(req: Request, res: Response) {
+    const { sub, orgId } = this.getAuthToken(req);
+    const apiKey = await this.organizationService.createApiKey(orgId, asActorId(sub));
+
+    sendCreated(res, apiKey, "Api key created successfully");
+  }
+
+  async getALlApiKey(req: Request, res: Response) {
+    const { sub, orgId } = this.getAuthToken(req);
+    const apiKeys = await this.organizationService.getAllApiKeyByOrganizationId(
+      orgId,
+      asActorId(sub),
+    );
+
+    sendSuccess(res, apiKeys, "All api key successfully retrieved");
+  }
+
+  private getAuthToken(req: { token?: AccessTokenPayload }): AccessTokenPayload {
+    if (!req.token) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
+    }
+    return req.token;
   }
 }
