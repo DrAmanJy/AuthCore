@@ -8,8 +8,8 @@ import {
   MongoVerificationTokenRepository,
 } from "@authcore/database";
 
-import { UserService } from "../src/modules/users/users.service.js";
-import { UserController } from "../src/modules/users/users.controller.js";
+import { UserService } from "./modules/users/users.service.js";
+import { UserController } from "./modules/users/users.controller.js";
 import { AuthController } from "./modules/auth/auth.controller.js";
 import { AuthService } from "./modules/auth/auth.service.js";
 import { SessionService } from "./modules/auth/session.service.js";
@@ -26,6 +26,7 @@ const verificationTokenRepository = new MongoVerificationTokenRepository();
 const organizationRepository = new MongoOrganizationRepository();
 const organizationMemberRepository = new MongoOrganizationMemberRepository();
 const roleRepository = new MongoRoleRepository();
+const apiKeyRepository = new MongoApiKeyRepository();
 
 const userService = new UserService(userRepository);
 const sessionService = new SessionService(sessionRepository, refreshTokenRepository);
