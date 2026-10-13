@@ -1,4 +1,5 @@
 import {
+  MongoApiKeyRepository,
   MongoOrganizationMemberRepository,
   MongoOrganizationRepository,
   MongoRefreshTokenRepository,
@@ -18,6 +19,7 @@ import { RecoveryService } from "./modules/auth/recovery.service.js";
 import { OrganizationController } from "./modules/organization/organization.controller.js";
 import { OrganizationService } from "./modules/organization/organization.service.js";
 import { emailQueue } from "@authcore/queue";
+import { ApiKeyService } from "./modules/api-keys/api-key.service.js";
 
 const userRepository = new MongoUserRepository();
 const sessionRepository = new MongoSessionRepository();
@@ -39,14 +41,16 @@ const authService = new AuthService(
   recoveryService,
   emailQueue,
 );
+const apiKeyService = new ApiKeyService(apiKeyRepository);
 const organizationService = new OrganizationService(
   organizationRepository,
   organizationMemberRepository,
   roleRepository,
+  apiKeyService,
 );
 
 const userController = new UserController(userService);
 const authController = new AuthController(authService);
 const organizationController = new OrganizationController(organizationService);
 
-export { userController, authController, organizationController };
+export { userController, authController, organizationController, apiKeyService };
