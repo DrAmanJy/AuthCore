@@ -76,4 +76,33 @@ organizationRouter.delete(
   organizationController.deleteRole,
 );
 
+organizationRouter.post(
+  "/api/v1/organizations/:organizationId/api-keys",
+  organizationController.createApiKey,
+);
+
+organizationRouter.get(
+  "/api/v1/organizations/:organizationId/api-keys",
+  organizationController.getALlApiKey,
+);
+organizationRouter.get(
+  "/api/v1/organizations/:organizationId/api-keys/:apiKeyId",
+  organizationController.getApiKeyById,
+);
+
+// organizationRouter.patch(
+//   "/api/v1/organizations/:organizationId/api-keys/:apiKeyId/revoke",
+//   organizationController.revokeApiKeyById,
+// );
+
+organizationRouter.patch(
+  "/api/v1/organizations/:organizationId/api-keys/:key/revoke",
+  organizationController.revokeApiKey,
+);
+
+organizationRouter.delete(
+  "/api/v1/organizations/:organizationId/api-keys/:apiKeyId",
+  organizationController.deleteApiKey,
+);
+
 export { organizationRouter };
