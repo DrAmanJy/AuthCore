@@ -69,6 +69,7 @@ export function validateAccessToken(
   };
 
   req.token = accessToken;
+  req.user = { userId: accessToken.sub };
 
   next();
 }
