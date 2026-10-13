@@ -5,6 +5,8 @@ import { asUserId } from "@authcore/database";
 import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
 
 import type { UserService } from "./users.service.js";
+import { AuthenticationError } from "../../errors/authentication-error.js";
+import { ERROR_CODES } from "../../errors/error-codes.js";
 import { sendSuccess } from "../../utils/response.utils.js";
 
 type UserParams = {
@@ -32,9 +34,13 @@ export class UserController {
   }
 
   async getAuthenticatedUser(req: Request, res: Response) {
-    const { userId } = req.user;
+    const userId = req.token?.sub ?? req.user?.userId;
 
-    const user = await this.userService.getUserById(asUserId(userId));
+    if (!userId) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
+    }
+
+    const user = await this.userService.getUserById(userId);
     sendSuccess(res, user, "Authenticated user successfully retrieved");
   }
 
