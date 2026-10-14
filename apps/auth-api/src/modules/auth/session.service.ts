@@ -9,6 +9,7 @@ import {
 } from "@authcore/database";
 
 import type {
+  ActorId,
   OrganizationId,
   RefreshToken,
   RefreshTokenHash,
@@ -99,8 +100,8 @@ export class SessionService {
     return this.assertSession(session);
   }
 
-  async revokeSession(sessionId: SessionId): Promise<Session> {
-    const session = await this.sessionRepository.revoke(sessionId);
+  async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
+    const session = await this.sessionRepository.revoke(sessionId, actorId);
 
     return this.assertSession(session);
   }
