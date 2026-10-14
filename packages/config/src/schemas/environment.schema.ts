@@ -91,6 +91,8 @@ export const EnvironmentSchema = z
 
     ACCESS_TOKEN_EXPIRY: durationSchema,
 
+    INVITATION_EXPIRY: durationSchema,
+
     REFRESH_TOKEN_EXPIRY: durationSchema,
 
     EMAIL_VERIFICATION_TOKEN_EXPIRY: durationSchema,

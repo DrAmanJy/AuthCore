@@ -15,6 +15,7 @@ const parsedEnvironment = EnvironmentSchema.safeParse({
 
   SESSION_EXPIRY: process.env.SESSION_EXPIRY,
   ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,
+  INVITATION_EXPIRY: process.env.INVITATION_EXPIRY,
   REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
   EMAIL_VERIFICATION_TOKEN_EXPIRY: process.env.EMAIL_VERIFICATION_TOKEN_EXPIRY,
   PASSWORD_RESET_TOKEN_EXPIRY: process.env.PASSWORD_RESET_TOKEN_EXPIRY,
@@ -58,6 +59,7 @@ export const config = {
   auth: {
     jwtIssuer: env.JWT_ISSUER,
     sessionExpiry: env.SESSION_EXPIRY,
+    invitationExpiry: env.INVITATION_EXPIRY,
     accessTokenExpiry: env.ACCESS_TOKEN_EXPIRY,
     refreshTokenExpiry: env.REFRESH_TOKEN_EXPIRY,
     jwtPrivateKey: env.JWT_PRIVATE_KEY,
