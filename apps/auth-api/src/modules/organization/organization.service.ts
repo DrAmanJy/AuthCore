@@ -400,7 +400,7 @@ export class OrganizationService {
   }
 
   // ─────────────────────────────────────────────
-  // Members
+  // Api Key
   // ─────────────────────────────────────────────
 
   async getApiKeyById(organizationId: OrganizationId, id: ApiKeyId): Promise<ApiKey> {
