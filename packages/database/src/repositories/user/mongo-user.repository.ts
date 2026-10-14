@@ -17,6 +17,7 @@ import type {
 import type { UserRepository } from "./user.repository.js";
 import UserModel from "../../models/user.model.js";
 import { mapDatabaseError } from "../../errors/database-error.utils.js";
+import { asOrganizationId } from "../organization/organization.types.js";
 
 type MongoUserRecord = {
   _id: Types.ObjectId;
@@ -26,6 +27,7 @@ type MongoUserRecord = {
   displayName: string;
   status: UserStatus;
   lastLoginAt?: Date;
+  managedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -124,7 +126,8 @@ export class MongoUserRepository implements UserRepository {
         email: data.email.toLowerCase().trim(),
         passwordHash: data.passwordHash,
         displayName: data.displayName,
-        emailVerified: data.emailVerified ?? false,
+        ...(data.emailVerified && { emailVerified: data.emailVerified }),
+        ...(data.status && { status: data.status }),
         status: data.status ?? "pending",
         lastLoginAt: data.lastLoginAt,
       });
@@ -138,32 +141,10 @@ export class MongoUserRepository implements UserRepository {
   async update(userId: UserId, data: UpdateUserData): Promise<User | null> {
     const objectId = toObjectId(userId);
 
-    const updateData: UpdateUserData = {};
-
-    if (data.email !== undefined) {
-      updateData.email = data.email.toLowerCase().trim();
-    }
-
-    if (data.displayName !== undefined) {
-      updateData.displayName = data.displayName;
-    }
-
-    if (data.emailVerified !== undefined) {
-      updateData.emailVerified = data.emailVerified;
-    }
-
-    if (data.status !== undefined) {
-      updateData.status = data.status;
-    }
-
-    if (data.lastLoginAt !== undefined) {
-      updateData.lastLoginAt = data.lastLoginAt;
-    }
-
     try {
       const user = await UserModel.findByIdAndUpdate(
         objectId,
-        { $set: updateData },
+        { $set: data },
         {
           new: true,
           runValidators: true,
@@ -221,8 +202,11 @@ export class MongoUserRepository implements UserRepository {
       email: record.email,
       displayName: record.displayName,
       status: record.status,
-      ...(record.lastLoginAt !== undefined && {
+      ...(record.lastLoginAt && {
         lastLoginAt: record.lastLoginAt,
+      }),
+      ...(record.managedBy && {
+        managedBy: asOrganizationId(record.managedBy.toString()),
       }),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
@@ -238,6 +222,9 @@ export class MongoUserRepository implements UserRepository {
       displayName: record.displayName,
       status: record.status,
       lastLoginAt: record.lastLoginAt,
+      ...(record.managedBy && {
+        managedBy: asOrganizationId(record.managedBy.toString()),
+      }),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
