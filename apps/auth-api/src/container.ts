@@ -1,5 +1,6 @@
 import {
   MongoApiKeyRepository,
+  MongoInvitationRepository,
   MongoOrganizationMemberRepository,
   MongoOrganizationRepository,
   MongoRefreshTokenRepository,
@@ -20,6 +21,8 @@ import { OrganizationController } from "./modules/organization/organization.cont
 import { OrganizationService } from "./modules/organization/organization.service.js";
 import { emailQueue } from "@authcore/queue";
 import { ApiKeyService } from "./modules/api-keys/api-key.service.js";
+import { InvitationController } from "./modules/invitation/invitation.controller.js";
+import { InvitationService } from "./modules/invitation/invitation.service.js";
 
 const userRepository = new MongoUserRepository();
 const sessionRepository = new MongoSessionRepository();
@@ -29,18 +32,12 @@ const organizationRepository = new MongoOrganizationRepository();
 const organizationMemberRepository = new MongoOrganizationMemberRepository();
 const roleRepository = new MongoRoleRepository();
 const apiKeyRepository = new MongoApiKeyRepository();
+const invitationRepository = new MongoInvitationRepository();
 
 const userService = new UserService(userRepository);
 const sessionService = new SessionService(sessionRepository, refreshTokenRepository);
 const passwordService = new PasswordService();
 const recoveryService = new RecoveryService(verificationTokenRepository);
-const authService = new AuthService(
-  userService,
-  sessionService,
-  passwordService,
-  recoveryService,
-  emailQueue,
-);
 const apiKeyService = new ApiKeyService(apiKeyRepository);
 const organizationService = new OrganizationService(
   organizationRepository,
@@ -48,9 +45,29 @@ const organizationService = new OrganizationService(
   roleRepository,
   apiKeyService,
 );
+const authService = new AuthService(
+  userService,
+  sessionService,
+  passwordService,
+  recoveryService,
+  emailQueue,
+  organizationService,
+);
+const invitationService = new InvitationService(
+  invitationRepository,
+  userService,
+  organizationService,
+);
 
 const userController = new UserController(userService);
 const authController = new AuthController(authService);
 const organizationController = new OrganizationController(organizationService);
+const invitationController = new InvitationController(invitationService);
 
-export { userController, authController, organizationController, apiKeyService };
+export {
+  userController,
+  authController,
+  organizationController,
+  apiKeyService,
+  invitationController,
+};
