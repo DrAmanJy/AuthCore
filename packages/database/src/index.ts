@@ -163,6 +163,7 @@ export { MongoRoleRepository } from "./repositories/role/mongo-role-repository.j
 // ─────────────────────────────────────────────
 
 export { asApiKeyId, asKeyHash } from "./repositories/api-key/api-key.types.js";
+
 export type {
   ApiKey,
   ApiKeyCredentials,
@@ -174,5 +175,26 @@ export type {
   UpdateApiKey,
   UpdateApiKeyCriteria,
 } from "./repositories/api-key/api-key.types.js";
+
 export type { ApiKeyRepository } from "./repositories/api-key/api-key-repository.js";
+
 export { MongoApiKeyRepository } from "./repositories/api-key/mongo-api-key-repository.js";
+
+// ─────────────────────────────────────────────
+// Invitations
+// ─────────────────────────────────────────────
+
+export { asInvitationId } from "./repositories/invitation/invitation-types.js";
+
+export type {
+  InvitationId,
+  Invitation,
+  CreateInvitation,
+  UpdateInvitation,
+  FindInvitationCriteria,
+} from "./repositories/invitation/invitation-types.js";
+export type { TargetType } from "./models/invitation.model.js";
+
+export type { InvitationRepository } from "./repositories/invitation/invitation-repository.js";
+
+export { MongoInvitationRepository } from "./repositories/invitation/mongo-invitation-repository.js";
