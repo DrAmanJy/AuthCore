@@ -8,6 +8,7 @@ import type { UserService } from "./users.service.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { sendSuccess } from "../../utils/response.utils.js";
+import type { AccessTokenPayload } from "../auth/auth.types.js";
 
 type UserParams = {
   userId: string;
@@ -34,25 +35,24 @@ export class UserController {
   }
 
   async getAuthenticatedUser(req: Request, res: Response) {
-    const userId = req.token?.sub ?? req.user?.userId;
+    const { sub } = this.getAuthToken(req);
 
-    if (!userId) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
-    }
-
-    const user = await this.userService.getUserById(userId);
+    const user = await this.userService.getUserById(sub);
     sendSuccess(res, user, "Authenticated user successfully retrieved");
   }
 
   async updateUserProfile(req: UserRequest<UpdateProfile>, res: Response) {
-    const user = await this.userService.updateProfile(asUserId(req.params.userId), {
+    const { sub } = this.getAuthToken(req);
+
+    const user = await this.userService.updateProfile(sub, {
       displayName: req.body.displayName,
     });
     sendSuccess(res, user, "User profile successfully updated");
   }
 
   async updateUserEmail(req: UserRequest<ChangeEmail>, res: Response) {
-    const user = await this.userService.changeEmail(asUserId(req.params.userId), {
+    const { sub } = this.getAuthToken(req);
+    const user = await this.userService.changeEmail(sub, {
       email: req.body.email,
     });
 
@@ -60,7 +60,9 @@ export class UserController {
   }
 
   async deleteUser(req: UserRequest, res: Response) {
-    const user = await this.userService.deleteUser(asUserId(req.params.userId));
+    const { sub } = this.getAuthToken(req);
+
+    const user = await this.userService.deleteUser(sub);
 
     sendSuccess(res, user, "User successfully deleted");
   }
@@ -78,7 +80,15 @@ export class UserController {
   }
 
   async deactivateUser(req: UserRequest, res: Response) {
-    const user = await this.userService.deactivateUser(asUserId(req.params.userId));
+    const { sub } = this.getAuthToken(req);
+    const user = await this.userService.deactivateUser(sub);
     sendSuccess(res, user, "User successfully deactivated");
+  }
+
+  private getAuthToken(req: { token?: AccessTokenPayload }): AccessTokenPayload {
+    if (!req.token) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
+    }
+    return req.token;
   }
 }
