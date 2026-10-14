@@ -111,7 +111,7 @@ export class OrganizationController {
   }
 
   async getOrganizationBySlug(req: Request, res: Response) {
-    const { slug } = req.query;
+    const { slug } = req.params;
 
     if (typeof slug !== "string" || !slug.trim()) {
       throw new ResourceError(ERROR_CODES.SLUG_REQUIRED);
@@ -293,7 +293,7 @@ export class OrganizationController {
   }
 
   // ─────────────────────────────────────────────
-  // Members
+  // Api Key
   // ─────────────────────────────────────────────
 
   async createApiKey(req: Request, res: Response) {
@@ -338,7 +338,11 @@ export class OrganizationController {
   ) {
     const { sub, orgId } = this.getAuthToken(req);
     const { apiKeyId } = req.params;
-    const apiKey = await this.organizationService.deleteApiKeyById(apiKeyId, orgId, asActorId(sub));
+    const apiKey = await this.organizationService.deleteApiKeyById(
+      apiKeyId,
+      orgId,
+      asActorId(sub),
+    );
 
     sendSuccess(res, apiKey, "Api key successfully deleted");
   }
