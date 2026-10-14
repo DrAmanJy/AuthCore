@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { organizationController } from "../../container.js";
+import { invitationController, organizationController } from "../../container.js";
 import { validateAccessToken } from "../../middlewares/token.middleware.js";
 
 const organizationRouter = Router();
@@ -76,33 +76,41 @@ organizationRouter.delete(
   organizationController.deleteRole,
 );
 
-organizationRouter.post(
-  "/api/v1/organizations/:organizationId/api-keys",
-  organizationController.createApiKey,
-);
+organizationRouter.post("/:organizationId/api-keys", organizationController.createApiKey);
 
+organizationRouter.get("/:organizationId/api-keys", organizationController.getALlApiKey);
 organizationRouter.get(
-  "/api/v1/organizations/:organizationId/api-keys",
-  organizationController.getALlApiKey,
-);
-organizationRouter.get(
-  "/api/v1/organizations/:organizationId/api-keys/:apiKeyId",
+  "/:organizationId/api-keys/:apiKeyId",
   organizationController.getApiKeyById,
 );
 
 // organizationRouter.patch(
-//   "/api/v1/organizations/:organizationId/api-keys/:apiKeyId/revoke",
+//   "/:organizationId/api-keys/:apiKeyId/revoke",
 //   organizationController.revokeApiKeyById,
 // );
 
 organizationRouter.patch(
-  "/api/v1/organizations/:organizationId/api-keys/:key/revoke",
+  "/:organizationId/api-keys/:key/revoke",
   organizationController.revokeApiKey,
 );
 
 organizationRouter.delete(
-  "/api/v1/organizations/:organizationId/api-keys/:apiKeyId",
+  "/:organizationId/api-keys/:apiKeyId",
   organizationController.deleteApiKey,
 );
 
+organizationRouter.get("/:organizationId/invitation",invitationController.getOrganizationInvites);
+
+organizationRouter.post("/:organizationId/invitation",invitationController.sendInvitation);
+
+organizationRouter.post(
+  "/:organizationId/invitation/:invitationId/accept",
+  invitationController.acceptInvitation,
+);
+organizationRouter.post(
+  "/:organizationId/invitation/:invitationId/reject",
+  invitationController.rejectInvitation,
+);
+
+organizationRouter.delete("/:organizationId/invitation/:invitationId",invitationController.revokeInvitation);
 export { organizationRouter };
