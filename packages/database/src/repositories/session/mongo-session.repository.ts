@@ -147,13 +147,18 @@ export class MongoSessionRepository implements SessionRepository {
     }
   }
 
-  async revoke(sessionId: SessionId, reason?: string): Promise<Session | null> {
+  async revoke(
+    sessionId: SessionId,
+    userId: UserId,
+    reason?: string,
+  ): Promise<Session | null> {
     const objectId = toObjectId(sessionId);
 
     try {
       const session = await SessionModel.findOneAndUpdate(
         {
           _id: objectId,
+          userId,
           revokedAt: {
             $exists: false,
           },
