@@ -170,8 +170,9 @@ export class AuthController {
 
   async revokeSession(req: Request<SessionParams>, res: Response) {
     const { sessionId } = req.params;
+    const { sub } = this.getAuthToken(req);
 
-    const session = await this.authService.revokeSession(asSessionId(sessionId));
+    const session = await this.authService.revokeSession(asSessionId(sessionId), sub);
 
     sendSuccess(res, session, "Session successfully revoked");
   }
