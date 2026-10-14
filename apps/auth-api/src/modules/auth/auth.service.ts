@@ -1,4 +1,5 @@
 import type {
+  ActorId,
   OrganizationId,
   RefreshToken,
   Session,
@@ -25,6 +26,7 @@ import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import type { EmailQueue } from "@authcore/queue";
+import type { OrganizationService } from "../organization/organization.service.js";
 
 export class AuthService {
   constructor(
@@ -33,6 +35,7 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly recoveryService: RecoveryService,
     private readonly emailQueue: EmailQueue,
+    private readonly organizationService: OrganizationService,
   ) {}
 
   async registerUser(data: RegisterType): Promise<User> {
@@ -42,6 +45,7 @@ export class AuthService {
       displayName: data.displayName,
       email: data.email,
       passwordHash,
+      emailVerified: false,
     });
 
     const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
@@ -72,6 +76,7 @@ export class AuthService {
       type: "email",
       value: data.email,
     });
+
     this.userService.validateAccountStatus(user);
 
     const isValidPassword = await this.passwordService.verify(
@@ -83,14 +88,26 @@ export class AuthService {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
+    const member = await this.organizationService.getMemberByUser(
+      data.organizationId,
+      user.id,
+    );
+
+    if (member.status === "removed") {
+      throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_REMOVED);
+    }
+    if (member.status === "suspended") {
+      throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_SUSPENDED);
+    }
+
     const session = await this.sessionService.createSession({
-      userId: user.id,
-      organizationId: data.organizationId,
+      userId: member.userId,
+      organizationId: member.organizationId,
       device: data.device,
     });
 
     logger.info(
-      { event: "auth.login.success", userId: user.id },
+      { event: "auth.login.success", userId: member.userId },
       "User logged in successfully",
     );
     const {
@@ -199,7 +216,6 @@ export class AuthService {
       },
       "Password reset requested",
     );
-
   }
 
   async resetPassword(token: string, password: string): Promise<User> {
@@ -264,8 +280,8 @@ export class AuthService {
     });
   }
 
-  async revokeSession(sessionId: SessionId): Promise<Session> {
-    const session = await this.sessionService.revokeSession(sessionId);
+  async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
+    const session = await this.sessionService.revokeSession(sessionId, actorId);
     logger.info(
       {
         event: "auth.session.revoked",
