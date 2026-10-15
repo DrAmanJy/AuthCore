@@ -2,6 +2,7 @@ import type { QueueService } from "./queue.service.js";
 import type {
   SendVerificationEmailJob,
   SendPasswordResetEmailJob,
+  SendInvitationEmailJob,
 } from "@authcore/contracts";
 
 export class EmailQueue {
@@ -25,6 +26,16 @@ export class EmailQueue {
   ): Promise<void> {
     await this.queueService.send(this.queueUrl, {
       type: "email.send_password_reset",
+      version: 1,
+      ...data,
+    });
+  }
+
+  async publishInvitationEmail(
+    data: Omit<SendInvitationEmailJob, "type" | "version">,
+  ): Promise<void> {
+    await this.queueService.send(this.queueUrl, {
+      type: "email.send_invitation",
       version: 1,
       ...data,
     });
