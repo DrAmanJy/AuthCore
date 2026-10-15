@@ -65,3 +65,19 @@ export {
   sendVerificationEmailJobSchema,
   emailJobSchema,
 } from "./jobs/email.jobs.js";
+
+// Invitations - Schemas
+export {
+  targetTypeSchema,
+  sendInvitationSchema,
+  invitationParamsSchema,
+  organizationInvitationParamsSchema,
+} from "./invitation/schemas/invitation.schema.js";
+
+// Invitations - Types
+export type {
+  TargetType as ContractTargetType,
+  SendInvitation,
+  InvitationParams,
+  OrganizationInvitationParams,
+} from "./invitation/types.js";
