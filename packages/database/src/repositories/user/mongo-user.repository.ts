@@ -11,6 +11,7 @@ import type {
   UserCredentials,
   UserId,
   UserStatus,
+  FindUserCriteria,
 } from "./user.types.js";
 
 import type { UserRepository } from "./user.repository.js";
@@ -46,65 +47,72 @@ export class MongoUserRepository implements UserRepository {
       throw mapDatabaseError(error);
     }
   }
-  async findAllUsers(): Promise<User[]> {
+  find(criteria: {
+    type: "id";
+    value: UserId;
+    credentials: true;
+  }): Promise<UserCredentials | null>;
+
+  find(criteria: { type: "id"; value: UserId; credentials: false }): Promise<User | null>;
+
+  find(criteria: {
+    type: "email";
+    value: string;
+    credentials: true;
+  }): Promise<UserCredentials | null>;
+
+  find(criteria: {
+    type: "email";
+    value: string;
+    credentials: false;
+  }): Promise<User | null>;
+
+  find(criteria: { type: "all" }): Promise<User[]>;
+  async find(
+    criteria: FindUserCriteria,
+  ): Promise<UserCredentials | User | User[] | null> {
     try {
-      const users = await UserModel.find().lean().exec();
+      switch (criteria.type) {
+        case "all": {
+          const users = await UserModel.find().lean().exec();
 
-      return users.map(user => this.toUserType(user));
-    } catch (error) {
-      throw mapDatabaseError(error);
-    }
-  }
+          return users.map(user => this.toUserType(user));
+        }
 
-  async findById(userId: UserId): Promise<User | null> {
-    const objectId = toObjectId(userId);
+        case "id": {
+          const userQuery = UserModel.findById(toObjectId(criteria.value));
 
-    try {
-      const user = await UserModel.findById(objectId).lean().exec();
+          if (criteria.credentials) {
+            userQuery.select("+passwordHash");
+          }
 
-      if (!user) {
-        return null;
+          const user = await userQuery.lean().exec();
+
+          return user
+            ? criteria.credentials
+              ? this.toUserCredentials(user)
+              : this.toUserType(user)
+            : null;
+        }
+
+        case "email": {
+          const userQuery = UserModel.findOne({
+            email: criteria.value,
+          });
+
+          if (criteria.credentials) {
+            userQuery.select("+passwordHash");
+          }
+
+          const user = await userQuery.lean().exec();
+
+          return user
+            ? criteria.credentials
+              ? this.toUserCredentials(user)
+              : this.toUserType(user)
+            : null;
+        }
       }
-
-      return this.toUserType(user);
-    } catch (error) {
-      throw mapDatabaseError(error);
-    }
-  }
-
-  async findCredentialsByEmail(email: string): Promise<UserCredentials | null> {
-    try {
-      const user = await UserModel.findOne({
-        email: email.toLowerCase().trim(),
-      })
-        .select(" +passwordHash")
-        .lean()
-        .exec();
-
-      if (!user?.passwordHash) {
-        return null;
-      }
-
-      return this.toUserCredentials(user);
-    } catch (error) {
-      throw mapDatabaseError(error);
-    }
-  }
-
-  async findCredentialsById(userId: UserId): Promise<UserCredentials | null> {
-    const objectId = toObjectId(userId);
-
-    try {
-      const user = await UserModel.findById(objectId)
-        .select(" +passwordHash")
-        .lean()
-        .exec();
-
-      if (!user?.passwordHash) {
-        return null;
-      }
-
-      return this.toUserCredentials(user);
     } catch (error) {
       throw mapDatabaseError(error);
     }

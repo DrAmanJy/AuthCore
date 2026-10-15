@@ -4,6 +4,8 @@ import type { User, UserRepository } from "@authcore/database";
 import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
 import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
+import { logger } from "@authcore/logger";
+import { InternalServerError } from "../../errors/internal-server-error.js";
 
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
@@ -17,7 +19,22 @@ export class UserService {
   }
 
   async getUserById(userId: UserId): Promise<User> {
-    const user = await this.userRepository.findById(userId);
+    const user = await this.userRepository.find({
+      type: "id",
+      value: userId,
+      credentials: false,
+    });
+
+    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+
+    return user;
+  }
+  async getUserByEmail(email: string): Promise<User> {
+    const user = await this.userRepository.find({
+      type: "email",
+      value: email,
+      credentials: false,
+    });
 
     if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
 
@@ -25,12 +42,20 @@ export class UserService {
   }
 
   async getUserCredentials(
-    criteria: { type: "email"; value: string } | { type: "id"; value: UserId },
+    criteria: { type: "id"; value: UserId } | { type: "email"; value: string },
   ): Promise<UserCredentials> {
     const user =
-      criteria.type === "email"
-        ? await this.userRepository.findCredentialsByEmail(criteria.value)
-        : await this.userRepository.findCredentialsById(criteria.value);
+      criteria.type === "id"
+        ? await this.userRepository.find({
+            type: "id",
+            value: criteria.value,
+            credentials: true,
+          })
+        : await this.userRepository.find({
+            type: "email",
+            value: criteria.value,
+            credentials: true,
+          });
 
     if (!user) {
       throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
@@ -40,7 +65,7 @@ export class UserService {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return this.userRepository.findAllUsers();
+    return this.userRepository.find({ type: "all" });
   }
 
   async create(data: CreateUserData): Promise<User> {
@@ -50,10 +75,28 @@ export class UserService {
     });
 
     if (existingUser) {
+      logger.warn(
+        {
+          event: "user.create.rejected",
+          reason: "email_already_exists",
+        },
+        "User creation rejected because email already exists",
+      );
+
       throw new ResourceError(ERROR_CODES.USER_EMAIL_ALREADY_EXISTS);
     }
 
-    return this.userRepository.create(data);
+    const user = await this.userRepository.create(data);
+
+    logger.info(
+      {
+        event: "user.create.success",
+        userId: user.id,
+      },
+      "User created successfully",
+    );
+
+    return user;
   }
 
   async updateProfile(userId: UserId, data: UpdateProfile): Promise<User> {
@@ -63,7 +106,14 @@ export class UserService {
       displayName: data.displayName,
     });
 
-    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+    if (!user) {
+      throw new InternalServerError();
+    }
+
+    logger.info(
+      { event: "user.profile.update.success", userId: user.id },
+      "User profile updated successfully",
+    );
     return user;
   }
 
@@ -93,7 +143,10 @@ export class UserService {
   }
 
   async verifyEmail(userId: UserId): Promise<User> {
-    const user = await this.userRepository.update(userId, { emailVerified: true });
+    const user = await this.userRepository.update(userId, {
+      emailVerified: true,
+      status: "active",
+    });
 
     if (!user) {
       throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
@@ -121,9 +174,17 @@ export class UserService {
     });
 
     if (!user) {
-      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+      throw new InternalServerError();
     }
 
+    logger.info(
+      {
+        event: "user.status.change.success",
+        userId: user.id,
+        status: user.status,
+      },
+      "User status successfully changed",
+    );
     return user;
   }
 
@@ -131,8 +192,9 @@ export class UserService {
     await this.getUserById(userId);
 
     const user = await this.userRepository.delete(userId);
+
     if (!user) {
-      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+      throw new InternalServerError();
     }
     return user;
   }

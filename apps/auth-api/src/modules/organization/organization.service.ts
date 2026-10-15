@@ -20,6 +20,7 @@ import type {
 import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { InternalServerError } from "../../errors/internal-server-error.js";
+import { logger } from "@authcore/logger";
 
 export class OrganizationService {
   constructor(
@@ -56,7 +57,12 @@ export class OrganizationService {
     actorId: ActorId,
     data: CreateOrganizationData,
   ): Promise<Organization> {
-    return this.organizationRepository.create(actorId, data);
+    const organization = await this.organizationRepository.create(actorId, data);
+    logger.info(
+      { event: "organization.create.success", actorId, orgId: organization.id },
+      "Organization created successfully",
+    );
+    return organization;
   }
 
   async updateOrganization(
@@ -78,6 +84,15 @@ export class OrganizationService {
       throw new InternalServerError();
     }
 
+    logger.info(
+      {
+        event: "organization.update.success",
+        actorId,
+        organizationId: organization.id,
+      },
+      "Organization updated successfully",
+    );
+
     return updatedOrganization;
   }
 
@@ -97,6 +112,10 @@ export class OrganizationService {
     if (!organizationDeleted) {
       throw new InternalServerError();
     }
+    logger.info(
+      { event: "organization.delete.success", actorId, orgId: organization.id },
+      "Organization deleted successfully",
+    );
 
     return organizationDeleted;
   }
@@ -155,10 +174,28 @@ export class OrganizationService {
     );
 
     if (existingMember) {
+      logger.warn(
+        {
+          event: "organization.member.create.field",
+          reason: "organization_already_exists",
+          actorId,
+          organizationId,
+        },
+        "Field to create user ",
+      );
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_ALREADY_EXISTS);
     }
 
-    return this.organizationMemberRepository.create(actorId, organizationId, data);
+    const member = await this.organizationMemberRepository.create(
+      actorId,
+      organizationId,
+      data,
+    );
+    logger.info(
+      { event: "organization.member.create.success", actorId, memberId: member.id },
+      "Organization member created successfully",
+    );
+    return member;
   }
 
   async updateMember(
@@ -185,6 +222,14 @@ export class OrganizationService {
       throw new InternalServerError();
     }
 
+    logger.info(
+      {
+        event: "organization.member.create.success",
+        actorId,
+        memberId: updatedMember.id,
+      },
+      "Organization member updated successfully",
+    );
     return updatedMember;
   }
 
@@ -281,7 +326,13 @@ export class OrganizationService {
       throw new ResourceError(ERROR_CODES.ROLE_ALREADY_EXISTS);
     }
 
-    return this.roleRepository.create(organizationId, actorId, data);
+    const role = await this.roleRepository.create(organizationId, actorId, data);
+
+    logger.info(
+      { event: "role.create.success", roleId: role.id, actorId },
+      "Role created successfully",
+    );
+    return role;
   }
 
   async updateRole(
@@ -304,6 +355,10 @@ export class OrganizationService {
       throw new InternalServerError();
     }
 
+    logger.info(
+      { event: "role.update.success", roleId: updatedRole.id, actorId },
+      "Role updated successfully",
+    );
     return updatedRole;
   }
 
@@ -326,6 +381,10 @@ export class OrganizationService {
       throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
+    logger.info(
+      { event: "role.delete.success", roleId: deletedRole.id, actorId },
+      "Role deleted successfully",
+    );
     return deletedRole;
   }
 

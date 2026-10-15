@@ -6,6 +6,7 @@ import type {
   User,
   UserId,
 } from "@authcore/database";
+import { logger } from "@authcore/logger";
 
 import type { ChangePassword } from "@authcore/contracts";
 
@@ -22,6 +23,7 @@ import type { RecoveryService } from "./recovery.service.js";
 import type { SessionService } from "./session.service.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
+import type { EmailQueue } from "@authcore/queue";
 
 export class AuthService {
   constructor(
@@ -29,6 +31,7 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly passwordService: PasswordService,
     private readonly recoveryService: RecoveryService,
+    private readonly emailQueue: EmailQueue,
   ) {}
 
   async registerUser(data: RegisterType): Promise<User> {
@@ -40,7 +43,22 @@ export class AuthService {
       passwordHash,
     });
 
-    // TODO: Push verify-email job to SQS.
+    const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
+
+    await this.emailQueue.publishVerificationEmail({
+      userId: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      verificationToken: token,
+    });
+
+    logger.info(
+      {
+        event: "auth.register.success",
+        userId: user.id,
+      },
+      "User registered successfully",
+    );
 
     return user;
   }
@@ -67,6 +85,10 @@ export class AuthService {
       device: data.device,
     });
 
+    logger.info(
+      { event: "auth.login.success", userId: user.id },
+      "User logged in successfully",
+    );
     const {
       passwordHash: _passwordHash,
       emailVerified: _emailVerified,
@@ -89,11 +111,23 @@ export class AuthService {
       "User logout",
     );
 
+    logger.info(
+      { event: "auth.logout.success", userId: user.id },
+      "User logged out successfully",
+    );
+
     return user;
   }
 
   async refreshAccessToken(refreshToken: RefreshToken): Promise<CreateSessionResult> {
-    return this.sessionService.rotateRefreshToken(refreshToken);
+    const result = await this.sessionService.rotateRefreshToken(refreshToken);
+    logger.info(
+      {
+        event: "auth.token.refresh.success",
+      },
+      "Access token refreshed successfully",
+    );
+    return result;
   }
 
   async verifyEmail(token: string): Promise<void> {
@@ -102,16 +136,34 @@ export class AuthService {
     await this.userService.verifyEmail(verificationToken.userId);
 
     await this.recoveryService.markTokenAsUsed(verificationToken.id);
+
+    logger.info(
+      { event: "auth.email.verify.success", userId: verificationToken.userId },
+      "Email verified successfully",
+    );
   }
 
-  async resendVerification(userId: UserId): Promise<void> {
-    const { token, expiresAt } =
-      await this.recoveryService.createEmailVerificationToken(userId);
+  async resendVerification(email: string): Promise<void> {
+    const user = await this.userService.getUserByEmail(email);
+    if (user.status !== "pending") {
+      throw new AuthenticationError("USER_ALREADY_ACTIVE");
+    }
+    const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
 
-    // TODO: Push verify-email job to SQS.
+    await this.emailQueue.publishVerificationEmail({
+      displayName: user.displayName,
+      email: user.email,
+      userId: user.id,
+      verificationToken: token,
+    });
 
-    void token;
-    void expiresAt;
+    logger.info(
+      {
+        event: "auth.email.verification.resend.requested",
+        userId: user.id,
+      },
+      "Verification email resend requested",
+    );
   }
 
   async forgotPassword(email: string): Promise<void> {
@@ -126,8 +178,19 @@ export class AuthService {
       user.id,
     );
 
-    // TODO: Push password-reset email job to SQS.
+    await this.emailQueue.publishPasswordResetEmail({
+      displayName: user.displayName,
+      email: user.email,
+      resetToken: token,
+      userId: user.id,
+    });
 
+    logger.info(
+      {
+        event: "auth.password.reset.requested",
+      },
+      "Password reset requested",
+    );
     void token;
     void expiresAt;
   }
@@ -145,7 +208,10 @@ export class AuthService {
     await this.sessionService.revokeAllUserSessions(user.id, undefined, "Password reset");
 
     await this.recoveryService.markTokenAsUsed(verificationToken.id);
-
+    logger.info(
+      { event: "auth.password.reset.success", userId: user.id },
+      "Password reset successfully",
+    );
     return user;
   }
 
@@ -170,7 +236,17 @@ export class AuthService {
 
     await this.sessionService.revokeAllUserSessions(userId);
 
-    return this.userService.updatePassword(userId, passwordHash);
+    const updatedUser = await this.userService.updatePassword(userId, passwordHash);
+
+    logger.info(
+      {
+        event: "auth.password.change.success",
+        userId: updatedUser.id,
+      },
+      "Password changed successfully",
+    );
+
+    return updatedUser;
   }
 
   async getSessions(organizationId: OrganizationId, userId: UserId): Promise<Session[]> {
@@ -182,13 +258,32 @@ export class AuthService {
   }
 
   async revokeSession(sessionId: SessionId): Promise<Session> {
-    return this.sessionService.revokeSession(sessionId);
+    const session = await this.sessionService.revokeSession(sessionId);
+    logger.info(
+      {
+        event: "auth.session.revoked",
+        organizationId: session.organizationId,
+        sessionId: session.id,
+        userId: session.userId,
+      },
+      "Session revoked successfully",
+    );
+    return session;
   }
 
   async revokeAllSessions(
     organizationId: OrganizationId,
     userId: UserId,
   ): Promise<number> {
-    return this.sessionService.revokeAllUserSessions(userId, organizationId);
+    const count = await this.sessionService.revokeAllUserSessions(userId, organizationId);
+    logger.info(
+      {
+        event: "auth.sessions.revoked_all",
+        organizationId,
+        userId,
+      },
+      "All user sessions revoked successfully",
+    );
+    return count;
   }
 }

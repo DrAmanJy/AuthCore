@@ -52,3 +52,16 @@ export type {
   ChangeStatus,
   UserParams,
 } from "./users/types.js";
+
+export type {
+  SendVerificationEmailJob,
+  SendPasswordResetEmailJob,
+} from "./jobs/types.js";
+
+export type { EmailJob } from "./jobs/email.jobs.js";
+
+export {
+  sendPasswordRestJobSchema,
+  sendVerificationEmailJobSchema,
+  emailJobSchema,
+} from "./jobs/email.jobs.js";

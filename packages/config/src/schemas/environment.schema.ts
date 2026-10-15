@@ -42,6 +42,27 @@ const redisUrlSchema = z
 const requiredStringSchema = (name: string) =>
   z.string().trim().min(1, `${name} is required`);
 
+const emailFromSchema = z
+  .string("EMAIL_FROM is required")
+  .trim()
+  .min(1, "EMAIL_FROM is required")
+  .refine(
+    value => {
+      // Name <email@example.com>
+      const namedAddress = value.match(/^(.+?)\s*<([^<>]+)>$/);
+
+      if (namedAddress?.[2]) {
+        return z.email().safeParse(namedAddress[2].trim()).success;
+      }
+
+      // email@example.com
+      return z.email().safeParse(value).success;
+    },
+    {
+      error: 'EMAIL_FROM must be an email or "Name <email@example.com>"',
+    },
+  );
+
 export const EnvironmentSchema = z
   .strictObject({
     NODE_ENV: z.enum(environments, {
@@ -59,6 +80,8 @@ export const EnvironmentSchema = z
     HOST: hostSchema,
 
     CORS_ORIGIN: z.url("CORS_ORIGIN must be a valid URL"),
+
+    FRONTEND_URL: z.url("FRONTEND_URL must be a valid URL"),
 
     DATABASE_URL: databaseUrlSchema,
 
@@ -87,6 +110,22 @@ export const EnvironmentSchema = z
     AWS_ACCESS_KEY_ID: requiredStringSchema("AWS_ACCESS_KEY_ID"),
 
     AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY is required"),
+
+    AWS_EMAIL_QUEUE_URL: z.url({
+      error: iss =>
+        iss.input === "" || iss.input === undefined
+          ? "AWS_EMAIL_QUEUE_URL is required"
+          : "AWS_EMAIL_QUEUE_URL is invalid",
+    }),
+
+    RESEND_API_KEY: z
+      .string()
+      .min(1, "RESEND_API is required")
+      .refine(val => val.startsWith("re_"), {
+        error: "RESEND_API is invalid API key",
+      }),
+
+    EMAIL_FROM: emailFromSchema,
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") {

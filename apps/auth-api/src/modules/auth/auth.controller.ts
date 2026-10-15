@@ -10,7 +10,6 @@ import {
 import type {
   Register,
   Login,
-  VerifyEmail,
   ForgotPassword,
   ResetPassword,
   ChangePassword,
@@ -24,6 +23,10 @@ import { sendCreated, sendNoContent, sendSuccess } from "../../utils/response.ut
 
 const REFRESH_TOKEN_COOKIE =
   config.nodeEnv === "production" ? "__Host-refresh_token" : "refresh_token";
+
+type EmailParams = {
+  email: string;
+};
 
 export class AuthController {
   constructor(private readonly authService: AuthService) {
@@ -99,18 +102,26 @@ export class AuthController {
     sendSuccess(res, result.accessToken, "Access token refreshed successfully");
   }
 
-  async verifyEmail(req: Request<unknown, unknown, VerifyEmail>, res: Response) {
-    const { token } = req.body;
+  async verifyEmail(req: Request<unknown, unknown, unknown>, res: Response) {
+    const { token } = req.query;
+
+    if (typeof token !== "string" || !token.trim()) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_REQUIRED);
+    }
 
     await this.authService.verifyEmail(token);
 
     sendNoContent(res);
   }
 
-  async resendVerification(req: Request, res: Response) {
-    const { sub } = req.token;
+  async resendVerification(req: Request<unknown, unknown, EmailParams>, res: Response) {
+    const { email } = req.query;
 
-    await this.authService.resendVerification(sub);
+    if (typeof email !== "string" || !email.trim()) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_EMAIL_REQUIRED);
+    }
+
+    await this.authService.resendVerification(email);
 
     sendNoContent(res);
   }

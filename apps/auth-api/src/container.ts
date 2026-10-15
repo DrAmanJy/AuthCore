@@ -17,6 +17,7 @@ import { PasswordService } from "./modules/auth/password.service.js";
 import { RecoveryService } from "./modules/auth/recovery.service.js";
 import { OrganizationController } from "./modules/organization/organization.controller.js";
 import { OrganizationService } from "./modules/organization/organization.service.js";
+import { emailQueue } from "@authcore/queue";
 
 const userRepository = new MongoUserRepository();
 const sessionRepository = new MongoSessionRepository();
@@ -35,6 +36,7 @@ const authService = new AuthService(
   sessionService,
   passwordService,
   recoveryService,
+  emailQueue,
 );
 const organizationService = new OrganizationService(
   organizationRepository,

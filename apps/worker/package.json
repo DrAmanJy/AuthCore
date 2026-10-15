@@ -1,0 +1,33 @@
+{
+  "name": "@authcore/worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/worker.js",
+  "types": "./dist/worker.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "dev": "node --env-file=../../.env ./node_modules/tsx/dist/cli.mjs watch src/worker.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "exports": {
+    ".": "./src/worker.ts"
+  },
+  "dependencies": {
+    "@authcore/config": "workspace:*",
+    "@authcore/contracts": "workspace:*",
+    "@authcore/logger": "workspace:*",
+    "@authcore/queue": "workspace:*",
+    "@aws-sdk/client-sqs": "^3.1124.0",
+    "resend": "^6.32.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13"
+  }
+}
