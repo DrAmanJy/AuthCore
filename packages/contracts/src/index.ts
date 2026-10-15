@@ -56,6 +56,7 @@ export type {
 export type {
   SendVerificationEmailJob,
   SendPasswordResetEmailJob,
+  SendInvitationEmailJob,
 } from "./jobs/types.js";
 
 export type { EmailJob } from "./jobs/email.jobs.js";
@@ -63,6 +64,7 @@ export type { EmailJob } from "./jobs/email.jobs.js";
 export {
   sendPasswordRestJobSchema,
   sendVerificationEmailJobSchema,
+  sendInvitationEmailJobSchema,
   emailJobSchema,
 } from "./jobs/email.jobs.js";
 
