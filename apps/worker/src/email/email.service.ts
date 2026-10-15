@@ -1,11 +1,13 @@
 import { config } from "@authcore/config";
 import type {
+  SendInvitationEmailJob,
   SendPasswordResetEmailJob,
   SendVerificationEmailJob,
 } from "@authcore/contracts";
 import { sendEmail } from "./providers/resend.provider.js";
 import { verificationEmailTemplate } from "./templates/verification-email.js";
 import { passwordResetEmailTemplate } from "./templates/password-reset-email.js";
+import { invitationEmailTemplate } from "./templates/invitation-email.js";
 
 export class EmailService {
   async sendVerificationEmail(job: SendVerificationEmailJob): Promise<void> {
@@ -26,12 +28,10 @@ export class EmailService {
       html: template.html,
       text: template.text,
     });
-
-    void verificationUrl;
   }
 
   async sendPasswordRestEmail(job: SendPasswordResetEmailJob): Promise<void> {
-    const resetUrl = `${config.app.frontendUrl}/reset-password?=${encodeURIComponent(job.resetToken)}`;
+    const resetUrl = `${config.app.frontendUrl}/reset-password?token=${encodeURIComponent(job.resetToken)}`;
 
     const template = passwordResetEmailTemplate({
       displayName: job.displayName,
@@ -46,6 +46,24 @@ export class EmailService {
       html: template.html,
       text: template.text,
     });
-    void resetUrl;
+  }
+
+  async sendInvitationEmail(job: SendInvitationEmailJob): Promise<void> {
+    const inviteUrl = `${config.app.frontendUrl}/invitations/accept?token=${encodeURIComponent(job.invitationToken)}`;
+
+    const template = invitationEmailTemplate({
+      organizationName: job.organizationName,
+      inviterName: job.inviterName,
+      roleName: job.roleName,
+      inviteUrl,
+      expiresAt: job.expiresAt,
+    });
+
+    await sendEmail({
+      to: job.email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
   }
 }

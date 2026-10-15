@@ -112,6 +112,11 @@ export class EmailConsumer {
 
         case "email.send_password_reset":
           await this.emailService.sendPasswordRestEmail(job);
+          break;
+
+        case "email.send_invitation":
+          await this.emailService.sendInvitationEmail(job);
+          break;
       }
 
       await this.deleteMessage(message.ReceiptHandle);
