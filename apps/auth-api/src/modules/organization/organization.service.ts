@@ -1,3 +1,4 @@
+import { DEFAULT_ROLE_PERMISSIONS, SYSTEM_ROLE_NAMES } from "./role-defaults.js";
 import type {
   ActorId,
   ApiKey,
