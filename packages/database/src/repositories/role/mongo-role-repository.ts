@@ -25,6 +25,7 @@ type MongoRoleRecord = {
     displayName: string;
   };
   isSystemRole: boolean;
+  permissions: string[];
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -86,6 +87,7 @@ export class MongoRoleRepository implements RoleRepository {
       organizationId: toObjectId(organizationId),
       name: data.name,
       createdBy: toObjectId(actorId),
+      permissions: data.permissions ?? [],
       ...(data.isSystemRole !== undefined && {
         isSystemRole: data.isSystemRole,
       }),
@@ -170,6 +172,7 @@ export class MongoRoleRepository implements RoleRepository {
         displayName: record.createdBy.displayName,
       },
       isSystemRole: record.isSystemRole,
+      permissions: record.permissions ?? [],
       ...(record.deletedAt !== undefined && {
         deletedAt: record.deletedAt,
       }),
