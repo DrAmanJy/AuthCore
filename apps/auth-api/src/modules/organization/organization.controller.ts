@@ -62,6 +62,7 @@ export class OrganizationController {
     this.getOrganization = this.getOrganization.bind(this);
     this.updateOrganization = this.updateOrganization.bind(this);
     this.deleteOrganization = this.deleteOrganization.bind(this);
+    this.transferOwnership = this.transferOwnership.bind(this);
 
     this.getMembers = this.getMembers.bind(this);
     this.createMember = this.createMember.bind(this);
@@ -156,6 +157,21 @@ export class OrganizationController {
 
   // ─────────────────────────────────────────────
   // Members
+
+  async transferOwnership(
+    req: OrganizationByIdRequest<{ newOwnerUserId: string }>,
+    res: Response,
+  ) {
+    const { sub } = this.getAuthToken(req);
+    const organization = await this.organizationService.transferOwnership(
+      asOrganizationId(req.params.organizationId),
+      asActorId(sub),
+      asUserId(req.body.newOwnerUserId),
+    );
+
+    sendSuccess(res, organization, "Organization ownership transferred successfully");
+  }
+
   // ─────────────────────────────────────────────
 
   async getMembers(req: OrganizationByIdRequest, res: Response) {

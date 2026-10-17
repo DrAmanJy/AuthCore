@@ -156,6 +156,42 @@ export class OrganizationService {
 
   // ─────────────────────────────────────────────
   // Members
+
+  async transferOwnership(
+    organizationId: OrganizationId,
+    currentOwnerActorId: ActorId,
+    newOwnerUserId: UserId,
+  ): Promise<Organization> {
+    const organization = await this.requireActiveOrganizationById(organizationId);
+    this.requireOrganizationCreator(currentOwnerActorId, organization);
+
+    const targetMember = await this.getMemberByUser(organizationId, newOwnerUserId);
+    if (targetMember.status !== "active") {
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
+    }
+
+    const ownerRole = await this.roleRepository.findByName(organizationId, SYSTEM_ROLE_NAMES.OWNER);
+    if (!ownerRole) {
+      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
+    }
+
+    await this.organizationMemberRepository.update(organizationId, targetMember.id, {
+      roleId: ownerRole.id,
+    });
+
+    logger.info(
+      {
+        event: "organization.ownership.transferred",
+        organizationId,
+        fromActorId: currentOwnerActorId,
+        toUserId: newOwnerUserId,
+      },
+      "Organization ownership transferred successfully",
+    );
+
+    return organization;
+  }
+
   // ─────────────────────────────────────────────
 
   async getMember(
