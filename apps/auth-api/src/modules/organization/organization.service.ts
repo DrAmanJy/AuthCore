@@ -317,6 +317,24 @@ export class OrganizationService {
 
   // ─────────────────────────────────────────────
   // Roles
+
+  async getMemberPermissions(
+    organizationId: OrganizationId,
+    userId: UserId,
+  ): Promise<string[]> {
+    const member = await this.getMemberByUser(organizationId, userId);
+    if (member.status !== "active") {
+      return [];
+    }
+
+    const role = await this.roleRepository.findById(member.roleId);
+    if (!role) {
+      return [];
+    }
+
+    return role.permissions ?? [];
+  }
+
   // ─────────────────────────────────────────────
 
   async getRole(organizationId: OrganizationId, roleId: RoleId): Promise<Role> {
