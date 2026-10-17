@@ -6,6 +6,7 @@ export interface IRole {
   name: string;
   createdBy: Types.ObjectId;
   isSystemRole: boolean;
+  permissions: string[];
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +40,12 @@ const RoleSchema = new Schema<IRole>(
       type: Boolean,
       required: true,
       default: false,
+    },
+
+    permissions: {
+      type: [String],
+      required: true,
+      default: [],
     },
 
     deletedAt: {
