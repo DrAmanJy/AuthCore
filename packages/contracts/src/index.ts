@@ -87,3 +87,17 @@ export type {
 // Permissions
 export { PERMISSIONS, ALL_PERMISSIONS } from "./auth/permissions.js";
 export type { Permission } from "./auth/permissions.js";
+
+// Roles - Schemas
+export {
+  createRoleSchema,
+  updateRoleSchema,
+  roleParamsSchema,
+} from "./roles/schemas/role.schema.js";
+
+// Roles - Types
+export type {
+  CreateRole,
+  UpdateRole,
+  RoleParams as ContractRoleParams,
+} from "./roles/types.js";
