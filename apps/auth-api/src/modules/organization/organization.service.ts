@@ -267,6 +267,29 @@ export class OrganizationService {
     return updatedMember;
   }
 
+  
+  private async ensureNotLastOwner(
+    organizationId: OrganizationId,
+    memberId: OrganizationMemberId,
+  ): Promise<void> {
+    const member = await this.organizationMemberRepository.findById(memberId);
+    if (!member) return;
+
+    const role = await this.roleRepository.findById(member.roleId);
+    if (!role || role.name !== SYSTEM_ROLE_NAMES.OWNER) {
+      return;
+    }
+
+    const allMembers = await this.organizationMemberRepository.findByOrganization(organizationId);
+    const activeOwnerCount = allMembers.filter(
+      m => m.status === "active" && m.roleId === member.roleId && m.id !== memberId
+    ).length;
+
+    if (activeOwnerCount === 0) {
+      throw new ResourceError(ERROR_CODES.ORGANIZATION_LAST_OWNER_PROTECTION);
+    }
+  }
+
   async removeMember(
     organizationId: OrganizationId,
     memberId: OrganizationMemberId,
@@ -277,6 +300,7 @@ export class OrganizationService {
     if (member.status !== "active") {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
+    await this.ensureNotLastOwner(organizationId, memberId);
 
     return this.updateMember(organizationId, memberId, actorId, {
       status: "removed",
