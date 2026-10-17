@@ -65,14 +65,36 @@ export class OrganizationService {
     return this.organizationRepository.find({ type: "all" });
   }
 
-  async createOrganization(
+    async createOrganization(
     actorId: ActorId,
     data: CreateOrganizationData,
   ): Promise<Organization> {
     const organization = await this.organizationRepository.create(actorId, data);
+
+    // Seed default roles and assign creator as Owner
+    let ownerRole: Role | null = null;
+    for (const [roleName, permissions] of Object.entries(DEFAULT_ROLE_PERMISSIONS)) {
+      const role = await this.roleRepository.create(organization.id, actorId, {
+        name: roleName,
+        isSystemRole: true,
+        permissions,
+      });
+      if (roleName === SYSTEM_ROLE_NAMES.OWNER) {
+        ownerRole = role;
+      }
+    }
+
+    if (ownerRole) {
+      await this.organizationMemberRepository.create(actorId, organization.id, {
+        userId: asUserId(actorId),
+        roleId: ownerRole.id,
+        status: "active",
+      });
+    }
+
     logger.info(
       { event: "organization.create.success", actorId, orgId: organization.id },
-      "Organization created successfully",
+      "Organization created and creator assigned as Owner",
     );
     return organization;
   }
