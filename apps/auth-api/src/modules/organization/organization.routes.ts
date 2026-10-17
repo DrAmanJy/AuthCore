@@ -70,9 +70,17 @@ organizationRouter.post(
 // Organization Roles
 // ─────────────────────────────────────────────
 
-organizationRouter.get("/:organizationId/roles", organizationController.getRoles);
+organizationRouter.get(
+  "/:organizationId/roles",
+  requirePermission(PERMISSIONS.ROLES_READ),
+  organizationController.getRoles,
+);
 
-organizationRouter.post("/:organizationId/roles", organizationController.createRole);
+organizationRouter.post(
+  "/:organizationId/roles",
+  requirePermission(PERMISSIONS.ROLES_MANAGE),
+  organizationController.createRole,
+);
 
 organizationRouter.get("/:organizationId/roles/:roleId", organizationController.getRole);
 
