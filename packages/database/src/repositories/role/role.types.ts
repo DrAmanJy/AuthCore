@@ -13,6 +13,7 @@ export type Role = {
   name: string;
   createdBy: CreatedBy;
   isSystemRole: boolean;
+  permissions: string[];
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -21,10 +22,12 @@ export type Role = {
 export type CreateRoleData = {
   name: string;
   isSystemRole?: boolean;
+  permissions?: string[];
 };
 
 export type UpdateRoleData = {
   name?: string;
+  permissions?: string[];
 };
 
 export type FindRoleCriteria =
