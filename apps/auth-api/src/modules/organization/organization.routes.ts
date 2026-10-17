@@ -1,3 +1,5 @@
+import { requirePermission } from "../../middlewares/permission.middleware.js";
+import { PERMISSIONS } from "@authcore/contracts";
 import { Router } from "express";
 
 import { invitationController, organizationController } from "../../container.js";
@@ -27,9 +29,17 @@ organizationRouter.delete("/:organizationId", organizationController.deleteOrgan
 // Organization Members
 // ─────────────────────────────────────────────
 
-organizationRouter.get("/:organizationId/members", organizationController.getMembers);
+organizationRouter.get(
+  "/:organizationId/members",
+  requirePermission(PERMISSIONS.MEMBERS_READ),
+  organizationController.getMembers,
+);
 
-organizationRouter.post("/:organizationId/members", organizationController.createMember);
+organizationRouter.post(
+  "/:organizationId/members",
+  requirePermission(PERMISSIONS.MEMBERS_MANAGE),
+  organizationController.createMember,
+);
 
 organizationRouter.get(
   "/:organizationId/members/:memberId",
