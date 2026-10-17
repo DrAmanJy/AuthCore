@@ -48,6 +48,30 @@ export const ERROR_CODES = {
   ORGANIZATION_MEMBER_SUSPENSION_REQUIRED: "ORGANIZATION_MEMBER_SUSPENSION_REQUIRED",
   ORGANIZATION_MEMBER_REMOVE_DIRECTLY: "ORGANIZATION_MEMBER_REMOVE_DIRECTLY",
 
+  // Authorization & Permissions
+  AUTH_FORBIDDEN: "AUTH_FORBIDDEN",
+  AUTH_INSUFFICIENT_PERMISSIONS: "AUTH_INSUFFICIENT_PERMISSIONS",
+  ORGANIZATION_ACCESS_DENIED: "ORGANIZATION_ACCESS_DENIED",
+  ORGANIZATION_LAST_OWNER_PROTECTION: "ORGANIZATION_LAST_OWNER_PROTECTION",
+
+  // Authorization & Permissions
+  AUTH_FORBIDDEN: {
+    statusCode: 403,
+    message: "You do not have permission to perform this action.",
+  },
+  AUTH_INSUFFICIENT_PERMISSIONS: {
+    statusCode: 403,
+    message: "Insufficient permissions for the requested resource.",
+  },
+  ORGANIZATION_ACCESS_DENIED: {
+    statusCode: 403,
+    message: "Access to this organization is denied.",
+  },
+  ORGANIZATION_LAST_OWNER_PROTECTION: {
+    statusCode: 409,
+    message: "Cannot remove, suspend, or demote the last organization owner.",
+  },
+
   // Role
   ROLE_NOT_FOUND: "ROLE_NOT_FOUND",
   ROLE_ALREADY_EXISTS: "ROLE_ALREADY_EXISTS",
