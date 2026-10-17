@@ -94,9 +94,17 @@ organizationRouter.delete(
   organizationController.deleteRole,
 );
 
-organizationRouter.post("/:organizationId/api-keys", organizationController.createApiKey);
+organizationRouter.post(
+  "/:organizationId/api-keys",
+  requirePermission(PERMISSIONS.API_KEYS_MANAGE),
+  organizationController.createApiKey,
+);
 
-organizationRouter.get("/:organizationId/api-keys", organizationController.getALlApiKey);
+organizationRouter.get(
+  "/:organizationId/api-keys",
+  requirePermission(PERMISSIONS.API_KEYS_READ),
+  organizationController.getALlApiKey,
+);
 organizationRouter.get(
   "/:organizationId/api-keys/:apiKeyId",
   organizationController.getApiKeyById,
