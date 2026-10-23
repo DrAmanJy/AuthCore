@@ -280,7 +280,17 @@ export class AuthService {
     });
   }
 
+  
+  async verifySessionOwnership(sessionId: SessionId, actorId: ActorId): Promise<Session> {
+    const session = await this.sessionService.getSession(sessionId);
+    if (!session || session.userId !== actorId) {
+      throw new AuthenticationError(ERROR_CODES.SESSION_ACCESS_DENIED);
+    }
+    return session;
+  }
+
   async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
+    await this.verifySessionOwnership(sessionId, actorId);
     const session = await this.sessionService.revokeSession(sessionId, actorId);
     logger.info(
       {
