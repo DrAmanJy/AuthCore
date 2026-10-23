@@ -9,6 +9,18 @@ export const ERROR_CODES = {
   AUTH_INVALID_REFRESH_TOKEN: "AUTH_INVALID_REFRESH_TOKEN",
   AUTH_SESSION_NOT_FOUND: "AUTH_SESSION_NOT_FOUND",
 
+  AUTH_REFRESH_TOKEN_REUSE_DETECTED: "AUTH_REFRESH_TOKEN_REUSE_DETECTED",
+  SESSION_ACCESS_DENIED: "SESSION_ACCESS_DENIED",
+
+  AUTH_REFRESH_TOKEN_REUSE_DETECTED: {
+    statusCode: 401,
+    message: "Security breach detected: refresh token reuse attempted. All sessions have been revoked.",
+  },
+  SESSION_ACCESS_DENIED: {
+    statusCode: 403,
+    message: "You are not authorized to manage this session.",
+  },
+
   // Authorization
   AUTHORIZATION_HEADER_MISSING: "AUTHORIZATION_HEADER_MISSING",
   AUTHORIZATION_HEADER_INVALID: "AUTHORIZATION_HEADER_INVALID",
