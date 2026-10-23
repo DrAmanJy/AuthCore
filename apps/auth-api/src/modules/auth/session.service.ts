@@ -131,8 +131,11 @@ export class SessionService {
   async rotateRefreshToken(refreshToken: RefreshToken): Promise<CreateSessionResult> {
     const refreshTokenHash = this.hashRefreshToken(refreshToken);
 
-    const currentRefreshToken =
-      await this.refreshTokenRepository.findByHash(refreshTokenHash);
+    // Attempt atomic consumption to prevent concurrency race conditions
+    const consumedToken = await this.refreshTokenRepository.consumeAtomic(refreshTokenHash);
+
+    const currentRefreshToken = consumedToken ??
+      (await this.refreshTokenRepository.findByHash(refreshTokenHash));
 
     if (!currentRefreshToken) {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
@@ -189,7 +192,9 @@ export class SessionService {
       ),
     );
 
-    await this.refreshTokenRepository.markAsUsed(currentRefreshToken.id);
+    if (!consumedToken) {
+      await this.refreshTokenRepository.markAsUsed(currentRefreshToken.id);
+    }
 
     await this.refreshTokenRepository.create({
       sessionId: session.id,
