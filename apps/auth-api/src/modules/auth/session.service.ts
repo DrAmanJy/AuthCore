@@ -138,13 +138,21 @@ export class SessionService {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
-    // Refresh-token reuse detected.
+    // Refresh-token reuse detected - revoke entire token family immediately
     if (currentRefreshToken.usedAt) {
-      await this.refreshTokenRepository.markReuseDetected(currentRefreshToken.id);
+      logger.warn(
+        {
+          event: "auth.refresh_token.reuse_detected",
+          tokenFamilyId: currentRefreshToken.tokenFamilyId,
+          tokenId: currentRefreshToken.id,
+        },
+        "Refresh token reuse detected! Revoking token family.",
+      );
 
+      await this.refreshTokenRepository.markReuseDetected(currentRefreshToken.id);
       await this.refreshTokenRepository.revokeFamily(currentRefreshToken.tokenFamilyId);
 
-      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
+      throw new AuthenticationError(ERROR_CODES.AUTH_REFRESH_TOKEN_REUSE_DETECTED);
     }
 
     const now = new Date();
