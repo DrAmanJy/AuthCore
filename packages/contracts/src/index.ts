@@ -16,7 +16,8 @@ export { forgotPasswordSchema } from "./auth/schemas/forgot-password.schema.js";
 
 export { resetPasswordSchema } from "./auth/schemas/reset-password.schema.js";
 
-export { sessionParamsSchema } from "./auth/schemas/session-params.schema.js";
+export { sessionParamsSchema, sessionQueryFilterSchema } from "./auth/schemas/session-params.schema.js";
+export type { SessionQueryFilter } from "./auth/schemas/session-params.schema.js";
 
 // Auth - Types
 export type {
