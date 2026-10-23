@@ -87,6 +87,20 @@ export class SessionService {
     return this.assertSession(session);
   }
 
+  
+  async getPaginatedUserSessions(params: {
+    userId: UserId;
+    organizationId: OrganizationId;
+    limit?: number;
+    skip?: number;
+  }): Promise<Session[]> {
+    return this.getUserSessions({
+      userId: params.userId,
+      organizationId: params.organizationId,
+      activeOnly: true,
+    });
+  }
+
   async getUserSessions(data: FindUserAllSessionType): Promise<Session[]> {
     return this.sessionRepository.findSession({
       type: "user",
