@@ -289,6 +289,13 @@ export class AuthService {
     return session;
   }
 
+  
+  async sessionHeartbeat(sessionId: SessionId, actorId: ActorId): Promise<Session> {
+    await this.verifySessionOwnership(sessionId, actorId);
+    const session = await this.sessionService.touchSession(sessionId);
+    return session;
+  }
+
   async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
     await this.verifySessionOwnership(sessionId, actorId);
     const session = await this.sessionService.revokeSession(sessionId, actorId);

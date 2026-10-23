@@ -65,6 +65,13 @@ authRouter.post(
 
 authRouter.get("/sessions", validateAccessToken, authController.getSessions);
 
+authRouter.post(
+  "/sessions/:sessionId/heartbeat",
+  validateAccessToken,
+  validateParams(sessionParamsSchema),
+  authController.heartbeat,
+);
+
 authRouter.delete(
   "/sessions/:sessionId",
   validateAccessToken,

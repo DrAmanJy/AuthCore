@@ -43,6 +43,7 @@ export class AuthController {
     this.changePassword = this.changePassword.bind(this);
     this.getSessions = this.getSessions.bind(this);
     this.revokeSession = this.revokeSession.bind(this);
+    this.heartbeat = this.heartbeat.bind(this);
     this.revokeAllSessions = this.revokeAllSessions.bind(this);
   }
 
@@ -166,6 +167,15 @@ export class AuthController {
     const sessions = await this.authService.getSessions(orgId, sub);
 
     sendSuccess(res, sessions, "Session successfully retrieved");
+  }
+
+  
+  async heartbeat(req: Request<SessionParams>, res: Response) {
+    const { sessionId } = req.params;
+    const { sub } = this.getAuthToken(req);
+
+    const session = await this.authService.sessionHeartbeat(asSessionId(sessionId), sub);
+    sendSuccess(res, session, "Session heartbeat acknowledged");
   }
 
   async revokeSession(req: Request<SessionParams>, res: Response) {
