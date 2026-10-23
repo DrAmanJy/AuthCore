@@ -31,7 +31,7 @@ export class EmailService {
   }
 
   async sendPasswordRestEmail(job: SendPasswordResetEmailJob): Promise<void> {
-    const resetUrl = `${config.app.frontendUrl}/reset-password?token=${encodeURIComponent(job.resetToken)}`;
+    const resetUrl = `${config.app.frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(job.resetToken.trim())}`;
 
     const template = passwordResetEmailTemplate({
       displayName: job.displayName,
