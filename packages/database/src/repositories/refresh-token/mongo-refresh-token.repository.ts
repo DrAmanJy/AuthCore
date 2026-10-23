@@ -180,6 +180,7 @@ export class MongoRefreshTokenRepository implements RefreshTokenRepository {
       {
         $set: {
           revokedAt,
+          reuseDetected: true,
         },
       },
     ).exec();
