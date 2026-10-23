@@ -75,7 +75,25 @@ export class EmailConsumer {
       return;
     }
 
-    const parsed = emailJobSchema.safeParse(JSON.parse(message.Body));
+    let rawBody: unknown;
+    try {
+      rawBody = JSON.parse(message.Body);
+    } catch (parseError) {
+      logger.error(
+        {
+          event: "queue.job.malformed_json",
+          worker: "email",
+          messageId: message.MessageId,
+          err: parseError,
+        },
+        "Failed to parse SQS message body as JSON",
+      );
+      // Delete unparseable message to avoid infinite poison pill loops
+      await this.deleteMessage(message.ReceiptHandle);
+      return;
+    }
+
+    const parsed = emailJobSchema.safeParse(rawBody);
 
     if (!parsed.success) {
       logger.error(
