@@ -38,6 +38,20 @@ export class MongoRefreshTokenRepository implements RefreshTokenRepository {
     return record ? this.toRefreshTokenRecord(record) : null;
   }
 
+
+  async findActiveByHash(tokenHash: RefreshTokenHash): Promise<RefreshTokenRecord | null> {
+    const record = await RefreshTokenModel.findOne({
+      tokenHash,
+      usedAt: { $exists: false },
+      revokedAt: { $exists: false },
+      expiresAt: { $gt: new Date() },
+    })
+      .lean<MongoRefreshTokenRecord>()
+      .exec();
+
+    return record ? this.toRefreshTokenRecord(record) : null;
+  }
+
   async findByHash(tokenHash: RefreshTokenHash): Promise<RefreshTokenRecord | null> {
     const record = await RefreshTokenModel.findOne({ tokenHash })
       .lean<MongoRefreshTokenRecord>()
