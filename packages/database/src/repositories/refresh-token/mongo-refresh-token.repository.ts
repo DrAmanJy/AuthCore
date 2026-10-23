@@ -76,6 +76,34 @@ export class MongoRefreshTokenRepository implements RefreshTokenRepository {
     return this.toRefreshTokenRecord(record);
   }
 
+
+  async consumeAtomic(
+    tokenHash: RefreshTokenHash,
+    usedAt: Date = new Date(),
+  ): Promise<RefreshTokenRecord | null> {
+    const record = await RefreshTokenModel.findOneAndUpdate(
+      {
+        tokenHash,
+        usedAt: { $exists: false },
+        revokedAt: { $exists: false },
+        expiresAt: { $gt: usedAt },
+      },
+      {
+        $set: {
+          usedAt,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    )
+      .lean<MongoRefreshTokenRecord>()
+      .exec();
+
+    return record ? this.toRefreshTokenRecord(record) : null;
+  }
+
   async markAsUsed(
     refreshTokenId: RefreshTokenId,
     usedAt: Date = new Date(),
