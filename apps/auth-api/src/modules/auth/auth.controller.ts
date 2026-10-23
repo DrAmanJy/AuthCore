@@ -172,6 +172,7 @@ export class AuthController {
     const { sessionId } = req.params;
     const { sub } = this.getAuthToken(req);
 
+    // Enforce caller ownership when revoking specific session
     const session = await this.authService.revokeSession(asSessionId(sessionId), sub);
 
     sendSuccess(res, session, "Session successfully revoked");
