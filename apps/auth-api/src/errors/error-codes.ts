@@ -95,6 +95,7 @@ export const ERROR_CODES = {
   API_KEY_UNAUTHORIZED: "API_KEY_UNAUTHORIZED",
 
   // Validation
+  RATE_LIMIT_EXCEEDED: "RATE_LIMIT_EXCEEDED",
   VALIDATION_FAILED: "VALIDATION_FAILED",
   SLUG_REQUIRED: "SLUG_REQUIRED",
   INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR",
@@ -329,6 +330,10 @@ export const ERROR_DEFINITIONS: Record<
   },
 
   // Validation
+  RATE_LIMIT_EXCEEDED: {
+    statusCode: 429,
+    message: "Too many requests. Please slow down and try again later.",
+  },
   VALIDATION_FAILED: {
     statusCode: 400,
     message: "The request contains invalid data.",
