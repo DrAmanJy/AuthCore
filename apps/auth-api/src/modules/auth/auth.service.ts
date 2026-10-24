@@ -1,3 +1,4 @@
+import { auditService } from "../../container.js";
 import type {
   ActorId,
   OrganizationId,
@@ -110,6 +111,14 @@ export class AuthService {
       { event: "auth.login.success", userId: member.userId },
       "User logged in successfully",
     );
+    void auditService.logEvent({
+      organizationId: member.organizationId,
+      actorId: member.userId,
+      action: "auth.login",
+      targetType: "session",
+      targetId: session.id,
+      details: { ip: data.device?.ip, userAgent: data.device?.userAgent },
+    });
     const {
       passwordHash: _passwordHash,
       emailVerified: _emailVerified,
@@ -136,6 +145,13 @@ export class AuthService {
       { event: "auth.logout.success", userId: user.id },
       "User logged out successfully",
     );
+    void auditService.logEvent({
+      organizationId: data.organizationId,
+      actorId: user.id,
+      action: "auth.logout",
+      targetType: "user",
+      targetId: user.id,
+    });
 
     return user;
   }
