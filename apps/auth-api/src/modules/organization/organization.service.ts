@@ -1,3 +1,4 @@
+import { auditService } from "../../container.js";
 import { DEFAULT_ROLE_PERMISSIONS, SYSTEM_ROLE_NAMES } from "./role-defaults.js";
 import type {
   ActorId,
@@ -265,6 +266,13 @@ export class OrganizationService {
       { event: "organization.member.create.success", actorId, memberId: member.id },
       "Organization member created successfully",
     );
+    void auditService.logEvent({
+      organizationId,
+      actorId,
+      action: "member.add",
+      targetType: "organization_member",
+      targetId: member.id,
+    });
     return member;
   }
 
@@ -543,6 +551,12 @@ export class OrganizationService {
     const apiKey = `ac_live_${randomBytes(32).toString("hex")}`;
 
     await this.apiKeyService.create(organization.name, organizationId, apiKey, actorId);
+    void auditService.logEvent({
+      organizationId,
+      actorId,
+      action: "api_key.create",
+      targetType: "api_key",
+    });
 
     return apiKey;
   }
