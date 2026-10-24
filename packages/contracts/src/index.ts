@@ -102,3 +102,13 @@ export type {
   UpdateRole,
   RoleParams as ContractRoleParams,
 } from "./roles/types.js";
+
+// Audit Log - Schemas & Types
+export {
+  auditQuerySchema,
+  organizationAuditParamsSchema,
+} from "./audit/schemas/audit-query.schema.js";
+export type {
+  AuditQuery,
+  OrganizationAuditParams,
+} from "./audit/schemas/audit-query.schema.js";
