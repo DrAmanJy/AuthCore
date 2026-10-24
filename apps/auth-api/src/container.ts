@@ -8,6 +8,7 @@ import {
   MongoSessionRepository,
   MongoUserRepository,
   MongoVerificationTokenRepository,
+  MongoAuditLogRepository,
 } from "@authcore/database";
 
 import { UserService } from "./modules/users/users.service.js";
@@ -23,6 +24,8 @@ import { emailQueue } from "@authcore/queue";
 import { ApiKeyService } from "./modules/api-keys/api-key.service.js";
 import { InvitationController } from "./modules/invitation/invitation.controller.js";
 import { InvitationService } from "./modules/invitation/invitation.service.js";
+import { AuditService } from "./modules/audit/audit.service.js";
+import { AuditController } from "./modules/audit/audit.controller.js";
 
 const userRepository = new MongoUserRepository();
 const sessionRepository = new MongoSessionRepository();
@@ -33,6 +36,7 @@ const organizationMemberRepository = new MongoOrganizationMemberRepository();
 const roleRepository = new MongoRoleRepository();
 const apiKeyRepository = new MongoApiKeyRepository();
 const invitationRepository = new MongoInvitationRepository();
+const auditLogRepository = new MongoAuditLogRepository();
 
 const userService = new UserService(userRepository);
 const sessionService = new SessionService(sessionRepository, refreshTokenRepository);
@@ -53,6 +57,7 @@ const authService = new AuthService(
   emailQueue,
   organizationService,
 );
+const auditService = new AuditService(auditLogRepository);
 const invitationService = new InvitationService(
   invitationRepository,
   userService,
@@ -63,6 +68,7 @@ const userController = new UserController(userService);
 const authController = new AuthController(authService);
 const organizationController = new OrganizationController(organizationService);
 const invitationController = new InvitationController(invitationService);
+const auditController = new AuditController(auditService);
 
 export {
   userController,
@@ -70,4 +76,6 @@ export {
   organizationController,
   apiKeyService,
   invitationController,
+  auditService,
+  auditController,
 };
