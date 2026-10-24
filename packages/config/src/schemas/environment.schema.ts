@@ -128,6 +128,7 @@ export const EnvironmentSchema = z
       }),
 
     EMAIL_FROM: emailFromSchema,
+    INTERNAL_SERVICE_SECRET: z.string().min(16).default("authcore_internal_service_secret_development_key"),
     HASH_PEPPER: z
       .string({
         error: iss =>

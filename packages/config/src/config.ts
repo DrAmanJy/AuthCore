@@ -29,6 +29,7 @@ const parsedEnvironment = EnvironmentSchema.safeParse({
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   AWS_EMAIL_QUEUE_URL: process.env.AWS_EMAIL_QUEUE_URL,
+  INTERNAL_SERVICE_SECRET: process.env.INTERNAL_SERVICE_SECRET,
   HASH_PEPPER: process.env.HASH_PEPPER,
 });
 
