@@ -198,3 +198,20 @@ export type { TargetType } from "./models/invitation.model.js";
 export type { InvitationRepository } from "./repositories/invitation/invitation-repository.js";
 
 export { MongoInvitationRepository } from "./repositories/invitation/mongo-invitation-repository.js";
+
+// ─────────────────────────────────────────────
+// Audit Log
+// ─────────────────────────────────────────────
+
+export { asAuditLogId } from "./repositories/audit-log/audit-log.types.js";
+
+export type {
+  AuditLog,
+  AuditLogId,
+  CreateAuditLogData,
+  FindAuditLogCriteria,
+} from "./repositories/audit-log/audit-log.types.js";
+
+export type { AuditLogRepository } from "./repositories/audit-log/audit-log.repository.js";
+
+export { MongoAuditLogRepository } from "./repositories/audit-log/mongo-audit-log.repository.js";
