@@ -1,3 +1,4 @@
+import { createRateLimiter } from "../../middlewares/rate-limit.middleware.js";
 import { Router } from "express";
 
 import {
@@ -82,3 +83,6 @@ authRouter.delete(
 authRouter.delete("/sessions", validateAccessToken, authController.revokeAllSessions);
 
 export { authRouter };
+
+const loginLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 });
+const authLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20 });
