@@ -1,3 +1,4 @@
+import { auditRouter } from "../modules/audit/audit.routes.js";
 import { organizationServiceRouter } from "../modules/organization/organization.service.routes.js";
 import { userServiceRouter } from "../modules/users/user.service.routes.js";
 import { Router } from "express";
@@ -11,6 +12,7 @@ const appRouter = Router();
 appRouter.use("/v1/auth", authRouter);
 appRouter.use("/v1/users", userRouter);
 appRouter.use("/v1/organizations", organizationRouter);
+appRouter.use("/v1/organizations", auditRouter);
 
 export default appRouter;
 
