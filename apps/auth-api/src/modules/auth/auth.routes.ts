@@ -43,12 +43,14 @@ authRouter.post("/resend-verification", authLimiter, authController.resendVerifi
 
 authRouter.post(
   "/forgot-password",
+  authLimiter,
   validateBody(forgotPasswordSchema),
   authController.forgotPassword,
 );
 
 authRouter.post(
   "/reset-password",
+  authLimiter,
   validateBody(resetPasswordSchema),
   authController.resetPassword,
 );
