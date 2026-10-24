@@ -21,9 +21,9 @@ const authRouter = Router();
 // Authentication
 // ─────────────────────────────────────────────
 
-authRouter.post("/register", validateBody(registerSchema), authController.register);
+authRouter.post("/register", authLimiter, validateBody(registerSchema), authController.register);
 
-authRouter.post("/login", attachDevice, validateBody(loginSchema), authController.login);
+authRouter.post("/login", loginLimiter, attachDevice, validateBody(loginSchema), authController.login);
 
 authRouter.post("/refresh-token", authController.refreshAccessToken);
 
@@ -35,7 +35,7 @@ authRouter.post("/logout", validateAccessToken, authController.logout);
 
 authRouter.post("/verify-email", authController.verifyEmail);
 
-authRouter.post("/resend-verification", authController.resendVerification);
+authRouter.post("/resend-verification", authLimiter, authController.resendVerification);
 
 // ─────────────────────────────────────────────
 // Password Recovery
