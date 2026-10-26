@@ -26,6 +26,16 @@ userRouter.patch(
   validateBody(updateUserProfile),
   userController.updateUserProfile,
 );
+userRouter.post(
+  "/email/request",
+  validateBody(changeEmailSchema),
+  userController.requestEmailChange,
+);
+userRouter.post(
+  "/email/confirm",
+  userController.confirmEmailChange,
+);
+
 userRouter.patch(
   "/email",
   validateParams(userParamsSchema),

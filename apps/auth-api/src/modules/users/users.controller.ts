@@ -22,6 +22,8 @@ export class UserController {
     this.getAuthenticatedUser = this.getAuthenticatedUser.bind(this);
     this.updateUserProfile = this.updateUserProfile.bind(this);
     this.updateUserEmail = this.updateUserEmail.bind(this);
+    this.requestEmailChange = this.requestEmailChange.bind(this);
+    this.confirmEmailChange = this.confirmEmailChange.bind(this);
     this.deleteUser = this.deleteUser.bind(this);
     this.getAllUsers = this.getAllUsers.bind(this);
     this.changeUserStatus = this.changeUserStatus.bind(this);
@@ -48,6 +50,19 @@ export class UserController {
       displayName: req.body.displayName,
     });
     sendSuccess(res, user, "User profile successfully updated");
+  }
+
+
+  async requestEmailChange(req: UserRequest<ChangeEmail>, res: Response) {
+    const { sub } = this.getAuthToken(req);
+    const result = await this.userService.requestEmailChange(sub, req.body.email);
+    sendSuccess(res, result, "Email change requested; verification required");
+  }
+
+  async confirmEmailChange(req: UserRequest<{ email: string }>, res: Response) {
+    const { sub } = this.getAuthToken(req);
+    const user = await this.userService.confirmEmailChange(sub, req.body.email);
+    sendSuccess(res, user, "Email address updated successfully");
   }
 
   async updateUserEmail(req: UserRequest<ChangeEmail>, res: Response) {
