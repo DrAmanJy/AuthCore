@@ -43,6 +43,8 @@ export const ERROR_CODES = {
   USER_ACCOUNT_PENDING: "USER_ACCOUNT_PENDING",
   USER_ACCOUNT_SUSPENDED: "USER_ACCOUNT_SUSPENDED",
   USER_PASSWORD_UPDATE_FAILED: "USER_PASSWORD_UPDATE_FAILED",
+  USER_EMAIL_CHANGE_TOKEN_INVALID: "USER_EMAIL_CHANGE_TOKEN_INVALID",
+  USER_EMAIL_CHANGE_TOKEN_EXPIRED: "USER_EMAIL_CHANGE_TOKEN_EXPIRED",
 
   // Organization
   ORGANIZATION_NOT_FOUND: "ORGANIZATION_NOT_FOUND",
@@ -231,6 +233,14 @@ export const ERROR_DEFINITIONS: Record<
     message: "Your account has been suspended.",
   },
 
+  USER_EMAIL_CHANGE_TOKEN_INVALID: {
+    statusCode: 400,
+    message: "The email change verification token is invalid.",
+  },
+  USER_EMAIL_CHANGE_TOKEN_EXPIRED: {
+    statusCode: 400,
+    message: "The email change verification token has expired. Please request a new one.",
+  },
   USER_PASSWORD_UPDATE_FAILED: {
     statusCode: 500,
     message: "The password could not be updated.",
