@@ -13,3 +13,5 @@ export type ChangeEmail = z.infer<typeof changeEmailSchema>;
 export type ChangeStatus = z.infer<typeof changeStatusSchema>;
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
 export type UserParams = z.infer<typeof userParamsSchema>;
+
+export type ConfirmEmailChange = z.infer<typeof import("./schemas/change-email.schema.js").confirmEmailChangeSchema>;

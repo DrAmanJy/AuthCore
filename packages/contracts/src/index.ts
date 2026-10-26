@@ -36,7 +36,7 @@ export { userProfileSchema } from "./users/schemas/user-profile.schema.js";
 
 export { updateUserProfile } from "./users/schemas/update-profile.schema.js";
 
-export { changeEmailSchema } from "./users/schemas/change-email.schema.js";
+export { changeEmailSchema, confirmEmailChangeSchema } from "./users/schemas/change-email.schema.js";
 
 export { changePasswordSchema } from "./users/schemas/change-password.schema.js";
 
@@ -49,6 +49,7 @@ export type {
   UserProfile,
   UpdateProfile,
   ChangeEmail,
+  ConfirmEmailChange,
   ChangePassword,
   ChangeStatus,
   UserParams,
