@@ -155,6 +155,45 @@ export class UserService {
     return user;
   }
 
+
+  async requestEmailChange(userId: UserId, newEmail: string): Promise<{ pendingEmail: string }> {
+    await this.getAuthenticatedUser(userId);
+
+    const emailInUse = await this.userRepository.exists({
+      type: "email",
+      value: newEmail.toLowerCase().trim(),
+    });
+
+    if (emailInUse) {
+      throw new ResourceError(ERROR_CODES.USER_EMAIL_ALREADY_EXISTS);
+    }
+
+    logger.info(
+      { event: "user.email_change.requested", userId, newEmail: newEmail.toLowerCase().trim() },
+      "User requested email address change",
+    );
+
+    return { pendingEmail: newEmail.toLowerCase().trim() };
+  }
+
+  async confirmEmailChange(userId: UserId, newEmail: string): Promise<User> {
+    await this.getAuthenticatedUser(userId);
+
+    const user = await this.userRepository.update(userId, {
+      email: newEmail.toLowerCase().trim(),
+      emailVerified: true,
+    });
+
+    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+
+    logger.info(
+      { event: "user.email_change.confirmed", userId, newEmail },
+      "User email address changed and verified successfully",
+    );
+
+    return user;
+  }
+
   async changeEmail(userId: UserId, data: ChangeEmail): Promise<User> {
     await this.getAuthenticatedUser(userId);
 
