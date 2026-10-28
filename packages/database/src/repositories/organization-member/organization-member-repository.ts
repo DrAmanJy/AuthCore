@@ -1,38 +1,40 @@
 import type { OrganizationId } from "../organization/organization.types.js";
 import type { ActorId, UserId } from "../user/user.types.js";
 import type {
-  CreateOrganizationMemberData,
-  OrganizationMember,
-  OrganizationMemberId,
-  UpdateOrganizationMemberData,
+  CreateMemberData,
+  Member,
+  MemberId,
+  UpdateMemberData,
 } from "./organization-member.types.js";
 
-export interface OrganizationMemberRepository {
-  findById(memberId: OrganizationMemberId): Promise<OrganizationMember | null>;
+export interface MemberRepository {
+  find(criteria: {
+    type: "id";
+    value: MemberId;
+    orgId: OrganizationId;
+  }): Promise<Member | null>;
 
-  findByUser(
-    userId: UserId,
-    organizationId: OrganizationId,
-  ): Promise<OrganizationMember | null>;
+  find(criteria: {
+    type: "user";
+    value: UserId;
+    orgId: OrganizationId;
+  }): Promise<Member | null>;
 
-  findByOrganization(organizationId: OrganizationId): Promise<OrganizationMember[]>;
+  find(criteria: { type: "organization"; value: OrganizationId }): Promise<Member[]>;
 
-  findAll(): Promise<OrganizationMember[]>;
+  find(criteria: { type: "all" }): Promise<Member[]>;
 
   create(
     actorId: ActorId,
     organizationId: OrganizationId,
-    data: CreateOrganizationMemberData,
-  ): Promise<OrganizationMember>;
+    data: CreateMemberData,
+  ): Promise<Member>;
 
   update(
     organizationId: OrganizationId,
-    memberId: OrganizationMemberId,
-    data: UpdateOrganizationMemberData,
-  ): Promise<OrganizationMember | null>;
+    memberId: MemberId,
+    data: UpdateMemberData,
+  ): Promise<Member | null>;
 
-  softDelete(
-    organizationId: OrganizationId,
-    memberId: OrganizationMemberId,
-  ): Promise<OrganizationMember | null>;
+  softDelete(organizationId: OrganizationId, memberId: MemberId): Promise<Member | null>;
 }
