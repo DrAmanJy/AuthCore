@@ -26,38 +26,34 @@ export class MongoApiKeyRepository implements ApiKeyRepository {
   find(criteria: {
     type: "id";
     value: ApiKeyId;
+    orgId: OrganizationId;
     credentials: true;
   }): Promise<ApiKeyCredentials | null>;
 
   find(criteria: {
     type: "id";
     value: ApiKeyId;
+    orgId: OrganizationId;
     credentials: false;
   }): Promise<ApiKey | null>;
 
   find(criteria: {
     type: "key";
     value: KeyHash;
+    orgId: OrganizationId;
     credentials: true;
   }): Promise<ApiKeyCredentials | null>;
 
   find(criteria: {
     type: "key";
     value: KeyHash;
+    orgId: OrganizationId;
     credentials: false;
   }): Promise<ApiKey | null>;
 
-  find(criteria: {
-    type: "all";
-    value: OrganizationId;
-    credentials: true;
-  }): Promise<ApiKeyCredentials[]>;
+  find(criteria: { type: "organization"; value: OrganizationId }): Promise<ApiKey[]>;
 
-  find(criteria: {
-    type: "all";
-    value: OrganizationId;
-    credentials: false;
-  }): Promise<ApiKey[]>;
+  find(criteria: { type: "all" }): Promise<ApiKey[]>;
 
   async find(
     criteria: FindApiKeyCriteria,
@@ -68,6 +64,7 @@ export class MongoApiKeyRepository implements ApiKeyRepository {
           {
             _id: toObjectId(criteria.value),
             status: "active",
+            organizationId: toObjectId(criteria.orgId),
             revokedAt: { $exists: false },
             deletedAt: { $exists: false },
           },
@@ -79,20 +76,19 @@ export class MongoApiKeyRepository implements ApiKeyRepository {
           {
             keyHash: criteria.value,
             status: "active",
+            ...(criteria.orgId && { organizationId: toObjectId(criteria.orgId) }),
             revokedAt: { $exists: false },
             deletedAt: { $exists: false },
           },
           criteria.credentials,
         );
 
-      case "all":
+      case "organization": {
         const apiKeysQuery = ApiKeyModel.find({
           organizationId: toObjectId(criteria.value),
           deletedAt: { $exists: false },
         });
-        if (criteria.credentials) {
-          apiKeysQuery.select("+keyHash");
-        }
+
         const apiKeys = await apiKeysQuery
           .populate({
             path: "createdBy",
@@ -101,9 +97,22 @@ export class MongoApiKeyRepository implements ApiKeyRepository {
           .lean<Record[]>()
           .exec();
 
-        return criteria.credentials
-          ? apiKeys.map(apiKey => this.toApiKeyCredentials(apiKey))
-          : apiKeys.map(apiKey => this.toApiKey(apiKey));
+        return apiKeys.map(apiKey => this.toApiKey(apiKey));
+      }
+      case "all":
+        const apiKeysQuery = ApiKeyModel.find({
+          deletedAt: { $exists: false },
+        });
+
+        const apiKeys = await apiKeysQuery
+          .populate({
+            path: "createdBy",
+            select: "_id displayName",
+          })
+          .lean<Record[]>()
+          .exec();
+
+        return apiKeys.map(apiKey => this.toApiKey(apiKey));
     }
   }
 
@@ -134,7 +143,7 @@ export class MongoApiKeyRepository implements ApiKeyRepository {
       criteria.type === "id"
         ? {
             _id: toObjectId(criteria.value),
-            organizationId: toObjectId(criteria.organizationId),
+            organizationId: toObjectId(criteria.orgId),
             ...(actorId && { createdBy: toObjectId(actorId) }),
             status: "active",
             revokedAt: { $exists: false },
@@ -161,7 +170,7 @@ export class MongoApiKeyRepository implements ApiKeyRepository {
         ? { _id: toObjectId(criteria.value) }
         : { keyHash: criteria.value }),
       createdBy: toObjectId(actorId),
-      organizationId: toObjectId(criteria.organizationId),
+      organizationId: toObjectId(criteria.orgId),
     };
     const apiKey = await ApiKeyModel.findOneAndUpdate(filter, { deletedAt: new Date() })
       .populate({
