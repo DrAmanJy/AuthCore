@@ -113,6 +113,7 @@ export type {
   Organization,
   OrganizationId,
   OrganizationStatus,
+  FindOrganizationCriteria,
   CreateOrganizationData,
   UpdateOrganizationData,
 } from "./repositories/organization/organization.types.js";
@@ -125,20 +126,20 @@ export { MongoOrganizationRepository } from "./repositories/organization/mongo-o
 // Organization Member
 // ─────────────────────────────────────────────
 
-export { asOrganizationMemberId } from "./repositories/organization-member/organization-member.types.js";
+export { asMemberId } from "./repositories/organization-member/organization-member.types.js";
 
 export type {
-  OrganizationMember,
-  OrganizationMemberId,
-  OrganizationMemberStatus,
-  CreateOrganizationMemberData,
-  UpdateOrganizationMemberData,
-  FindOrganizationMemberCriteria,
+  Member,
+  MemberId,
+  MemberStatus,
+  CreateMemberData,
+  UpdateMemberData,
+  FindMemberCriteria,
 } from "./repositories/organization-member/organization-member.types.js";
 
-export type { OrganizationMemberRepository } from "./repositories/organization-member/organization-member-repository.js";
+export type { MemberRepository } from "./repositories/organization-member/organization-member-repository.js";
 
-export { MongoOrganizationMemberRepository } from "./repositories/organization-member/mongo-organization-member-repository.js";
+export { MongoMemberRepository } from "./repositories/organization-member/mongo-organization-member-repository.js";
 
 // ─────────────────────────────────────────────
 // Role
@@ -198,20 +199,3 @@ export type { TargetType } from "./models/invitation.model.js";
 export type { InvitationRepository } from "./repositories/invitation/invitation-repository.js";
 
 export { MongoInvitationRepository } from "./repositories/invitation/mongo-invitation-repository.js";
-
-// ─────────────────────────────────────────────
-// Audit Log
-// ─────────────────────────────────────────────
-
-export { asAuditLogId } from "./repositories/audit-log/audit-log.types.js";
-
-export type {
-  AuditLog,
-  AuditLogId,
-  CreateAuditLogData,
-  FindAuditLogCriteria,
-} from "./repositories/audit-log/audit-log.types.js";
-
-export type { AuditLogRepository } from "./repositories/audit-log/audit-log.repository.js";
-
-export { MongoAuditLogRepository } from "./repositories/audit-log/mongo-audit-log.repository.js";
