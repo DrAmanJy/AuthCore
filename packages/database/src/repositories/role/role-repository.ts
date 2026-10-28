@@ -3,11 +3,20 @@ import type { ActorId } from "../user/user.types.js";
 import type { CreateRoleData, Role, RoleId, UpdateRoleData } from "./role.types.js";
 
 export interface RoleRepository {
-  findById(roleId: RoleId): Promise<Role | null>;
+  find(criteria: {
+    type: "id";
+    value: RoleId;
+    orgId: OrganizationId;
+  }): Promise<Role | null>;
 
-  findByName(organizationId: OrganizationId, name: string): Promise<Role | null>;
+  find(criteria: {
+    type: "name";
+    value: string;
+    orgId: OrganizationId;
+  }): Promise<Role | null>;
 
-  findByOrganization(organizationId: OrganizationId): Promise<Role[]>;
+  find(criteria: { type: "organization"; value: OrganizationId }): Promise<Role[]>;
+  find(criteria: { type: "all" }): Promise<Role[]>;
 
   create(
     organizationId: OrganizationId,
