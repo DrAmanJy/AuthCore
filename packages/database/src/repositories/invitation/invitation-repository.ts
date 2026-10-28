@@ -31,9 +31,14 @@ export interface InvitationRepository {
 
   update(
     id: InvitationId,
+    organizationId: OrganizationId,
     data: UpdateInvitation,
     actorId: ActorId,
   ): Promise<Invitation | null>;
 
-  revoke(id: InvitationId, actorId: ActorId): Promise<Invitation | null>;
+  revoke(
+    id: InvitationId,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<Invitation | null>;
 }
