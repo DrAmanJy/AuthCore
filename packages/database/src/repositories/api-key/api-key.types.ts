@@ -30,9 +30,10 @@ export type ApiKeyCredentials = ApiKey & {
   keyHash: KeyHash;
 };
 export type FindApiKeyCriteria =
-  | { type: "id"; value: ApiKeyId; credentials: boolean }
-  | { type: "key"; value: KeyHash; credentials: boolean }
-  | { type: "all"; value: OrganizationId; credentials: boolean };
+  | { type: "id"; value: ApiKeyId; orgId: OrganizationId; credentials: boolean }
+  | { type: "key"; value: KeyHash; orgId?: OrganizationId; credentials: boolean }
+  | { type: "organization"; value: OrganizationId }
+  | { type: "all" };
 
 export type CreateApiKey = Pick<ApiKeyCredentials, "name" | "organizationId" | "keyHash">;
 
@@ -41,7 +42,7 @@ export type UpdateApiKey = Partial<
 >;
 
 export type UpdateApiKeyCriteria =
-  | { type: "id"; value: ApiKeyId; organizationId: OrganizationId }
-  | { type: "key"; value: KeyHash; organizationId: OrganizationId };
+  | { type: "id"; value: ApiKeyId; orgId: OrganizationId }
+  | { type: "key"; value: KeyHash; orgId: OrganizationId };
 
 export type DeleteApiKeyCriteria = UpdateApiKeyCriteria;
