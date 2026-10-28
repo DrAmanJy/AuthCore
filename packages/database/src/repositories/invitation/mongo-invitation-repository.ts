@@ -60,7 +60,7 @@ export class MongoInvitationRepository implements InvitationRepository {
           break;
 
         case "id":
-          filter.id = toObjectId(criteria.value);
+          filter._id = toObjectId(criteria.value);
           break;
 
         case "email":
@@ -108,11 +108,17 @@ export class MongoInvitationRepository implements InvitationRepository {
 
   async update(
     id: InvitationId,
+    organizationId: OrganizationId,
     data: UpdateInvitation,
     actorId: ActorId,
   ): Promise<Invitation | null> {
     const invitation = await InvitationModel.findOneAndUpdate(
-      toObjectId(id),
+      {
+        _id: toObjectId(id),
+        organizationId,
+        status: "pending",
+        expiresAt: { $gt: new Date() },
+      },
       { status: data.status, actionAt: new Date(), actionBy: toObjectId(actorId) },
       {
         returnDocument: "after",
@@ -125,9 +131,18 @@ export class MongoInvitationRepository implements InvitationRepository {
     return invitation ? this.toInvitation(invitation) : null;
   }
 
-  async revoke(id: InvitationId, actorId: ActorId): Promise<Invitation | null> {
+  async revoke(
+    id: InvitationId,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<Invitation | null> {
     const invitation = await InvitationModel.findOneAndUpdate(
-      toObjectId(id),
+      {
+        _id: toObjectId(id),
+        organizationId,
+        status: "pending",
+        expiresAt: { $gt: new Date() },
+      },
       { status: "revoked", actionAt: new Date(), actionBy: toObjectId(actorId) },
       {
         returnDocument: "after",
