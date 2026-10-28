@@ -12,15 +12,6 @@ export const ERROR_CODES = {
   AUTH_REFRESH_TOKEN_REUSE_DETECTED: "AUTH_REFRESH_TOKEN_REUSE_DETECTED",
   SESSION_ACCESS_DENIED: "SESSION_ACCESS_DENIED",
 
-  AUTH_REFRESH_TOKEN_REUSE_DETECTED: {
-    statusCode: 401,
-    message: "Security breach detected: refresh token reuse attempted. All sessions have been revoked.",
-  },
-  SESSION_ACCESS_DENIED: {
-    statusCode: 403,
-    message: "You are not authorized to manage this session.",
-  },
-
   // Authorization
   AUTHORIZATION_HEADER_MISSING: "AUTHORIZATION_HEADER_MISSING",
   AUTHORIZATION_HEADER_INVALID: "AUTHORIZATION_HEADER_INVALID",
@@ -69,22 +60,6 @@ export const ERROR_CODES = {
   ORGANIZATION_LAST_OWNER_PROTECTION: "ORGANIZATION_LAST_OWNER_PROTECTION",
 
   // Authorization & Permissions
-  AUTH_FORBIDDEN: {
-    statusCode: 403,
-    message: "You do not have permission to perform this action.",
-  },
-  AUTH_INSUFFICIENT_PERMISSIONS: {
-    statusCode: 403,
-    message: "Insufficient permissions for the requested resource.",
-  },
-  ORGANIZATION_ACCESS_DENIED: {
-    statusCode: 403,
-    message: "Access to this organization is denied.",
-  },
-  ORGANIZATION_LAST_OWNER_PROTECTION: {
-    statusCode: 409,
-    message: "Cannot remove, suspend, or demote the last organization owner.",
-  },
 
   // Role
   ROLE_NOT_FOUND: "ROLE_NOT_FOUND",
@@ -112,6 +87,15 @@ export const ERROR_DEFINITIONS: Record<
   }
 > = {
   // Authentication
+  AUTH_REFRESH_TOKEN_REUSE_DETECTED: {
+    statusCode: 401,
+    message:
+      "Security breach detected: refresh token reuse attempted. All sessions have been revoked.",
+  },
+  SESSION_ACCESS_DENIED: {
+    statusCode: 403,
+    message: "You are not authorized to manage this session.",
+  },
   AUTH_UNAUTHORIZED: {
     statusCode: 401,
     message: "Authentication is required to access this resource.",
@@ -169,6 +153,22 @@ export const ERROR_DEFINITIONS: Record<
   },
 
   // Recovery / Verification
+  AUTH_FORBIDDEN: {
+    statusCode: 403,
+    message: "You do not have permission to perform this action.",
+  },
+  AUTH_INSUFFICIENT_PERMISSIONS: {
+    statusCode: 403,
+    message: "Insufficient permissions for the requested resource.",
+  },
+  ORGANIZATION_ACCESS_DENIED: {
+    statusCode: 403,
+    message: "Access to this organization is denied.",
+  },
+  ORGANIZATION_LAST_OWNER_PROTECTION: {
+    statusCode: 409,
+    message: "Cannot remove, suspend, or demote the last organization owner.",
+  },
   AUTH_VERIFICATION_TOKEN_INVALID: {
     statusCode: 400,
     message: "The verification token is invalid.",
