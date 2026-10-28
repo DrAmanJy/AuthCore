@@ -15,38 +15,34 @@ export interface ApiKeyRepository {
   find(criteria: {
     type: "id";
     value: ApiKeyId;
+    orgId: OrganizationId;
     credentials: true;
   }): Promise<ApiKeyCredentials | null>;
 
   find(criteria: {
     type: "id";
     value: ApiKeyId;
+    orgId: OrganizationId;
     credentials: false;
   }): Promise<ApiKey | null>;
 
   find(criteria: {
     type: "key";
     value: KeyHash;
+    orgId?: OrganizationId;
     credentials: true;
   }): Promise<ApiKeyCredentials | null>;
 
   find(criteria: {
     type: "key";
     value: KeyHash;
+    orgId?: OrganizationId;
     credentials: false;
   }): Promise<ApiKey | null>;
 
-  find(criteria: {
-    type: "all";
-    value: OrganizationId;
-    credentials: true;
-  }): Promise<ApiKeyCredentials[]>;
+  find(criteria: { type: "organization"; value: OrganizationId }): Promise<ApiKey[]>;
 
-  find(criteria: {
-    type: "all";
-    value: OrganizationId;
-    credentials: false;
-  }): Promise<ApiKey[]>;
+  find(criteria: { type: "all" }): Promise<ApiKey[]>;
 
   create(data: CreateApiKey, actorId: ActorId): Promise<ApiKey>;
 
