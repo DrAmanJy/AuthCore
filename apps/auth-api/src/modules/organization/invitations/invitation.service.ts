@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import type { InvitationId, ActorId, Invitation } from "@authcore/database";
+import type { InvitationId, ActorId, Invitation, Member } from "@authcore/database";
 import { getExpiryTime } from "@authcore/database";
 import type {
   InvitationRepository,
@@ -8,18 +8,20 @@ import type {
   UserId,
   TargetType,
 } from "@authcore/database";
-import type { OrganizationService } from "../organization/organization.service.js";
 import { config } from "@authcore/config";
-import { hashString } from "../../utils/hashString.js";
-import { ResourceError } from "../../errors/resource-error.js";
-import { ERROR_CODES } from "../../errors/error-codes.js";
-import type { UserService } from "../users/users.service.js";
+import { hashString } from "../../../utils/hashString.js";
+import { ResourceError } from "../../../errors/resource-error.js";
+import { ERROR_CODES } from "../../../errors/error-codes.js";
+import type { UserService } from "../../users/users.service.js";
+import type { AuthorizationService } from "../authorization/authorization.service.js";
+import type { MembersService } from "../members/member.service.js";
 
 export class InvitationService {
   constructor(
     private readonly invitationRepository: InvitationRepository,
     private readonly userService: UserService,
-    private readonly organizationService: OrganizationService,
+    private readonly memberService: MembersService,
+    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async getInvitesByActorId(actorId: ActorId): Promise<Invitation[]> {
@@ -51,6 +53,11 @@ export class InvitationService {
     userId: UserId,
     organizationId: OrganizationId,
   ): Promise<Invitation> {
+    await this.authorizationService.getValidOrganization({
+      type: "id",
+      value: organizationId,
+    });
+
     const invitation = await this.invitationRepository.find({
       type: "user",
       value: userId,
@@ -68,6 +75,11 @@ export class InvitationService {
     email: string,
     organizationId: OrganizationId,
   ): Promise<Invitation> {
+    await this.authorizationService.getValidOrganization({
+      type: "id",
+      value: organizationId,
+    });
+
     const invitation = await this.invitationRepository.find({
       type: "email",
       value: email,
@@ -82,6 +94,11 @@ export class InvitationService {
   }
 
   async getOrganizationInvites(organizationId: OrganizationId): Promise<Invitation[]> {
+    await this.authorizationService.getValidOrganization({
+      type: "id",
+      value: organizationId,
+    });
+
     const invitations = await this.invitationRepository.find({
       type: "organization",
       value: organizationId,
@@ -90,49 +107,42 @@ export class InvitationService {
     return invitations;
   }
 
-  async sendInvite(
-    organizationId: OrganizationId,
-    roleId: RoleId,
-    targetType: TargetType,
-    actorId: ActorId,
-    targetEmail?: string,
-    targetUserId?: UserId,
-  ): Promise<Invitation> {
-    let email: string;
-    let resolvedTargetUserId: UserId | undefined;
+  async sendInvite(params: {
+    organizationId: OrganizationId;
+    roleId: RoleId;
+    targetType: TargetType;
+    actorId: ActorId;
+    targetEmail?: string;
+    targetUserId?: UserId;
+  }): Promise<Invitation> {
+    let _email: string;
 
-    if (targetType === "user") {
-      if (!targetUserId) {
+    await this.authorizationService.getValidOrganization(
+      {
+        type: "id",
+        value: params.organizationId,
+      },
+      params.actorId,
+    );
+
+    if (params.targetType === "user") {
+      if (!params.targetUserId) {
         throw new ResourceError(ERROR_CODES.VALIDATION_FAILED);
       }
 
-      const user = await this.userService.getAuthenticatedUser(targetUserId);
+      const user = await this.userService.getAuthenticatedUser(params.targetUserId);
 
-      email = user.email;
-      resolvedTargetUserId = user.id;
-    } else {
-      const normalizedEmail = targetEmail?.trim().toLowerCase();
-
-      if (!normalizedEmail) {
-        throw new ResourceError(ERROR_CODES.VALIDATION_FAILED);
-      }
-
-      email = normalizedEmail;
+      _email = user.email;
     }
 
     const token = randomBytes(32).toString("base64url");
     const tokenHash = hashString(token);
 
     const invitation = await this.invitationRepository.create({
-      organizationId,
-      roleId,
-      targetType,
-      ...(targetType === "user"
-        ? { targetUserId: resolvedTargetUserId }
-        : { targetEmail: email }),
-      invitedBy: actorId,
+      invitedBy: params.actorId,
       tokenHash,
       expiresAt: getExpiryTime(config.auth.invitationExpiry),
+      ...params,
     });
 
     // TODO: Send the invitation email to `email` with the raw `token`.
@@ -141,11 +151,17 @@ export class InvitationService {
     return invitation;
   }
 
+  // use Id for now
   async acceptInviteByEmail(
     email: string,
     organizationId: OrganizationId,
     actorId: ActorId,
   ): Promise<void> {
+    await this.authorizationService.getValidOrganization({
+      type: "id",
+      value: organizationId,
+    });
+
     const invitation = await this.invitationRepository.find({
       type: "email",
       value: email,
@@ -156,10 +172,11 @@ export class InvitationService {
       throw new Error("Invitation not found");
     }
 
-    await this.validInvitation(invitation, actorId, "accepted");
+    await this.validInvitation(invitation, organizationId, actorId, "accepted");
 
     const acceptedInvitation = await this.invitationRepository.update(
       invitation.id,
+      organizationId,
       { status: "accepted" },
       actorId,
     );
@@ -169,7 +186,11 @@ export class InvitationService {
     }
   }
 
-  async acceptInvite(invitationId: InvitationId, actorId: ActorId): Promise<void> {
+  async acceptInvite(
+    invitationId: InvitationId,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<Member> {
     const invitation = await this.invitationRepository.find({
       type: "id",
       value: invitationId,
@@ -179,10 +200,16 @@ export class InvitationService {
       throw new Error("Invitation not found");
     }
 
-    await this.validInvitation(invitation, actorId, "accepted");
+    await this.authorizationService.getValidOrganization({
+      type: "id",
+      value: invitation.organizationId,
+    });
+
+    await this.validInvitation(invitation, organizationId, actorId, "accepted");
 
     const acceptedInvitation = await this.invitationRepository.update(
       invitationId,
+      organizationId,
       { status: "accepted" },
       actorId,
     );
@@ -190,9 +217,18 @@ export class InvitationService {
     if (!acceptedInvitation) {
       throw new Error("Invitation not found");
     }
+
+    return this.memberService.addMember(acceptedInvitation.organizationId, actorId, {
+      roleId: acceptedInvitation.roleId,
+      userId: actorId,
+    });
   }
 
-  async rejectInvitation(invitationId: InvitationId, actorId: ActorId): Promise<void> {
+  async rejectInvitation(
+    invitationId: InvitationId,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<void> {
     const invitation = await this.invitationRepository.find({
       type: "id",
       value: invitationId,
@@ -201,11 +237,12 @@ export class InvitationService {
       throw new Error("Change at L133");
     }
 
-    await this.validInvitation(invitation, actorId, "rejected");
+    await this.validInvitation(invitation, organizationId, actorId, "rejected");
 
     const rejectInvitation = await this.invitationRepository.update(
       invitationId,
-      { status: "expired" },
+      organizationId,
+      { status: "rejected" },
       actorId,
     );
     if (!rejectInvitation) {
@@ -213,7 +250,11 @@ export class InvitationService {
     }
   }
 
-  async revokeInvitation(invitationId: InvitationId, actorId: ActorId) {
+  async revokeInvitation(
+    invitationId: InvitationId,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ) {
     const invitation = await this.invitationRepository.find({
       type: "id",
       value: invitationId,
@@ -223,10 +264,19 @@ export class InvitationService {
       throw new Error("Invitation not found");
     }
 
-    await this.validInvitation(invitation, actorId, "accepted");
+    await this.authorizationService.getValidOrganization(
+      {
+        type: "id",
+        value: invitation.organizationId,
+      },
+      actorId,
+    );
+
+    await this.validInvitation(invitation, organizationId, actorId, "accepted");
 
     const revokeInvitation = await this.invitationRepository.revoke(
       invitation.id,
+      organizationId,
       actorId,
     );
 
@@ -237,12 +287,14 @@ export class InvitationService {
 
   private async validInvitation(
     invitation: Invitation,
+    organizationId: OrganizationId,
     actorId: ActorId,
     status: "accepted" | "rejected",
   ): Promise<void> {
     if (invitation.status !== "expired" && invitation.expiresAt <= new Date()) {
       await this.invitationRepository.update(
         invitation.id,
+        organizationId,
         { status: "expired" },
         actorId,
       );
@@ -267,6 +319,10 @@ export class InvitationService {
         throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths}
       case "pending":
         break;
+    }
+
+    if (invitation.targetType === "user" && invitation.targetUserId !== actorId) {
+      throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths}
     }
   }
 }
