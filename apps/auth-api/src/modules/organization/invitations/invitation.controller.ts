@@ -7,17 +7,28 @@ import type {
   TargetType,
   UserId,
 } from "@authcore/database";
-import { sendCreated, sendNoContent, sendSuccess } from "../../utils/response.utils.js";
-import { AuthenticationError } from "../../errors/authentication-error.js";
-import { ERROR_CODES } from "../../errors/error-codes.js";
-import type { AccessTokenPayload } from "../auth/auth.types.js";
+import {
+  sendCreated,
+  sendNoContent,
+  sendSuccess,
+} from "../../../utils/response.utils.js";
+import { AuthenticationError } from "../../../errors/authentication-error.js";
+import { ERROR_CODES } from "../../../errors/error-codes.js";
+import type { AccessTokenPayload } from "../../auth/auth.types.js";
 
 export class InvitationController {
-  constructor(private readonly invitationService: InvitationService) {}
+  constructor(private readonly invitationService: InvitationService) {
+    this.sendInvitation = this.sendInvitation.bind(this);
+    this.getOrganizationInvites = this.getOrganizationInvites.bind(this);
+    this.getUserInvites = this.getUserInvites.bind(this);
+    this.acceptInvitation = this.acceptInvitation.bind(this);
+    this.rejectInvitation = this.rejectInvitation.bind(this);
+    this.revokeInvitation = this.revokeInvitation.bind(this);
+  }
 
   async sendInvitation(
     req: Request<
-      Record<string, never>,
+      { organizationId: OrganizationId },
       unknown,
       {
         roleId: RoleId;
@@ -29,16 +40,17 @@ export class InvitationController {
     res: Response,
   ) {
     const { roleId, targetType, targetEmail, targetUserId } = req.body;
-    const { sub, orgId } = this.getAuthToken(req);
+    const { sub: actorId } = this.getAuthToken(req);
+    const { organizationId } = req.params;
 
-    const invitation = await this.invitationService.sendInvite(
-      orgId,
+    const invitation = await this.invitationService.sendInvite({
+      organizationId,
       roleId,
       targetType,
-      sub,
+      actorId,
       targetEmail,
       targetUserId,
-    );
+    });
 
     sendCreated(res, invitation, "Invite send successfully");
   }
@@ -65,46 +77,58 @@ export class InvitationController {
   }
 
   async acceptInvitation(
-    req: Request<{ invitationId: InvitationId }, unknown, unknown>,
+    req: Request<
+      { invitationId: InvitationId; organizationId: OrganizationId },
+      unknown,
+      unknown
+    >,
     res: Response,
   ) {
-    const { invitationId } = req.params;
+    const { invitationId, organizationId } = req.params;
     const { sub } = this.getAuthToken(req);
 
     if (!invitationId) {
       throw new Error("Change at L39");
     }
-    await this.invitationService.acceptInvite(invitationId, sub);
+    await this.invitationService.acceptInvite(invitationId, organizationId, sub);
 
     sendNoContent(res);
   }
 
   async rejectInvitation(
-    req: Request<{ invitationId: InvitationId }, unknown, unknown>,
+    req: Request<
+      { invitationId: InvitationId; organizationId: OrganizationId },
+      unknown,
+      unknown
+    >,
     res: Response,
   ) {
-    const { invitationId } = req.params;
+    const { invitationId, organizationId } = req.params;
     const { sub } = this.getAuthToken(req);
 
     if (!invitationId) {
       throw new Error("Change at L56");
     }
-    await this.invitationService.rejectInvitation(invitationId, sub);
+    await this.invitationService.rejectInvitation(invitationId, organizationId, sub);
 
     sendNoContent(res);
   }
 
   async revokeInvitation(
-    req: Request<{ invitationId: InvitationId }, unknown, unknown>,
+    req: Request<
+      { invitationId: InvitationId; organizationId: OrganizationId },
+      unknown,
+      unknown
+    >,
     res: Response,
   ) {
-    const { invitationId } = req.params;
+    const { invitationId, organizationId } = req.params;
     const { sub } = this.getAuthToken(req);
 
     if (!invitationId) {
       throw new Error("Change at L71");
     }
-    await this.invitationService.revokeInvitation(invitationId, sub);
+    await this.invitationService.revokeInvitation(invitationId, organizationId, sub);
 
     sendNoContent(res);
   }
