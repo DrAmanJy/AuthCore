@@ -9,7 +9,7 @@ import {
 import { config } from "@authcore/config";
 import { asOrganizationId, asSessionId, asUserId } from "@authcore/database";
 import type { AccessTokenPayload } from "../modules/auth/auth.types.js";
-import { apiKeyService } from "../container.js";
+import { authorizationService } from "../modules/organization/organization.container.js";
 
 export function validateAccessToken(
   req: Request,
@@ -75,7 +75,6 @@ export function validateAccessToken(
   next();
 }
 
-
 export async function validateApiToken(
   req: Request,
   _res: Response,
@@ -94,7 +93,7 @@ export async function validateApiToken(
       throw new AuthenticationError(ERROR_CODES.AUTHORIZATION_HEADER_INVALID);
     }
 
-    const apiKey = await apiKeyService.getByKey(match[1]);
+    const apiKey = await authorizationService.getByKey(match[1]);
 
     if (apiKey.status !== "active") {
       throw new AuthenticationError(ERROR_CODES.API_KEY_REVOKED);
