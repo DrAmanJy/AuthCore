@@ -1,39 +1,39 @@
-import { Router } from "express";
+// import { Router } from "express";
 
-import { organizationController } from "../../container.js";
-import { validateApiToken } from "../../middlewares/token.middleware.js";
+// import { validateApiToken } from "../../middlewares/token.middleware.js";
+// import { organizationController } from "./organization.container.js";
 
-const organizationServiceRouter = Router();
+// const organizationServiceRouter = Router();
 
-organizationServiceRouter.use(validateApiToken);
+// organizationServiceRouter.use(validateApiToken);
 
-// ─────────────────────────────────────────────
-// Organizations
-// ─────────────────────────────────────────────
+// // ─────────────────────────────────────────────
+// // Organizations
+// // ─────────────────────────────────────────────
 
-// ─────────────────────────────────────────────
-// Organization Members
-// ─────────────────────────────────────────────
+// // ─────────────────────────────────────────────
+// // Organization Members
+// // ─────────────────────────────────────────────
 
-organizationServiceRouter.get(
-  "/:organizationId/members",
-  organizationController.getMembers,
-);
+// organizationServiceRouter.get(
+//   "/:organizationId/members",
+//   organizationController.getMembers,
+// );
 
-organizationServiceRouter.get(
-  "/:organizationId/members/:memberId",
-  organizationController.getMember,
-);
+// organizationServiceRouter.get(
+//   "/:organizationId/members/:memberId",
+//   organizationController.getMember,
+// );
 
-// ─────────────────────────────────────────────
-// Organization Roles
-// ─────────────────────────────────────────────
+// // ─────────────────────────────────────────────
+// // Organization Roles
+// // ─────────────────────────────────────────────
 
-organizationServiceRouter.get("/:organizationId/roles", organizationController.getRoles);
+// organizationServiceRouter.get("/:organizationId/roles", organizationController.getRoles);
 
-organizationServiceRouter.get(
-  "/:organizationId/roles/:roleId",
-  organizationController.getRole,
-);
+// organizationServiceRouter.get(
+//   "/:organizationId/roles/:roleId",
+//   organizationController.getRole,
+// );
 
-export { organizationServiceRouter };
+// export { organizationServiceRouter };
