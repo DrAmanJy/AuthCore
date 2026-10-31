@@ -36,6 +36,7 @@ import {
 } from "../../errors/authentication-error.js";
 
 import { ERROR_CODES } from "../../errors/error-codes.js";
+import { logger } from "@authcore/logger";
 
 export class SessionService {
   constructor(
@@ -87,7 +88,6 @@ export class SessionService {
     return this.assertSession(session);
   }
 
-  
   async getPaginatedUserSessions(params: {
     userId: UserId;
     organizationId: OrganizationId;
@@ -145,17 +145,13 @@ export class SessionService {
   async rotateRefreshToken(refreshToken: RefreshToken): Promise<CreateSessionResult> {
     const refreshTokenHash = this.hashRefreshToken(refreshToken);
 
-    // Attempt atomic consumption to prevent concurrency race conditions
-    const consumedToken = await this.refreshTokenRepository.consumeAtomic(refreshTokenHash);
-
-    const currentRefreshToken = consumedToken ??
-      (await this.refreshTokenRepository.findByHash(refreshTokenHash));
+    const currentRefreshToken =
+      await this.refreshTokenRepository.findByHash(refreshTokenHash);
 
     if (!currentRefreshToken) {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
-    // Refresh-token reuse detected - revoke entire token family immediately
     if (currentRefreshToken.usedAt) {
       logger.warn(
         {
@@ -174,7 +170,6 @@ export class SessionService {
 
     const now = new Date();
 
-    // Refresh token was revoked or expired.
     if (currentRefreshToken.revokedAt || currentRefreshToken.expiresAt <= now) {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
@@ -206,9 +201,7 @@ export class SessionService {
       ),
     );
 
-    if (!consumedToken) {
-      await this.refreshTokenRepository.markAsUsed(currentRefreshToken.id);
-    }
+    await this.refreshTokenRepository.markAsUsed(currentRefreshToken.id);
 
     await this.refreshTokenRepository.create({
       sessionId: session.id,
