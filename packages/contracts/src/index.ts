@@ -16,8 +16,8 @@ export { forgotPasswordSchema } from "./auth/schemas/forgot-password.schema.js";
 
 export { resetPasswordSchema } from "./auth/schemas/reset-password.schema.js";
 
-export { sessionParamsSchema, sessionQueryFilterSchema } from "./auth/schemas/session-params.schema.js";
-export type { SessionQueryFilter } from "./auth/schemas/session-params.schema.js";
+// export { sessionParamsSchema, sessionQueryFilterSchema } from "./auth/schemas/session-params.schema.js";
+// export type { SessionQueryFilter } from "./auth/schemas/session-params.schema.js";
 
 // Auth - Types
 export type {
@@ -26,7 +26,6 @@ export type {
   VerifyEmail,
   ForgotPassword,
   ResetPassword,
-  SessionParams,
 } from "./auth/types.js";
 
 // Users - Schemas
@@ -36,7 +35,10 @@ export { userProfileSchema } from "./users/schemas/user-profile.schema.js";
 
 export { updateUserProfile } from "./users/schemas/update-profile.schema.js";
 
-export { changeEmailSchema, confirmEmailChangeSchema } from "./users/schemas/change-email.schema.js";
+export {
+  changeEmailSchema,
+  confirmEmailChangeSchema,
+} from "./users/schemas/change-email.schema.js";
 
 export { changePasswordSchema } from "./users/schemas/change-password.schema.js";
 
@@ -49,7 +51,6 @@ export type {
   UserProfile,
   UpdateProfile,
   ChangeEmail,
-  ConfirmEmailChange,
   ChangePassword,
   ChangeStatus,
   UserParams,

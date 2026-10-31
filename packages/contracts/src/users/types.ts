@@ -1,6 +1,9 @@
 import type { z } from "zod";
 
-import type { changeEmailSchema } from "./schemas/change-email.schema.js";
+import type {
+  changeEmailSchema,
+  confirmEmailChangeSchema,
+} from "./schemas/change-email.schema.js";
 import type { changeStatusSchema } from "./schemas/change-status.schema.js";
 import type { updateUserProfile } from "./schemas/update-profile.schema.js";
 import type { userProfileSchema } from "./schemas/user-profile.schema.js";
@@ -13,5 +16,4 @@ export type ChangeEmail = z.infer<typeof changeEmailSchema>;
 export type ChangeStatus = z.infer<typeof changeStatusSchema>;
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
 export type UserParams = z.infer<typeof userParamsSchema>;
-
-export type ConfirmEmailChange = z.infer<typeof import("./schemas/change-email.schema.js").confirmEmailChangeSchema>;
+export type confirmEmailChange = z.infer<typeof confirmEmailChangeSchema>;
