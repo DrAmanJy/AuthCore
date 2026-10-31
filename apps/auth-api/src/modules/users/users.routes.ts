@@ -1,15 +1,11 @@
 import { Router } from "express";
 
-import {
-  changeEmailSchema,
-  // changeStatusSchema,
-  updateUserProfile,
-  userParamsSchema,
-} from "@authcore/contracts";
+import { updateUserProfile, userParamsSchema } from "@authcore/contracts";
 
-import { invitationController, userController } from "../../container.js";
+import { userController } from "../../container.js";
 import { validateAccessToken } from "../../middlewares/token.middleware.js";
 import { validateBody, validateParams } from "../../middlewares/validate.middleware.js";
+import { invitationController } from "../organization/organization.container.js";
 
 const userRouter = Router();
 
@@ -26,22 +22,7 @@ userRouter.patch(
   validateBody(updateUserProfile),
   userController.updateUserProfile,
 );
-userRouter.post(
-  "/email/request",
-  validateBody(changeEmailSchema),
-  userController.requestEmailChange,
-);
-userRouter.post(
-  "/email/confirm",
-  userController.confirmEmailChange,
-);
 
-userRouter.patch(
-  "/email",
-  validateParams(userParamsSchema),
-  validateBody(changeEmailSchema),
-  userController.updateUserEmail,
-);
 userRouter.post(
   "/deactivate",
   validateParams(userParamsSchema),
