@@ -2,6 +2,7 @@ import type { Types } from "mongoose";
 import { model, Schema } from "mongoose";
 
 export interface IRole {
+  _id: Types.ObjectId;
   organizationId: Types.ObjectId;
   name: string;
   createdBy: Types.ObjectId;
