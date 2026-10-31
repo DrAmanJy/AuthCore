@@ -117,7 +117,6 @@ export class EmailConsumer {
         worker: "email",
         messageId: message.MessageId,
         jobType: job.type,
-        userId: job.userId,
       },
       "Email job received",
     );
@@ -145,7 +144,6 @@ export class EmailConsumer {
           worker: "email",
           messageId: message.MessageId,
           jobType: job.type,
-          userId: job.userId,
         },
         "Email job completed",
       );
@@ -156,7 +154,6 @@ export class EmailConsumer {
           worker: "email",
           messageId: message.MessageId,
           jobType: job.type,
-          userId: job.userId,
           err: error,
         },
         "Email job failed",

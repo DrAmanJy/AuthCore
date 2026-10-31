@@ -1,4 +1,4 @@
-import type { EmailTemplateResult } from "./email-template.types.js";
+import type { EmailTemplate } from "./email-template.types.js";
 
 export interface EmailChangeConfirmationProps {
   displayName: string;
@@ -10,7 +10,7 @@ export function emailChangeConfirmationTemplate({
   displayName,
   newEmail,
   confirmUrl,
-}: EmailChangeConfirmationProps): EmailTemplateResult {
+}: EmailChangeConfirmationProps): EmailTemplate {
   const subject = "Confirm your new email address on AuthCore";
 
   const html = `<!DOCTYPE html>

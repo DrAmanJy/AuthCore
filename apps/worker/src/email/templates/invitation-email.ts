@@ -1,4 +1,4 @@
-import type { EmailTemplateResult } from "./email-template.types.js";
+import type { EmailTemplate } from "./email-template.types.js";
 
 export interface InvitationEmailProps {
   organizationName: string;
@@ -14,7 +14,7 @@ export function invitationEmailTemplate({
   roleName,
   inviteUrl,
   expiresAt,
-}: InvitationEmailProps): EmailTemplateResult {
+}: InvitationEmailProps): EmailTemplate {
   const subject = `You have been invited to join ${organizationName} on AuthCore`;
 
   const html = `<!DOCTYPE html>
