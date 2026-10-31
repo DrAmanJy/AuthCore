@@ -1,4 +1,3 @@
-import { createRateLimiter } from "../../middlewares/rate-limit.middleware.js";
 import { Router } from "express";
 
 import {
@@ -7,12 +6,11 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
-  sessionParamsSchema,
 } from "@authcore/contracts";
 
 import { authController } from "../../container.js";
 import { validateAccessToken } from "../../middlewares/token.middleware.js";
-import { validateBody, validateParams } from "../../middlewares/validate.middleware.js";
+import { validateBody } from "../../middlewares/validate.middleware.js";
 import { attachDevice } from "../../middlewares/device.middleware.js";
 
 const authRouter = Router();
@@ -21,9 +19,9 @@ const authRouter = Router();
 // Authentication
 // ─────────────────────────────────────────────
 
-authRouter.post("/register", authLimiter, validateBody(registerSchema), authController.register);
+authRouter.post("/register", validateBody(registerSchema), authController.register);
 
-authRouter.post("/login", loginLimiter, attachDevice, validateBody(loginSchema), authController.login);
+authRouter.post("/login", attachDevice, validateBody(loginSchema), authController.login);
 
 authRouter.post("/refresh-token", authController.refreshAccessToken);
 
@@ -35,7 +33,7 @@ authRouter.post("/logout", validateAccessToken, authController.logout);
 
 authRouter.post("/verify-email", authController.verifyEmail);
 
-authRouter.post("/resend-verification", authLimiter, authController.resendVerification);
+authRouter.post("/resend-verification", authController.resendVerification);
 
 // ─────────────────────────────────────────────
 // Password Recovery
@@ -43,14 +41,12 @@ authRouter.post("/resend-verification", authLimiter, authController.resendVerifi
 
 authRouter.post(
   "/forgot-password",
-  authLimiter,
   validateBody(forgotPasswordSchema),
   authController.forgotPassword,
 );
 
 authRouter.post(
   "/reset-password",
-  authLimiter,
   validateBody(resetPasswordSchema),
   authController.resetPassword,
 );
@@ -68,23 +64,12 @@ authRouter.post(
 
 authRouter.get("/sessions", validateAccessToken, authController.getSessions);
 
-authRouter.post(
-  "/sessions/:sessionId/heartbeat",
-  validateAccessToken,
-  validateParams(sessionParamsSchema),
-  authController.heartbeat,
-);
-
 authRouter.delete(
   "/sessions/:sessionId",
   validateAccessToken,
-  validateParams(sessionParamsSchema),
   authController.revokeSession,
 );
 
 authRouter.delete("/sessions", validateAccessToken, authController.revokeAllSessions);
 
 export { authRouter };
-
-const loginLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 });
-const authLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20 });
