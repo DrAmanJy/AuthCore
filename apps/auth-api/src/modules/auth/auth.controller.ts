@@ -1,27 +1,21 @@
 import type { Request, Response } from "express";
 
 import { config } from "@authcore/config";
-import type { Device } from "@authcore/database";
-import {
-  asOrganizationId,
-  asRefreshToken,
-  asSessionId,
-  getDurationMs,
-} from "@authcore/database";
+import type { Device, SessionId } from "@authcore/database";
+import { asRefreshToken, getDurationMs } from "@authcore/database";
 import type {
   Register,
-  Login,
   ForgotPassword,
   ResetPassword,
   ChangePassword,
-  SessionParams,
 } from "@authcore/contracts";
 
 import type { AuthService } from "./auth.service.js";
-import type { AccessTokenPayload } from "./auth.types.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { sendCreated, sendNoContent, sendSuccess } from "../../utils/response.utils.js";
+import getAuthToken from "../../utils/token.js";
+import type { LoginType } from "./auth.types.js";
 
 const REFRESH_TOKEN_COOKIE =
   config.nodeEnv === "production" ? "__Host-refresh_token" : "refresh_token";
@@ -43,7 +37,6 @@ export class AuthController {
     this.changePassword = this.changePassword.bind(this);
     this.getSessions = this.getSessions.bind(this);
     this.revokeSession = this.revokeSession.bind(this);
-    this.heartbeat = this.heartbeat.bind(this);
     this.revokeAllSessions = this.revokeAllSessions.bind(this);
   }
 
@@ -59,7 +52,7 @@ export class AuthController {
     sendCreated(res, user, "User successfully registered");
   }
 
-  async login(req: Request<unknown, unknown, Login>, res: Response) {
+  async login(req: Request<unknown, unknown, LoginType>, res: Response) {
     const { organizationId, email, password } = req.body;
     const device: Device = req.device ?? {
       name: req.get("user-agent") ?? "Unknown Device",
@@ -68,7 +61,7 @@ export class AuthController {
     };
 
     const { user, accessToken, refreshToken } = await this.authService.loginUser({
-      organizationId: asOrganizationId(organizationId),
+      organizationId: organizationId,
       email,
       password,
       device,
@@ -80,7 +73,7 @@ export class AuthController {
   }
 
   async logout(req: Request, res: Response) {
-    const { orgId, sub } = this.getAuthToken(req);
+    const { orgId, sub } = getAuthToken(req);
 
     const user = await this.authService.logoutUser({
       organizationId: orgId,
@@ -106,6 +99,7 @@ export class AuthController {
     );
 
     this.setRefreshTokenCookie(res, result.refreshToken);
+
     sendSuccess(res, result.accessToken, "Access token refreshed successfully");
   }
 
@@ -151,7 +145,7 @@ export class AuthController {
 
   async changePassword(req: Request<unknown, unknown, ChangePassword>, res: Response) {
     const { currentPassword, newPassword } = req.body;
-    const { sub } = this.getAuthToken(req);
+    const { sub } = getAuthToken(req);
 
     await this.authService.changePassword(sub, {
       currentPassword,
@@ -162,45 +156,29 @@ export class AuthController {
   }
 
   async getSessions(req: Request, res: Response) {
-    const { orgId, sub } = this.getAuthToken(req);
+    const { orgId, sub } = getAuthToken(req);
 
     const sessions = await this.authService.getSessions(orgId, sub);
 
     sendSuccess(res, sessions, "Session successfully retrieved");
   }
 
-  
-  async heartbeat(req: Request<SessionParams>, res: Response) {
+  async revokeSession(req: Request<{ sessionId: SessionId }>, res: Response) {
     const { sessionId } = req.params;
-    const { sub } = this.getAuthToken(req);
-
-    const session = await this.authService.sessionHeartbeat(asSessionId(sessionId), sub);
-    sendSuccess(res, session, "Session heartbeat acknowledged");
-  }
-
-  async revokeSession(req: Request<SessionParams>, res: Response) {
-    const { sessionId } = req.params;
-    const { sub } = this.getAuthToken(req);
+    const { sub } = getAuthToken(req);
 
     // Enforce caller ownership when revoking specific session
-    const session = await this.authService.revokeSession(asSessionId(sessionId), sub);
+    const session = await this.authService.revokeSession(sessionId, sub);
 
     sendSuccess(res, session, "Session successfully revoked");
   }
 
   async revokeAllSessions(req: Request, res: Response) {
-    const { orgId, sub } = this.getAuthToken(req);
+    const { orgId, sub } = getAuthToken(req);
 
     const count = await this.authService.revokeAllSessions(orgId, sub);
 
     sendSuccess(res, count, "Sessions successfully revoked");
-  }
-
-  private getAuthToken(req: { token?: AccessTokenPayload }): AccessTokenPayload {
-    if (!req.token) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
-    }
-    return req.token;
   }
 
   private setRefreshTokenCookie(res: Response, refreshToken: string): void {
