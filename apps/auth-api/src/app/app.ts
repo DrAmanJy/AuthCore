@@ -14,14 +14,7 @@ const app = express();
 // Trust reverse proxy for accurate client IP resolution
 app.set("trust proxy", 1);
 
-// Response timing header
-app.use((_req, res, next) => {
-  const start = Date.now();
-  res.on("finish", () => {
-    res.setHeader("X-Response-Time", `${Date.now() - start}ms`);
-  });
-  next();
-});
+
 
 app.use(requestId);
 
