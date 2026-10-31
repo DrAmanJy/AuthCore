@@ -1,4 +1,3 @@
-import { auditService } from "../../container.js";
 import type {
   ActorId,
   OrganizationId,
@@ -27,7 +26,7 @@ import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import type { EmailQueue } from "@authcore/queue";
-import type { OrganizationService } from "../organization/organization.service.js";
+import type { MembersService } from "../organization/members/member.service.js";
 
 export class AuthService {
   constructor(
@@ -36,7 +35,7 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly recoveryService: RecoveryService,
     private readonly emailQueue: EmailQueue,
-    private readonly organizationService: OrganizationService,
+    private readonly membersService: MembersService,
   ) {}
 
   async registerUser(data: RegisterType): Promise<User> {
@@ -89,7 +88,7 @@ export class AuthService {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
-    const member = await this.organizationService.getMemberByUser(
+    const member = await this.membersService.getMemberByUser(
       data.organizationId,
       user.id,
     );
@@ -111,14 +110,7 @@ export class AuthService {
       { event: "auth.login.success", userId: member.userId },
       "User logged in successfully",
     );
-    void auditService.logEvent({
-      organizationId: member.organizationId,
-      actorId: member.userId,
-      action: "auth.login",
-      targetType: "session",
-      targetId: session.id,
-      details: { ip: data.device?.ip, userAgent: data.device?.userAgent },
-    });
+
     const {
       passwordHash: _passwordHash,
       emailVerified: _emailVerified,
@@ -145,13 +137,6 @@ export class AuthService {
       { event: "auth.logout.success", userId: user.id },
       "User logged out successfully",
     );
-    void auditService.logEvent({
-      organizationId: data.organizationId,
-      actorId: user.id,
-      action: "auth.logout",
-      targetType: "user",
-      targetId: user.id,
-    });
 
     return user;
   }
@@ -296,24 +281,7 @@ export class AuthService {
     });
   }
 
-  
-  async verifySessionOwnership(sessionId: SessionId, actorId: ActorId): Promise<Session> {
-    const session = await this.sessionService.getSession(sessionId);
-    if (!session || session.userId !== actorId) {
-      throw new AuthenticationError(ERROR_CODES.SESSION_ACCESS_DENIED);
-    }
-    return session;
-  }
-
-  
-  async sessionHeartbeat(sessionId: SessionId, actorId: ActorId): Promise<Session> {
-    await this.verifySessionOwnership(sessionId, actorId);
-    const session = await this.sessionService.touchSession(sessionId);
-    return session;
-  }
-
   async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
-    await this.verifySessionOwnership(sessionId, actorId);
     const session = await this.sessionService.revokeSession(sessionId, actorId);
     logger.info(
       {
