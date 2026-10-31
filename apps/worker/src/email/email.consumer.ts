@@ -75,7 +75,25 @@ export class EmailConsumer {
       return;
     }
 
-    const parsed = emailJobSchema.safeParse(JSON.parse(message.Body));
+    let rawBody: unknown;
+    try {
+      rawBody = JSON.parse(message.Body);
+    } catch (parseError) {
+      logger.error(
+        {
+          event: "queue.job.malformed_json",
+          worker: "email",
+          messageId: message.MessageId,
+          err: parseError,
+        },
+        "Failed to parse SQS message body as JSON",
+      );
+      // Delete unparseable message to avoid infinite poison pill loops
+      await this.deleteMessage(message.ReceiptHandle);
+      return;
+    }
+
+    const parsed = emailJobSchema.safeParse(rawBody);
 
     if (!parsed.success) {
       logger.error(
@@ -99,7 +117,6 @@ export class EmailConsumer {
         worker: "email",
         messageId: message.MessageId,
         jobType: job.type,
-        userId: job.userId,
       },
       "Email job received",
     );
@@ -112,6 +129,11 @@ export class EmailConsumer {
 
         case "email.send_password_reset":
           await this.emailService.sendPasswordRestEmail(job);
+          break;
+
+        case "email.send_invitation":
+          await this.emailService.sendInvitationEmail(job);
+          break;
       }
 
       await this.deleteMessage(message.ReceiptHandle);
@@ -122,7 +144,6 @@ export class EmailConsumer {
           worker: "email",
           messageId: message.MessageId,
           jobType: job.type,
-          userId: job.userId,
         },
         "Email job completed",
       );
@@ -133,7 +154,6 @@ export class EmailConsumer {
           worker: "email",
           messageId: message.MessageId,
           jobType: job.type,
-          userId: job.userId,
           err: error,
         },
         "Email job failed",

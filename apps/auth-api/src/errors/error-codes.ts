@@ -1,5 +1,6 @@
 export const ERROR_CODES = {
   // Authentication
+  AUTH_UNAUTHORIZED: "AUTH_UNAUTHORIZED",
   AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS",
   AUTH_INVALID_TOKEN: "AUTH_INVALID_TOKEN",
   AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
@@ -7,6 +8,9 @@ export const ERROR_CODES = {
   AUTH_SESSION_REVOKED: "AUTH_SESSION_REVOKED",
   AUTH_INVALID_REFRESH_TOKEN: "AUTH_INVALID_REFRESH_TOKEN",
   AUTH_SESSION_NOT_FOUND: "AUTH_SESSION_NOT_FOUND",
+
+  AUTH_REFRESH_TOKEN_REUSE_DETECTED: "AUTH_REFRESH_TOKEN_REUSE_DETECTED",
+  SESSION_ACCESS_DENIED: "SESSION_ACCESS_DENIED",
 
   // Authorization
   AUTHORIZATION_HEADER_MISSING: "AUTHORIZATION_HEADER_MISSING",
@@ -30,6 +34,8 @@ export const ERROR_CODES = {
   USER_ACCOUNT_PENDING: "USER_ACCOUNT_PENDING",
   USER_ACCOUNT_SUSPENDED: "USER_ACCOUNT_SUSPENDED",
   USER_PASSWORD_UPDATE_FAILED: "USER_PASSWORD_UPDATE_FAILED",
+  USER_EMAIL_CHANGE_TOKEN_INVALID: "USER_EMAIL_CHANGE_TOKEN_INVALID",
+  USER_EMAIL_CHANGE_TOKEN_EXPIRED: "USER_EMAIL_CHANGE_TOKEN_EXPIRED",
 
   // Organization
   ORGANIZATION_NOT_FOUND: "ORGANIZATION_NOT_FOUND",
@@ -42,16 +48,33 @@ export const ERROR_CODES = {
   ORGANIZATION_MEMBER_NOT_ACTIVE: "ORGANIZATION_MEMBER_NOT_ACTIVE",
   ORGANIZATION_MEMBER_NOT_SUSPENDED: "ORGANIZATION_MEMBER_NOT_SUSPENDED",
   ORGANIZATION_MEMBER_REMOVED: "ORGANIZATION_MEMBER_REMOVED",
+  ORGANIZATION_MEMBER_SUSPENDED: "ORGANIZATION_MEMBER_SUSPENDED",
   ORGANIZATION_MEMBER_ACTIVATION_REQUIRED: "ORGANIZATION_MEMBER_ACTIVATION_REQUIRED",
   ORGANIZATION_MEMBER_SUSPENSION_REQUIRED: "ORGANIZATION_MEMBER_SUSPENSION_REQUIRED",
   ORGANIZATION_MEMBER_REMOVE_DIRECTLY: "ORGANIZATION_MEMBER_REMOVE_DIRECTLY",
+
+  // Authorization & Permissions
+  AUTH_FORBIDDEN: "AUTH_FORBIDDEN",
+  AUTH_INSUFFICIENT_PERMISSIONS: "AUTH_INSUFFICIENT_PERMISSIONS",
+  ORGANIZATION_ACCESS_DENIED: "ORGANIZATION_ACCESS_DENIED",
+  ORGANIZATION_LAST_OWNER_PROTECTION: "ORGANIZATION_LAST_OWNER_PROTECTION",
+
+  // Authorization & Permissions
 
   // Role
   ROLE_NOT_FOUND: "ROLE_NOT_FOUND",
   ROLE_ALREADY_EXISTS: "ROLE_ALREADY_EXISTS",
   ROLE_SYSTEM_PROTECTED: "ROLE_SYSTEM_PROTECTED",
 
+  // API Key
+  API_KEY_NOT_FOUND: "API_KEY_NOT_FOUND",
+  API_KEY_REVOKED: "API_KEY_REVOKED",
+  API_KEY_UNAUTHORIZED: "API_KEY_UNAUTHORIZED",
+
+  // Validation
+  RATE_LIMIT_EXCEEDED: "RATE_LIMIT_EXCEEDED",
   VALIDATION_FAILED: "VALIDATION_FAILED",
+  SLUG_REQUIRED: "SLUG_REQUIRED",
   INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR",
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
@@ -64,6 +87,20 @@ export const ERROR_DEFINITIONS: Record<
   }
 > = {
   // Authentication
+  AUTH_REFRESH_TOKEN_REUSE_DETECTED: {
+    statusCode: 401,
+    message:
+      "Security breach detected: refresh token reuse attempted. All sessions have been revoked.",
+  },
+  SESSION_ACCESS_DENIED: {
+    statusCode: 403,
+    message: "You are not authorized to manage this session.",
+  },
+  AUTH_UNAUTHORIZED: {
+    statusCode: 401,
+    message: "Authentication is required to access this resource.",
+  },
+
   AUTH_INVALID_CREDENTIALS: {
     statusCode: 401,
     message: "Invalid email or password.",
@@ -116,6 +153,22 @@ export const ERROR_DEFINITIONS: Record<
   },
 
   // Recovery / Verification
+  AUTH_FORBIDDEN: {
+    statusCode: 403,
+    message: "You do not have permission to perform this action.",
+  },
+  AUTH_INSUFFICIENT_PERMISSIONS: {
+    statusCode: 403,
+    message: "Insufficient permissions for the requested resource.",
+  },
+  ORGANIZATION_ACCESS_DENIED: {
+    statusCode: 403,
+    message: "Access to this organization is denied.",
+  },
+  ORGANIZATION_LAST_OWNER_PROTECTION: {
+    statusCode: 409,
+    message: "Cannot remove, suspend, or demote the last organization owner.",
+  },
   AUTH_VERIFICATION_TOKEN_INVALID: {
     statusCode: 400,
     message: "The verification token is invalid.",
@@ -162,8 +215,8 @@ export const ERROR_DEFINITIONS: Record<
   },
 
   USER_ALREADY_ACTIVE: {
-    statusCode: 403,
-    message: "Your account already active.",
+    statusCode: 409,
+    message: "Your account is already active.",
   },
   USER_ACCOUNT_INACTIVE: {
     statusCode: 403,
@@ -180,6 +233,14 @@ export const ERROR_DEFINITIONS: Record<
     message: "Your account has been suspended.",
   },
 
+  USER_EMAIL_CHANGE_TOKEN_INVALID: {
+    statusCode: 400,
+    message: "The email change verification token is invalid.",
+  },
+  USER_EMAIL_CHANGE_TOKEN_EXPIRED: {
+    statusCode: 400,
+    message: "The email change verification token has expired. Please request a new one.",
+  },
   USER_PASSWORD_UPDATE_FAILED: {
     statusCode: 500,
     message: "The password could not be updated.",
@@ -214,17 +275,21 @@ export const ERROR_DEFINITIONS: Record<
 
   ORGANIZATION_MEMBER_NOT_ACTIVE: {
     statusCode: 409,
-    message: "Only active members can be modified in this way.",
+    message: "The member must be active to perform this action.",
   },
 
   ORGANIZATION_MEMBER_NOT_SUSPENDED: {
     statusCode: 409,
-    message: "Only suspended members can be activated.",
+    message: "The member must be suspended before they can be activated.",
   },
 
   ORGANIZATION_MEMBER_REMOVED: {
     statusCode: 409,
-    message: "Removed members cannot be updated.",
+    message: "This organization membership has been removed.",
+  },
+  ORGANIZATION_MEMBER_SUSPENDED: {
+    statusCode: 409,
+    message: "This organization membership has been suspended.",
   },
 
   ORGANIZATION_MEMBER_ACTIVATION_REQUIRED: {
@@ -258,9 +323,35 @@ export const ERROR_DEFINITIONS: Record<
     message: "System roles cannot be modified.",
   },
 
+  // API Key
+  API_KEY_NOT_FOUND: {
+    statusCode: 404,
+    message: "The requested API key could not be found.",
+  },
+
+  API_KEY_REVOKED: {
+    statusCode: 403,
+    message: "The API key has been revoked and is no longer valid.",
+  },
+
+  API_KEY_UNAUTHORIZED: {
+    statusCode: 403,
+    message: "The API key does not belong to the requested organization.",
+  },
+
+  // Validation
+  RATE_LIMIT_EXCEEDED: {
+    statusCode: 429,
+    message: "Too many requests. Please slow down and try again later.",
+  },
   VALIDATION_FAILED: {
     statusCode: 400,
     message: "The request contains invalid data.",
+  },
+
+  SLUG_REQUIRED: {
+    statusCode: 400,
+    message: "Organization slug is required.",
   },
 
   INTERNAL_SERVER_ERROR: {

@@ -11,6 +11,11 @@ import appRouter from "./routes.js";
 
 const app = express();
 
+// Trust reverse proxy for accurate client IP resolution
+app.set("trust proxy", 1);
+
+
+
 app.use(requestId);
 
 app.use(helmet());

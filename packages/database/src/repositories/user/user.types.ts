@@ -1,4 +1,5 @@
 import type { USER_STATUSES } from "../../models/user.model.js";
+import type { OrganizationId } from "../organization/organization.types.js";
 
 export type UserId = string & {
   readonly __brand: "UserId";
@@ -23,38 +24,23 @@ export type User = {
   displayName: string;
   status: UserStatus;
   lastLoginAt?: Date;
+  managedBy?: OrganizationId;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type UserCredentials = {
-  id: UserId;
-  email: string;
+export type UserCredentials = User & {
   emailVerified: boolean;
-  displayName: string;
   passwordHash: string;
-  status: UserStatus;
-  lastLoginAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
-export type CreateUserData = {
-  email: string;
-  passwordHash: string;
-  displayName: string;
-  emailVerified?: boolean;
-  status?: UserStatus;
-  lastLoginAt?: Date;
-};
+export type CreateUserData = Pick<
+  UserCredentials,
+  "email" | "passwordHash" | "displayName" | "emailVerified" | "lastLoginAt" | "managedBy"
+> &
+  Partial<Pick<UserCredentials, "status">>;
 
-export type UpdateUserData = {
-  email?: string;
-  displayName?: string;
-  emailVerified?: boolean;
-  status?: UserStatus;
-  lastLoginAt?: Date;
-};
+export type UpdateUserData = Partial<Omit<CreateUserData, "passwordHash" | "managedBy">>;
 
 export type ExistsUserCriteria =
   | {

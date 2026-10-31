@@ -20,10 +20,12 @@
     },
 
     "lint": {
+      "dependsOn": ["^build"],
       "outputs": []
     },
 
     "typecheck": {
+      "dependsOn": ["^build"],
       "outputs": []
     },
 

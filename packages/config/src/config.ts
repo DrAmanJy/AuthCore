@@ -15,6 +15,7 @@ const parsedEnvironment = EnvironmentSchema.safeParse({
 
   SESSION_EXPIRY: process.env.SESSION_EXPIRY,
   ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,
+  INVITATION_EXPIRY: process.env.INVITATION_EXPIRY,
   REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
   EMAIL_VERIFICATION_TOKEN_EXPIRY: process.env.EMAIL_VERIFICATION_TOKEN_EXPIRY,
   PASSWORD_RESET_TOKEN_EXPIRY: process.env.PASSWORD_RESET_TOKEN_EXPIRY,
@@ -28,6 +29,8 @@ const parsedEnvironment = EnvironmentSchema.safeParse({
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   AWS_EMAIL_QUEUE_URL: process.env.AWS_EMAIL_QUEUE_URL,
+  INTERNAL_SERVICE_SECRET: process.env.INTERNAL_SERVICE_SECRET,
+  HASH_PEPPER: process.env.HASH_PEPPER,
 });
 
 if (!parsedEnvironment.success) {
@@ -57,6 +60,7 @@ export const config = {
   auth: {
     jwtIssuer: env.JWT_ISSUER,
     sessionExpiry: env.SESSION_EXPIRY,
+    invitationExpiry: env.INVITATION_EXPIRY,
     accessTokenExpiry: env.ACCESS_TOKEN_EXPIRY,
     refreshTokenExpiry: env.REFRESH_TOKEN_EXPIRY,
     jwtPrivateKey: env.JWT_PRIVATE_KEY,
@@ -76,6 +80,7 @@ export const config = {
     resendApiKey: env.RESEND_API_KEY,
     from: env.EMAIL_FROM,
   },
+  hashPepper: env.HASH_PEPPER,
 } as const;
 
 export type Config = typeof config;

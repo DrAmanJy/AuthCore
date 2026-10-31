@@ -1,4 +1,5 @@
 import type {
+  ActorId,
   OrganizationId,
   RefreshToken,
   Session,
@@ -22,8 +23,10 @@ import type { PasswordService } from "./password.service.js";
 import type { RecoveryService } from "./recovery.service.js";
 import type { SessionService } from "./session.service.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
+import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import type { EmailQueue } from "@authcore/queue";
+import type { MembersService } from "../organization/members/member.service.js";
 
 export class AuthService {
   constructor(
@@ -32,6 +35,7 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly recoveryService: RecoveryService,
     private readonly emailQueue: EmailQueue,
+    private readonly membersService: MembersService,
   ) {}
 
   async registerUser(data: RegisterType): Promise<User> {
@@ -41,15 +45,19 @@ export class AuthService {
       displayName: data.displayName,
       email: data.email,
       passwordHash,
+      emailVerified: false,
     });
 
-    const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
+    const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
+      user.id,
+    );
 
     await this.emailQueue.publishVerificationEmail({
       userId: user.id,
       email: user.email,
       displayName: user.displayName,
       verificationToken: token,
+      expiresAt: expiresAt.toISOString(),
     });
 
     logger.info(
@@ -68,6 +76,7 @@ export class AuthService {
       type: "email",
       value: data.email,
     });
+
     this.userService.validateAccountStatus(user);
 
     const isValidPassword = await this.passwordService.verify(
@@ -79,16 +88,29 @@ export class AuthService {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
+    const member = await this.membersService.getMemberByUser(
+      data.organizationId,
+      user.id,
+    );
+
+    if (member.status === "removed") {
+      throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_REMOVED);
+    }
+    if (member.status === "suspended") {
+      throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_SUSPENDED);
+    }
+
     const session = await this.sessionService.createSession({
-      userId: user.id,
-      organizationId: data.organizationId,
+      userId: member.userId,
+      organizationId: member.organizationId,
       device: data.device,
     });
 
     logger.info(
-      { event: "auth.login.success", userId: user.id },
+      { event: "auth.login.success", userId: member.userId },
       "User logged in successfully",
     );
+
     const {
       passwordHash: _passwordHash,
       emailVerified: _emailVerified,
@@ -146,15 +168,18 @@ export class AuthService {
   async resendVerification(email: string): Promise<void> {
     const user = await this.userService.getUserByEmail(email);
     if (user.status !== "pending") {
-      throw new AuthenticationError("USER_ALREADY_ACTIVE");
+      throw new ResourceError(ERROR_CODES.USER_ALREADY_ACTIVE);
     }
-    const { token } = await this.recoveryService.createEmailVerificationToken(user.id);
+    const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
+      user.id,
+    );
 
     await this.emailQueue.publishVerificationEmail({
       displayName: user.displayName,
       email: user.email,
       userId: user.id,
       verificationToken: token,
+      expiresAt: expiresAt.toISOString(),
     });
 
     logger.info(
@@ -183,6 +208,7 @@ export class AuthService {
       email: user.email,
       resetToken: token,
       userId: user.id,
+      expiresAt: expiresAt.toISOString(),
     });
 
     logger.info(
@@ -191,8 +217,6 @@ export class AuthService {
       },
       "Password reset requested",
     );
-    void token;
-    void expiresAt;
   }
 
   async resetPassword(token: string, password: string): Promise<User> {
@@ -257,8 +281,8 @@ export class AuthService {
     });
   }
 
-  async revokeSession(sessionId: SessionId): Promise<Session> {
-    const session = await this.sessionService.revokeSession(sessionId);
+  async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
+    const session = await this.sessionService.revokeSession(sessionId, actorId);
     logger.info(
       {
         event: "auth.session.revoked",

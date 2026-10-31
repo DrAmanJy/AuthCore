@@ -5,21 +5,25 @@ import { toObjectId } from "../../utils/object-id.utils.js";
 
 import type {
   CreateOrganizationData,
+  DeleteOrganizationCriteria,
+  FindOrganizationCriteria,
+  OrganizationStatus,
   Organization,
   OrganizationId,
-  OrganizationStatus,
   UpdateOrganizationData,
 } from "./organization.types.js";
 import { asOrganizationId } from "./organization.types.js";
 import type { ActorId } from "../user/user.types.js";
 import { asUserId } from "../user/user.types.js";
 import type { OrganizationRepository } from "./organization-repository.js";
+import { mapDatabaseError } from "../../errors/database-error.utils.js";
 
 type MongoOrganizationRecord = {
   _id: Types.ObjectId;
   name: string;
   slug: string;
   status: OrganizationStatus;
+  frontendUrl: string;
   createdBy: {
     _id: Types.ObjectId;
     displayName: string;
@@ -30,63 +34,65 @@ type MongoOrganizationRecord = {
 };
 
 export class MongoOrganizationRepository implements OrganizationRepository {
-  async findById(organizationId: OrganizationId): Promise<Organization | null> {
-    const organization = await OrganizationModel.findOne({
-      _id: toObjectId(organizationId),
-      deletedAt: { $exists: false },
-    })
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .lean<MongoOrganizationRecord>()
-      .exec();
+  find(criteria: { type: "all" }): Promise<Organization[]>;
 
-    return organization ? this.toOrganization(organization) : null;
-  }
+  find(criteria: { type: "actor"; value: ActorId }): Promise<Organization[]>;
 
-  async findBySlug(slug: string): Promise<Organization | null> {
-    const organization = await OrganizationModel.findOne({
-      slug,
-      deletedAt: { $exists: false },
-    })
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .lean<MongoOrganizationRecord>()
-      .exec();
+  find(criteria: { type: "id"; value: OrganizationId }): Promise<Organization | null>;
 
-    return organization ? this.toOrganization(organization) : null;
-  }
+  find(criteria: { type: "slug"; value: string }): Promise<Organization | null>;
 
-  async findAll(): Promise<Organization[]> {
-    const organizations = await OrganizationModel.find({
-      deletedAt: { $exists: false },
-    })
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .lean<MongoOrganizationRecord[]>()
-      .exec();
+  async find(
+    criteria: FindOrganizationCriteria,
+  ): Promise<Organization[] | Organization | null> {
+    try {
+      switch (criteria.type) {
+        case "all": {
+          const organizations = await OrganizationModel.find({
+            deletedAt: { $exists: false },
+          })
+            .populate({ path: "createdBy", select: "displayName _id" })
+            .lean<MongoOrganizationRecord[]>()
+            .exec();
 
-    return organizations.map(organization => this.toOrganization(organization));
-  }
+          return organizations.map(organization => this.toOrganization(organization));
+        }
+        case "actor": {
+          const organizations = await OrganizationModel.find({
+            createdBy: criteria.value,
+            deletedAt: { $exists: false },
+          })
+            .populate({ path: "createdBy", select: "displayName _id" })
+            .lean<MongoOrganizationRecord[]>()
+            .exec();
+          return organizations.map(organization => this.toOrganization(organization));
+        }
+        case "id": {
+          const organization = await OrganizationModel.findOne({
+            _id: toObjectId(criteria.value),
+            deletedAt: { $exists: false },
+          })
+            .populate({ path: "createdBy", select: "displayName _id" })
+            .lean<MongoOrganizationRecord>()
+            .exec();
 
-  async findAllByActorId(actorId: ActorId): Promise<Organization[]> {
-    const organizations = await OrganizationModel.find({
-      createdBy: toObjectId(actorId),
-      deletedAt: { $exists: false },
-    })
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .lean<MongoOrganizationRecord[]>()
-      .exec();
+          return organization ? this.toOrganization(organization) : null;
+        }
+        case "slug": {
+          const organization = await OrganizationModel.findOne({
+            slug: criteria.value,
+            deletedAt: { $exists: false },
+          })
+            .populate({ path: "createdBy", select: "displayName _id" })
+            .lean<MongoOrganizationRecord>()
+            .exec();
 
-    return organizations.map(organization => this.toOrganization(organization));
+          return organization ? this.toOrganization(organization) : null;
+        }
+      }
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
   }
 
   async create(actorId: ActorId, data: CreateOrganizationData): Promise<Organization> {
@@ -115,20 +121,6 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     actorId: ActorId,
     data: UpdateOrganizationData,
   ): Promise<Organization | null> {
-    const update: Partial<UpdateOrganizationData> = {};
-
-    if (data.name !== undefined) {
-      update.name = data.name;
-    }
-
-    if (data.slug !== undefined) {
-      update.slug = data.slug;
-    }
-
-    if (data.status !== undefined) {
-      update.status = data.status;
-    }
-
     const organization = await OrganizationModel.findOneAndUpdate(
       {
         _id: toObjectId(organizationId),
@@ -136,7 +128,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
         deletedAt: { $exists: false },
       },
       {
-        $set: update,
+        $set: data,
       },
       {
         new: true,
@@ -154,15 +146,19 @@ export class MongoOrganizationRepository implements OrganizationRepository {
   }
 
   async softDelete(
-    organizationId: OrganizationId,
+    criteria: DeleteOrganizationCriteria,
     actorId: ActorId,
   ): Promise<Organization | null> {
+    const search = {
+      createdBy: toObjectId(actorId),
+      deletedAt: { $exists: false },
+      ...(criteria.type === "id"
+        ? { _id: toObjectId(criteria.value) }
+        : { slug: criteria.value }),
+    };
+
     const organization = await OrganizationModel.findOneAndUpdate(
-      {
-        _id: toObjectId(organizationId),
-        createdBy: toObjectId(actorId),
-        deletedAt: { $exists: false },
-      },
+      search,
       {
         $set: {
           deletedAt: new Date(),
@@ -189,6 +185,7 @@ export class MongoOrganizationRepository implements OrganizationRepository {
       name: record.name,
       slug: record.slug,
       status: record.status,
+      frontendUrl: record.frontendUrl,
 
       ...(record.deletedAt !== undefined && {
         deletedAt: record.deletedAt,

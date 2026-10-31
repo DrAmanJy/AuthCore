@@ -1,7 +1,7 @@
 import type { UserId, CreateUserData, UserCredentials } from "@authcore/database";
 
 import type { User, UserRepository } from "@authcore/database";
-import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
+import type { ChangeStatus, UpdateProfile } from "@authcore/contracts";
 import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { logger } from "@authcore/logger";
@@ -29,6 +29,7 @@ export class UserService {
 
     return user;
   }
+
   async getUserByEmail(email: string): Promise<User> {
     const user = await this.userRepository.find({
       type: "email",
@@ -152,17 +153,6 @@ export class UserService {
       throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     }
 
-    return user;
-  }
-
-  async changeEmail(userId: UserId, data: ChangeEmail): Promise<User> {
-    await this.getAuthenticatedUser(userId);
-
-    const user = await this.userRepository.update(userId, {
-      email: data.email,
-    });
-
-    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
     return user;
   }
 

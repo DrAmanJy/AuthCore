@@ -22,7 +22,7 @@ export interface SessionRepository {
 
   updateSession(sessionId: SessionId, data: UpdateSessionData): Promise<Session | null>;
 
-  revoke(sessionId: SessionId, reason?: string): Promise<Session | null>;
+  revoke(sessionId: SessionId, userId: UserId, reason?: string): Promise<Session | null>;
 
   revokeAllByUserId(
     userId: UserId,

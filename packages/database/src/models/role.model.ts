@@ -2,10 +2,12 @@ import type { Types } from "mongoose";
 import { model, Schema } from "mongoose";
 
 export interface IRole {
+  _id: Types.ObjectId;
   organizationId: Types.ObjectId;
   name: string;
   createdBy: Types.ObjectId;
   isSystemRole: boolean;
+  permissions: string[];
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +41,12 @@ const RoleSchema = new Schema<IRole>(
       type: Boolean,
       required: true,
       default: false,
+    },
+
+    permissions: {
+      type: [String],
+      required: true,
+      default: [],
     },
 
     deletedAt: {

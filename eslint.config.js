@@ -13,6 +13,7 @@ export default defineConfig(
       "**/coverage/**",
       "**/.pnpm-store/**",
       "**/.turbo/**",
+      "src/**",
     ],
   },
 

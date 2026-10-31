@@ -1,10 +1,12 @@
 import type { Types } from "mongoose";
+import type { IRole } from "../../models/role.model.js";
 import { RoleModel } from "../../models/role.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
 import {
   asOrganizationId,
   type OrganizationId,
 } from "../organization/organization.types.js";
+import type { FindRoleCriteria } from "./role.types.js";
 import {
   asRoleId,
   type CreateRoleData,
@@ -16,56 +18,46 @@ import type { ActorId } from "../user/user.types.js";
 import { asUserId } from "../user/user.types.js";
 import type { RoleRepository } from "./role-repository.js";
 
-type MongoRoleRecord = {
-  _id: Types.ObjectId;
-  organizationId: Types.ObjectId;
-  name: string;
+type MongoRoleRecord = Omit<IRole, "createdBy"> & {
   createdBy: {
     _id: Types.ObjectId;
     displayName: string;
   };
-  isSystemRole: boolean;
-  deletedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
 export class MongoRoleRepository implements RoleRepository {
-  async findById(roleId: RoleId): Promise<Role | null> {
-    const role = await RoleModel.findOne({
-      _id: toObjectId(roleId),
-      deletedAt: { $exists: false },
-    })
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
+  find(criteria: {
+    type: "id";
+    value: RoleId;
+    orgId: OrganizationId;
+  }): Promise<Role | null>;
+
+  find(criteria: {
+    type: "name";
+    value: string;
+    orgId: OrganizationId;
+  }): Promise<Role | null>;
+
+  find(criteria: { type: "organization"; value: OrganizationId }): Promise<Role[]>;
+  find(criteria: { type: "all" }): Promise<Role[]>;
+
+  async find(criteria: FindRoleCriteria): Promise<Role[] | Role | null> {
+    if (criteria.type === "id" || criteria.type === "name") {
+      const role = await RoleModel.findOne({
+        organizationId: criteria.orgId,
+        ...(criteria.type === "id" ? { _id: criteria.value } : { name: criteria.value }),
       })
-      .lean<MongoRoleRecord>()
-      .exec();
+        .populate({
+          path: "createdBy",
+          select: "_id displayName",
+        })
+        .lean<MongoRoleRecord>()
+        .exec();
+      return role ? this.toRole(role) : null;
+    }
 
-    return role ? this.toRole(role) : null;
-  }
-
-  async findByName(organizationId: OrganizationId, name: string): Promise<Role | null> {
-    const role = await RoleModel.findOne({
-      organizationId: toObjectId(organizationId),
-      name,
-      deletedAt: { $exists: false },
-    })
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .lean<MongoRoleRecord>()
-      .exec();
-
-    return role ? this.toRole(role) : null;
-  }
-
-  async findByOrganization(organizationId: OrganizationId): Promise<Role[]> {
     const roles = await RoleModel.find({
-      organizationId: toObjectId(organizationId),
-      deletedAt: { $exists: false },
+      ...(criteria.type === "organization" && { organizationId: criteria.value }),
     })
       .populate({
         path: "createdBy",
@@ -86,9 +78,8 @@ export class MongoRoleRepository implements RoleRepository {
       organizationId: toObjectId(organizationId),
       name: data.name,
       createdBy: toObjectId(actorId),
-      ...(data.isSystemRole !== undefined && {
-        isSystemRole: data.isSystemRole,
-      }),
+      permissions: data.permissions,
+      isSystemRole: data.isSystemRole,
     });
 
     const populatedRole = await RoleModel.findById(role._id)
@@ -170,6 +161,7 @@ export class MongoRoleRepository implements RoleRepository {
         displayName: record.createdBy.displayName,
       },
       isSystemRole: record.isSystemRole,
+      permissions: record.permissions,
       ...(record.deletedAt !== undefined && {
         deletedAt: record.deletedAt,
       }),

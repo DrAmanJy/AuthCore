@@ -6,12 +6,11 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
-  sessionParamsSchema,
 } from "@authcore/contracts";
 
 import { authController } from "../../container.js";
 import { validateAccessToken } from "../../middlewares/token.middleware.js";
-import { validateBody, validateParams } from "../../middlewares/validate.middleware.js";
+import { validateBody } from "../../middlewares/validate.middleware.js";
 import { attachDevice } from "../../middlewares/device.middleware.js";
 
 const authRouter = Router();
@@ -46,7 +45,11 @@ authRouter.post(
   authController.forgotPassword,
 );
 
-authRouter.post("/reset-password", validateBody(resetPasswordSchema));
+authRouter.post(
+  "/reset-password",
+  validateBody(resetPasswordSchema),
+  authController.resetPassword,
+);
 
 authRouter.post(
   "/change-password",
@@ -64,7 +67,6 @@ authRouter.get("/sessions", validateAccessToken, authController.getSessions);
 authRouter.delete(
   "/sessions/:sessionId",
   validateAccessToken,
-  validateParams(sessionParamsSchema),
   authController.revokeSession,
 );
 

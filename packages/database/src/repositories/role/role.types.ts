@@ -13,31 +13,31 @@ export type Role = {
   name: string;
   createdBy: CreatedBy;
   isSystemRole: boolean;
+  permissions: string[];
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type CreateRoleData = {
-  name: string;
-  isSystemRole?: boolean;
-};
+export type CreateRoleData = Pick<Role, "name" | "isSystemRole" | "permissions">;
 
-export type UpdateRoleData = {
-  name?: string;
-};
+export type UpdateRoleData = Omit<CreateRoleData, "isSystemRole">;
 
 export type FindRoleCriteria =
   | {
       type: "id";
       value: RoleId;
+      orgId: OrganizationId;
     }
   | {
       type: "name";
-      organizationId: OrganizationId;
-      name: string;
+      value: string;
+      orgId: OrganizationId;
     }
   | {
       type: "organization";
-      organizationId: OrganizationId;
+      value: OrganizationId;
+    }
+  | {
+      type: "all";
     };

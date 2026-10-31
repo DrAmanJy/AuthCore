@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { model, Schema, type HydratedDocument } from "mongoose";
 import type { UserStatus } from "../repositories/user/user.types.js";
 
@@ -16,6 +17,7 @@ interface IUser {
   emailVerified: boolean;
   status: UserStatus;
   lastLoginAt?: Date;
+  managedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +65,8 @@ const UserSchema = new Schema<IUser>(
       type: Date,
       default: null,
     },
+
+    managedBy: { type: Types.ObjectId, ref: "Organization", default: undefined },
   },
   {
     timestamps: true,

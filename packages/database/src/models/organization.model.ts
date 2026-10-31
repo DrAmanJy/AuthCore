@@ -9,6 +9,7 @@ export interface IOrganization {
   name: string;
   slug: string;
   status: OrganizationStatus;
+  frontendUrl: string;
   deletedAt?: Date;
   createdBy: Types.ObjectId;
   createdAt: Date;
@@ -39,6 +40,25 @@ const OrganizationSchema = new Schema<IOrganization>(
       enum: ORGANIZATION_STATUSES,
       required: true,
       default: "active",
+    },
+
+    frontendUrl: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2048,
+      validate: {
+        validator: (value: string) => {
+          try {
+            const url = new URL(value);
+
+            return url.protocol === "http:" || url.protocol === "https:";
+          } catch {
+            return false;
+          }
+        },
+        message: "redirectUrl must be a valid HTTP or HTTPS URL.",
+      },
     },
 
     deletedAt: {

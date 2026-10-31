@@ -113,6 +113,7 @@ export type {
   Organization,
   OrganizationId,
   OrganizationStatus,
+  FindOrganizationCriteria,
   CreateOrganizationData,
   UpdateOrganizationData,
 } from "./repositories/organization/organization.types.js";
@@ -125,20 +126,20 @@ export { MongoOrganizationRepository } from "./repositories/organization/mongo-o
 // Organization Member
 // ─────────────────────────────────────────────
 
-export { asOrganizationMemberId } from "./repositories/organization-member/organization-member.types.js";
+export { asMemberId } from "./repositories/organization-member/organization-member.types.js";
 
 export type {
-  OrganizationMember,
-  OrganizationMemberId,
-  OrganizationMemberStatus,
-  CreateOrganizationMemberData,
-  UpdateOrganizationMemberData,
-  FindOrganizationMemberCriteria,
+  Member,
+  MemberId,
+  MemberStatus,
+  CreateMemberData,
+  UpdateMemberData,
+  FindMemberCriteria,
 } from "./repositories/organization-member/organization-member.types.js";
 
-export type { OrganizationMemberRepository } from "./repositories/organization-member/organization-member-repository.js";
+export type { MemberRepository } from "./repositories/organization-member/organization-member-repository.js";
 
-export { MongoOrganizationMemberRepository } from "./repositories/organization-member/mongo-organization-member-repository.js";
+export { MongoMemberRepository } from "./repositories/organization-member/mongo-organization-member-repository.js";
 
 // ─────────────────────────────────────────────
 // Role
@@ -157,3 +158,44 @@ export type {
 export type { RoleRepository } from "./repositories/role/role-repository.js";
 
 export { MongoRoleRepository } from "./repositories/role/mongo-role-repository.js";
+
+// ─────────────────────────────────────────────
+// Api Keys
+// ─────────────────────────────────────────────
+
+export { asApiKeyId, asKeyHash } from "./repositories/api-key/api-key.types.js";
+
+export type {
+  ApiKey,
+  ApiKeyCredentials,
+  ApiKeyId,
+  CreateApiKey,
+  DeleteApiKeyCriteria,
+  FindApiKeyCriteria,
+  KeyHash,
+  UpdateApiKey,
+  UpdateApiKeyCriteria,
+} from "./repositories/api-key/api-key.types.js";
+
+export type { ApiKeyRepository } from "./repositories/api-key/api-key-repository.js";
+
+export { MongoApiKeyRepository } from "./repositories/api-key/mongo-api-key-repository.js";
+
+// ─────────────────────────────────────────────
+// Invitations
+// ─────────────────────────────────────────────
+
+export { asInvitationId } from "./repositories/invitation/invitation-types.js";
+
+export type {
+  InvitationId,
+  Invitation,
+  CreateInvitation,
+  UpdateInvitation,
+  FindInvitationCriteria,
+} from "./repositories/invitation/invitation-types.js";
+export type { TargetType } from "./models/invitation.model.js";
+
+export type { InvitationRepository } from "./repositories/invitation/invitation-repository.js";
+
+export { MongoInvitationRepository } from "./repositories/invitation/mongo-invitation-repository.js";

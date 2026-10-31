@@ -9,6 +9,7 @@ import {
 } from "@authcore/database";
 
 import type {
+  ActorId,
   OrganizationId,
   RefreshToken,
   RefreshTokenHash,
@@ -35,6 +36,7 @@ import {
 } from "../../errors/authentication-error.js";
 
 import { ERROR_CODES } from "../../errors/error-codes.js";
+import { logger } from "@authcore/logger";
 
 export class SessionService {
   constructor(
@@ -86,6 +88,19 @@ export class SessionService {
     return this.assertSession(session);
   }
 
+  async getPaginatedUserSessions(params: {
+    userId: UserId;
+    organizationId: OrganizationId;
+    limit?: number;
+    skip?: number;
+  }): Promise<Session[]> {
+    return this.getUserSessions({
+      userId: params.userId,
+      organizationId: params.organizationId,
+      activeOnly: true,
+    });
+  }
+
   async getUserSessions(data: FindUserAllSessionType): Promise<Session[]> {
     return this.sessionRepository.findSession({
       type: "user",
@@ -99,8 +114,8 @@ export class SessionService {
     return this.assertSession(session);
   }
 
-  async revokeSession(sessionId: SessionId): Promise<Session> {
-    const session = await this.sessionRepository.revoke(sessionId);
+  async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
+    const session = await this.sessionRepository.revoke(sessionId, actorId);
 
     return this.assertSession(session);
   }
@@ -137,18 +152,24 @@ export class SessionService {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
-    // Refresh-token reuse detected.
     if (currentRefreshToken.usedAt) {
-      await this.refreshTokenRepository.markReuseDetected(currentRefreshToken.id);
+      logger.warn(
+        {
+          event: "auth.refresh_token.reuse_detected",
+          tokenFamilyId: currentRefreshToken.tokenFamilyId,
+          tokenId: currentRefreshToken.id,
+        },
+        "Refresh token reuse detected! Revoking token family.",
+      );
 
+      await this.refreshTokenRepository.markReuseDetected(currentRefreshToken.id);
       await this.refreshTokenRepository.revokeFamily(currentRefreshToken.tokenFamilyId);
 
-      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
+      throw new AuthenticationError(ERROR_CODES.AUTH_REFRESH_TOKEN_REUSE_DETECTED);
     }
 
     const now = new Date();
 
-    // Refresh token was revoked or expired.
     if (currentRefreshToken.revokedAt || currentRefreshToken.expiresAt <= now) {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }

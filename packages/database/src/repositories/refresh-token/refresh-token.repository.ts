@@ -12,6 +12,8 @@ export interface RefreshTokenRepository {
 
   findByHash(tokenHash: RefreshTokenHash): Promise<RefreshTokenRecord | null>;
 
+  findActiveByHash(tokenHash: RefreshTokenHash): Promise<RefreshTokenRecord | null>;
+
   findFamily(tokenFamilyId: TokenFamilyId): Promise<RefreshTokenRecord[]>;
 
   create(data: CreateRefreshTokenData): Promise<RefreshTokenRecord>;

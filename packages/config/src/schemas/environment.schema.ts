@@ -91,6 +91,8 @@ export const EnvironmentSchema = z
 
     ACCESS_TOKEN_EXPIRY: durationSchema,
 
+    INVITATION_EXPIRY: durationSchema,
+
     REFRESH_TOKEN_EXPIRY: durationSchema,
 
     EMAIL_VERIFICATION_TOKEN_EXPIRY: durationSchema,
@@ -126,6 +128,15 @@ export const EnvironmentSchema = z
       }),
 
     EMAIL_FROM: emailFromSchema,
+    INTERNAL_SERVICE_SECRET: z.string().min(16).default("authcore_internal_service_secret_development_key"),
+    HASH_PEPPER: z
+      .string({
+        error: iss =>
+          iss.input === undefined || iss.input === ""
+            ? "HASH_PEPPER is required"
+            : "HASH_PEPPER must be a string",
+      })
+      .min(32, "HASH_PEPPER must be at least 32 characters"),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") {
