@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 
 import { asUserId } from "@authcore/database";
 
-import type { ChangeEmail, ChangeStatus, UpdateProfile } from "@authcore/contracts";
+import type { ChangeStatus, UpdateProfile } from "@authcore/contracts";
 
 import type { UserService } from "./users.service.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
@@ -21,9 +21,6 @@ export class UserController {
     this.getUserById = this.getUserById.bind(this);
     this.getAuthenticatedUser = this.getAuthenticatedUser.bind(this);
     this.updateUserProfile = this.updateUserProfile.bind(this);
-    this.updateUserEmail = this.updateUserEmail.bind(this);
-    this.requestEmailChange = this.requestEmailChange.bind(this);
-    this.confirmEmailChange = this.confirmEmailChange.bind(this);
     this.deleteUser = this.deleteUser.bind(this);
     this.getAllUsers = this.getAllUsers.bind(this);
     this.changeUserStatus = this.changeUserStatus.bind(this);
@@ -50,28 +47,6 @@ export class UserController {
       displayName: req.body.displayName,
     });
     sendSuccess(res, user, "User profile successfully updated");
-  }
-
-
-  async requestEmailChange(req: UserRequest<ChangeEmail>, res: Response) {
-    const { sub } = this.getAuthToken(req);
-    const result = await this.userService.requestEmailChange(sub, req.body.email);
-    sendSuccess(res, result, "Email change requested; verification required");
-  }
-
-  async confirmEmailChange(req: UserRequest<{ email: string }>, res: Response) {
-    const { sub } = this.getAuthToken(req);
-    const user = await this.userService.confirmEmailChange(sub, req.body.email);
-    sendSuccess(res, user, "Email address updated successfully");
-  }
-
-  async updateUserEmail(req: UserRequest<ChangeEmail>, res: Response) {
-    const { sub } = this.getAuthToken(req);
-    const user = await this.userService.changeEmail(sub, {
-      email: req.body.email,
-    });
-
-    sendSuccess(res, user, "User email successfully updated");
   }
 
   async deleteUser(req: UserRequest, res: Response) {
