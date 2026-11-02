@@ -46,6 +46,7 @@ export class MongoRoleRepository implements RoleRepository {
       const role = await RoleModel.findOne({
         organizationId: criteria.orgId,
         ...(criteria.type === "id" ? { _id: criteria.value } : { name: criteria.value }),
+        deletedAt: { $exists: false },
       })
         .populate({
           path: "createdBy",
@@ -58,6 +59,7 @@ export class MongoRoleRepository implements RoleRepository {
 
     const roles = await RoleModel.find({
       ...(criteria.type === "organization" && { organizationId: criteria.value }),
+      deletedAt: { $exists: false },
     })
       .populate({
         path: "createdBy",
