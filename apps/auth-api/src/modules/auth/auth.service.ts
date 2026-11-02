@@ -99,6 +99,9 @@ export class AuthService {
     if (member.status === "suspended") {
       throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_SUSPENDED);
     }
+    if (member.status === "invited") {
+      throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_SUSPENDED); //todo change this
+    }
 
     const session = await this.sessionService.createSession({
       userId: member.userId,
