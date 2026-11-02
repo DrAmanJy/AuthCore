@@ -32,11 +32,11 @@ export class RoleController {
   ) {
     const { sub: actorId } = getAuthToken(req);
     const { organizationId } = req.params;
-    const { isSystemRole, name, permissions } = req.body;
+    const { name, permissions } = req.body;
     const role = await this.roleService.createRole({
       organizationId,
       actorId,
-      data: { isSystemRole, name, permissions },
+      data: { name, permissions },
     });
 
     sendCreated(res, role, "Role successfully created");

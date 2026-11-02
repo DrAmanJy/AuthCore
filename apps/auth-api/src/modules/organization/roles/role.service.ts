@@ -108,12 +108,15 @@ export class RoleService {
   async createRole(params: {
     organizationId: OrganizationId;
     actorId: ActorId;
-    data: CreateRoleData;
+    data: Omit<CreateRoleData, "isSystemRole">;
   }): Promise<Role> {
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: params.organizationId,
-    });
+    await this.authorizationService.getValidOrganization(
+      {
+        type: "id",
+        value: params.organizationId,
+      },
+      params.actorId,
+    );
 
     const existingRole = await this.roleRepository.find({
       type: "name",
@@ -125,11 +128,10 @@ export class RoleService {
       throw new ResourceError(ERROR_CODES.ROLE_ALREADY_EXISTS);
     }
 
-    const role = await this.roleRepository.create(
-      params.organizationId,
-      params.actorId,
-      params.data,
-    );
+    const role = await this.roleRepository.create(params.organizationId, params.actorId, {
+      isSystemRole: false,
+      ...params.data,
+    });
 
     logger.info(
       { event: "role.create.success", roleId: role.id, actorId: params.actorId },
