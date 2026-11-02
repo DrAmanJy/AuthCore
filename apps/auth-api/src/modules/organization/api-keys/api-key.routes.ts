@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { apiKeyController } from "../organization.container.js";
+import { apiKeyController } from "../../../container.js";
 
 const apiKeyRouter = Router({ mergeParams: true });
 

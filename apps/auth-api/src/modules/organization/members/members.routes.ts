@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { memberController } from "../organization.container.js";
+import { memberController } from "../../../container.js";
 
 const memberRouter = Router({ mergeParams: true });
 
