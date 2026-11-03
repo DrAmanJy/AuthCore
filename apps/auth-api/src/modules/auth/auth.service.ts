@@ -25,8 +25,13 @@ import type { SessionService } from "./session.service.js";
 import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
-import type { EmailQueue } from "@authcore/queue";
 import type { MembersService } from "../organization/members/member.service.js";
+import {
+  passwordResetEmailTemplate,
+  resendVerificationEmailTemplate,
+  sendEmail,
+  verificationEmailTemplate,
+} from "@authcore/email";
 
 export class AuthService {
   constructor(
@@ -34,7 +39,6 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly passwordService: PasswordService,
     private readonly recoveryService: RecoveryService,
-    private readonly emailQueue: EmailQueue,
     private readonly membersService: MembersService,
   ) {}
 
@@ -52,13 +56,13 @@ export class AuthService {
       user.id,
     );
 
-    await this.emailQueue.publishVerificationEmail({
-      userId: user.id,
-      email: user.email,
+    const { html, subject, text } = verificationEmailTemplate({
       displayName: user.displayName,
-      verificationToken: token,
       expiresAt: expiresAt.toISOString(),
+      verificationUrl: `not available/${token}`,
     });
+
+    await sendEmail({ html, subject, to: user.email, text });
 
     logger.info(
       {
@@ -176,14 +180,13 @@ export class AuthService {
     const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
       user.id,
     );
-
-    await this.emailQueue.publishVerificationEmail({
+    const { html, subject, text } = resendVerificationEmailTemplate({
       displayName: user.displayName,
-      email: user.email,
-      userId: user.id,
-      verificationToken: token,
       expiresAt: expiresAt.toISOString(),
+      verificationUrl: `not available/${token}`,
     });
+
+    await sendEmail({ html, subject, to: user.email, text });
 
     logger.info(
       {
@@ -206,13 +209,13 @@ export class AuthService {
       user.id,
     );
 
-    await this.emailQueue.publishPasswordResetEmail({
+    const { html, subject, text } = passwordResetEmailTemplate({
       displayName: user.displayName,
-      email: user.email,
-      resetToken: token,
-      userId: user.id,
       expiresAt: expiresAt.toISOString(),
+      resetUrl: `not available/${token}`,
     });
+
+    await sendEmail({ html, subject, to: user.email, text });
 
     logger.info(
       {

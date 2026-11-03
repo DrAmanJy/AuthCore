@@ -17,7 +17,6 @@ import { AuthService } from "./modules/auth/auth.service.js";
 import { SessionService } from "./modules/auth/session.service.js";
 import { PasswordService } from "./modules/auth/password.service.js";
 import { RecoveryService } from "./modules/auth/recovery.service.js";
-import { emailQueue } from "@authcore/queue";
 import { AuthorizationService } from "./modules/organization/authorization/authorization.service.js";
 import { OrganizationService } from "./modules/organization/organization.service.js";
 import { ApiKeyService } from "./modules/organization/api-keys/api-key.service.js";
@@ -66,7 +65,6 @@ const authService = new AuthService(
   sessionService,
   passwordService,
   recoveryService,
-  emailQueue,
   memberService,
 );
 
