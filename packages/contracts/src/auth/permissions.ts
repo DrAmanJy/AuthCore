@@ -15,8 +15,6 @@ export const PERMISSIONS = {
 
   INVITATIONS_READ: "invitations:read",
   INVITATIONS_MANAGE: "invitations:manage",
-
-  AUDIT_READ: "audit:read",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
