@@ -99,6 +99,33 @@ export class MongoRefreshTokenRepository implements RefreshTokenRepository {
     return record ? this.toRefreshTokenRecord(record) : null;
   }
 
+  async consumeIfUnused(
+  refreshTokenId: RefreshTokenId,
+  consumedAt: Date = new Date(),
+): Promise<RefreshTokenRecord | null> {
+  const record = await RefreshTokenModel.findOneAndUpdate(
+    {
+      _id: toObjectId(refreshTokenId),
+      usedAt: { $exists: false },
+      revokedAt: { $exists: false },
+      expiresAt: { $gt: consumedAt },
+    },
+    {
+      $set: {
+        usedAt: consumedAt,
+      },
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  )
+    .lean<MongoRefreshTokenRecord>()
+    .exec();
+
+  return record ? this.toRefreshTokenRecord(record) : null;
+}
+
   async revoke(
     refreshTokenId: RefreshTokenId,
     revokedAt: Date = new Date(),

@@ -5,7 +5,7 @@ import apiKeyRouter from "./api-keys/api-key.routes.js";
 import invitationRouter from "./invitations/invitations.routes.js";
 import memberRouter from "./members/members.routes.js";
 import roleRouter from "./roles/role.routes.js";
-import { organizationController } from "./organization.container.js";
+import { organizationController } from "../../container.js";
 
 const organizationRouter = Router();
 

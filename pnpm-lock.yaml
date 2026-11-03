@@ -249,12 +249,12 @@ importers:
       '@authcore/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@authcore/email':
+        specifier: workspace:*
+        version: link:../../packages/email
       '@authcore/logger':
         specifier: workspace:*
         version: link:../../packages/logger
-      '@authcore/queue':
-        specifier: workspace:*
-        version: link:../../packages/queue
       '@aws-sdk/client-kms':
         specifier: ^3.1124.0
         version: 3.1124.0
@@ -332,34 +332,6 @@ importers:
         specifier: ^8.69.0
         version: 8.69.0(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
 
-  apps/worker:
-    dependencies:
-      '@authcore/config':
-        specifier: workspace:*
-        version: link:../../packages/config
-      '@authcore/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@authcore/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
-      '@authcore/queue':
-        specifier: workspace:*
-        version: link:../../packages/queue
-      '@aws-sdk/client-sqs':
-        specifier: ^3.1124.0
-        version: 3.1124.0
-      resend:
-        specifier: ^6.32.0
-        version: 6.32.0
-    devDependencies:
-      '@types/node':
-        specifier: ^26.4.1
-        version: 26.4.1
-      tsx:
-        specifier: ^4.23.13
-        version: 4.23.13
-
   packages/config:
     dependencies:
       ms:
@@ -405,6 +377,28 @@ importers:
         specifier: ^26.4.1
         version: 26.4.1
 
+  packages/email:
+    dependencies:
+      '@authcore/config':
+        specifier: workspace:*
+        version: link:../config
+      '@authcore/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@authcore/logger':
+        specifier: workspace:*
+        version: link:../logger
+      resend:
+        specifier: ^6.32.0
+        version: 6.32.0
+    devDependencies:
+      '@types/node':
+        specifier: ^26.4.1
+        version: 26.4.1
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+
   packages/logger:
     dependencies:
       '@authcore/config':
@@ -423,22 +417,6 @@ importers:
       pino-pretty:
         specifier: ^13.1.3
         version: 13.1.3
-
-  packages/queue:
-    dependencies:
-      '@authcore/config':
-        specifier: workspace:*
-        version: link:../config
-      '@authcore/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@aws-sdk/client-sqs':
-        specifier: ^3.1124.0
-        version: 3.1124.0
-    devDependencies:
-      '@types/node':
-        specifier: ^26.4.1
-        version: 26.4.1
 
 packages:
 

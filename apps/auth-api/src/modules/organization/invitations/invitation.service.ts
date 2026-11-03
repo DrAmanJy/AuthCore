@@ -207,6 +207,11 @@ export class InvitationService {
 
     await this.validInvitation(invitation, organizationId, actorId, "accepted");
 
+    const member = await this.memberService.addMember(organizationId, actorId, {
+      roleId: invitation.roleId,
+      userId: actorId,
+    });
+
     const acceptedInvitation = await this.invitationRepository.update(
       invitationId,
       organizationId,
@@ -218,10 +223,7 @@ export class InvitationService {
       throw new Error("Invitation not found");
     }
 
-    return this.memberService.addMember(acceptedInvitation.organizationId, actorId, {
-      roleId: acceptedInvitation.roleId,
-      userId: actorId,
-    });
+    return member;
   }
 
   async rejectInvitation(
@@ -250,6 +252,7 @@ export class InvitationService {
     }
   }
 
+  //todo improve validInvitation its not allowing revoking invited user
   async revokeInvitation(
     invitationId: InvitationId,
     organizationId: OrganizationId,

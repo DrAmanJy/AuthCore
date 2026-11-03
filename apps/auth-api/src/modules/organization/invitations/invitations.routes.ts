@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { invitationController } from "../organization.container.js";
+import { invitationController } from "../../../container.js";
 
 const invitationRouter = Router({ mergeParams: true });
 

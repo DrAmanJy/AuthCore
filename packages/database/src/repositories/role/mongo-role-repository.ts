@@ -17,14 +17,15 @@ import {
 import type { ActorId } from "../user/user.types.js";
 import { asUserId } from "../user/user.types.js";
 import type { RoleRepository } from "./role-repository.js";
+import type { IPermissions } from "../../models/permission.model.js";
 
-type MongoRoleRecord = Omit<IRole, "createdBy"> & {
+type MongoRoleRecord = Omit<IRole, "createdBy" | "permissionIds"> & {
   createdBy: {
     _id: Types.ObjectId;
     displayName: string;
   };
+  permissionIds: Pick<IPermissions, "_id" | "key">[];
 };
-
 export class MongoRoleRepository implements RoleRepository {
   find(criteria: {
     type: "id";
@@ -46,10 +47,15 @@ export class MongoRoleRepository implements RoleRepository {
       const role = await RoleModel.findOne({
         organizationId: criteria.orgId,
         ...(criteria.type === "id" ? { _id: criteria.value } : { name: criteria.value }),
+        deletedAt: { $exists: false },
       })
         .populate({
           path: "createdBy",
           select: "_id displayName",
+        })
+        .populate({
+          path: "permissionIds",
+          select: "key",
         })
         .lean<MongoRoleRecord>()
         .exec();
@@ -58,10 +64,15 @@ export class MongoRoleRepository implements RoleRepository {
 
     const roles = await RoleModel.find({
       ...(criteria.type === "organization" && { organizationId: criteria.value }),
+      deletedAt: { $exists: false },
     })
       .populate({
         path: "createdBy",
         select: "_id displayName",
+      })
+      .populate({
+        path: "permissionIds",
+        select: "key",
       })
       .lean<MongoRoleRecord[]>()
       .exec();
@@ -78,7 +89,6 @@ export class MongoRoleRepository implements RoleRepository {
       organizationId: toObjectId(organizationId),
       name: data.name,
       createdBy: toObjectId(actorId),
-      permissions: data.permissions,
       isSystemRole: data.isSystemRole,
     });
 
@@ -86,6 +96,10 @@ export class MongoRoleRepository implements RoleRepository {
       .populate({
         path: "createdBy",
         select: "_id displayName",
+      })
+      .populate({
+        path: "permissionIds",
+        select: "key",
       })
       .lean<MongoRoleRecord>()
       .exec();
@@ -118,6 +132,10 @@ export class MongoRoleRepository implements RoleRepository {
         path: "createdBy",
         select: "_id displayName",
       })
+      .populate({
+        path: "permissionIds",
+        select: "key",
+      })
       .lean<MongoRoleRecord>()
       .exec();
 
@@ -145,6 +163,10 @@ export class MongoRoleRepository implements RoleRepository {
         path: "createdBy",
         select: "_id displayName",
       })
+      .populate({
+        path: "permissionIds",
+        select: "key",
+      })
       .lean<MongoRoleRecord>()
       .exec();
 
@@ -161,7 +183,7 @@ export class MongoRoleRepository implements RoleRepository {
         displayName: record.createdBy.displayName,
       },
       isSystemRole: record.isSystemRole,
-      permissions: record.permissions,
+      permissions: record.permissionIds.map(({ key }) => key),
       ...(record.deletedAt !== undefined && {
         deletedAt: record.deletedAt,
       }),

@@ -32,12 +32,13 @@ export class MemberController {
   //   }
 
   async getMembers(req: Request<{ organizationId: OrganizationId }>, res: Response) {
+    const { sub } = getAuthToken(req);
     const { organizationId } = req.params;
 
     if (!organizationId) {
       throw new Error("change at L10");
     }
-    const members = await this.membersService.getMembers(organizationId);
+    const members = await this.membersService.getMembers(organizationId, sub);
 
     sendSuccess(res, members, "Organization Members successfully retrieved");
   }
@@ -65,12 +66,13 @@ export class MemberController {
     req: Request<{ organizationId: OrganizationId; memberId: MemberId }>,
     res: Response,
   ) {
+    const { sub } = getAuthToken(req);
     const { organizationId, memberId } = req.params;
 
     if (!organizationId || !memberId) {
       throw new Error("change at L10");
     }
-    const member = await this.membersService.getMember(organizationId, memberId);
+    const member = await this.membersService.getMember(organizationId, memberId, sub);
 
     sendSuccess(res, member, "Organization Member successfully retrieved");
   }

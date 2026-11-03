@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { roleController } from "../organization.container.js";
+import { roleController } from "../../../container.js";
 
 const roleRouter = Router({ mergeParams: true });
 

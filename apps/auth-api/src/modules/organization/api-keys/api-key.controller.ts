@@ -6,7 +6,7 @@ import {
 } from "../../../utils/response.utils.js";
 import getAuthToken from "../../../utils/token.js";
 import type { ApiKeyService } from "./api-key.service.js";
-import type { ApiKeyId } from "@authcore/database";
+import type { ApiKeyId, OrganizationId } from "@authcore/database";
 
 export class ApiKeyController {
   constructor(private readonly apiKeyService: ApiKeyService) {
@@ -18,11 +18,16 @@ export class ApiKeyController {
   }
 
   async createApiKey(
-    req: Request<unknown, unknown, { name: string; key: string }>,
+    req: Request<
+      { organizationId: OrganizationId },
+      unknown,
+      { name: string; key: string }
+    >,
     res: Response,
   ) {
-    const { sub: actorId, orgId: organizationId } = getAuthToken(req);
+    const { sub: actorId } = getAuthToken(req);
     const { name, key } = req.body;
+    const { organizationId } = req.params;
 
     const apiKey = await this.apiKeyService.create({
       name,
@@ -34,8 +39,12 @@ export class ApiKeyController {
     sendCreated(res, apiKey, "Api key created successfully");
   }
 
-  async getALlOrganizationApiKey(req: Request, res: Response) {
-    const { sub: actorId, orgId: organizationId } = getAuthToken(req);
+  async getALlOrganizationApiKey(
+    req: Request<{ organizationId: OrganizationId }>,
+    res: Response,
+  ) {
+    const { sub: actorId } = getAuthToken(req);
+    const { organizationId } = req.params;
 
     const apiKeys = await this.apiKeyService.getAllOrganizationKey({
       organizationId,
@@ -46,11 +55,15 @@ export class ApiKeyController {
   }
 
   async getApiKeyById(
-    req: Request<{ apiKeyId: ApiKeyId }, unknown, unknown>,
+    req: Request<
+      { organizationId: OrganizationId; apiKeyId: ApiKeyId },
+      unknown,
+      unknown
+    >,
     res: Response,
   ) {
-    const { sub: actorId, orgId: organizationId } = getAuthToken(req);
-    const { apiKeyId } = req.params;
+    const { sub: actorId } = getAuthToken(req);
+    const { organizationId, apiKeyId } = req.params;
 
     const apiKeys = await this.apiKeyService.getById({
       organizationId,
@@ -61,8 +74,12 @@ export class ApiKeyController {
     sendSuccess(res, apiKeys, "Api key successfully retrieved");
   }
 
-  async revokeApiKey(req: Request<{ key: string }, unknown, unknown>, res: Response) {
-    const { sub: actorId, orgId: organizationId } = getAuthToken(req);
+  async revokeApiKey(
+    req: Request<{ organizationId: OrganizationId; key: string }, unknown, unknown>,
+    res: Response,
+  ) {
+    const { sub: actorId } = getAuthToken(req);
+    const { organizationId } = req.params;
 
     const { key } = req.params;
     await this.apiKeyService.revokeByKey({ organizationId, key, actorId });
@@ -71,11 +88,15 @@ export class ApiKeyController {
   }
 
   async deleteApiKey(
-    req: Request<{ apiKeyId: ApiKeyId }, unknown, unknown>,
+    req: Request<
+      { organizationId: OrganizationId; apiKeyId: ApiKeyId },
+      unknown,
+      unknown
+    >,
     res: Response,
   ) {
-    const { sub: actorId, orgId: organizationId } = getAuthToken(req);
-    const { apiKeyId } = req.params;
+    const { sub: actorId } = getAuthToken(req);
+    const { organizationId, apiKeyId } = req.params;
 
     const apiKey = await this.apiKeyService.softDeleteById({
       apiKeyId,

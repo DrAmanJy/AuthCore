@@ -36,7 +36,6 @@ import {
 } from "../../errors/authentication-error.js";
 
 import { ERROR_CODES } from "../../errors/error-codes.js";
-import { logger } from "@authcore/logger";
 
 export class SessionService {
   constructor(
@@ -152,22 +151,6 @@ export class SessionService {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
-    if (currentRefreshToken.usedAt) {
-      logger.warn(
-        {
-          event: "auth.refresh_token.reuse_detected",
-          tokenFamilyId: currentRefreshToken.tokenFamilyId,
-          tokenId: currentRefreshToken.id,
-        },
-        "Refresh token reuse detected! Revoking token family.",
-      );
-
-      await this.refreshTokenRepository.markReuseDetected(currentRefreshToken.id);
-      await this.refreshTokenRepository.revokeFamily(currentRefreshToken.tokenFamilyId);
-
-      throw new AuthenticationError(ERROR_CODES.AUTH_REFRESH_TOKEN_REUSE_DETECTED);
-    }
-
     const now = new Date();
 
     if (currentRefreshToken.revokedAt || currentRefreshToken.expiresAt <= now) {
@@ -191,6 +174,15 @@ export class SessionService {
       throw new AuthenticationError(ERROR_CODES.AUTH_SESSION_EXPIRED);
     }
 
+    const consumedToken = await this.refreshTokenRepository.consumeIfUnused(
+      currentRefreshToken.id,
+      now,
+    );
+
+    if (!consumedToken) {
+      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
+    }
+
     const { refreshToken: newRefreshToken, refreshTokenHash: newRefreshTokenHash } =
       this.generateRefreshToken();
 
@@ -201,12 +193,10 @@ export class SessionService {
       ),
     );
 
-    await this.refreshTokenRepository.markAsUsed(currentRefreshToken.id);
-
     await this.refreshTokenRepository.create({
       sessionId: session.id,
-      parentTokenId: currentRefreshToken.id,
-      tokenFamilyId: currentRefreshToken.tokenFamilyId,
+      parentTokenId: consumedToken.id,
+      tokenFamilyId: consumedToken.tokenFamilyId,
       tokenHash: newRefreshTokenHash,
       expiresAt: refreshTokenExpiresAt,
     });
@@ -224,6 +214,7 @@ export class SessionService {
       accessToken,
     };
   }
+
   async validateSession(sessionId: SessionId): Promise<boolean> {
     const session = await this.sessionRepository.findSession({
       type: "id",

@@ -9,7 +9,7 @@ import {
 import { config } from "@authcore/config";
 import { asOrganizationId, asSessionId, asUserId } from "@authcore/database";
 import type { AccessTokenPayload } from "../modules/auth/auth.types.js";
-import { authorizationService } from "../modules/organization/organization.container.js";
+import { authorizationService } from "../container.js";
 
 export function validateAccessToken(
   req: Request,

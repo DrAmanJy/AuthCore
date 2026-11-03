@@ -62,11 +62,18 @@ export class MembersService {
 
   // ─────────────────────────────────────────────
 
-  async getMember(organizationId: OrganizationId, memberId: MemberId): Promise<Member> {
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: organizationId,
-    });
+  async getMember(
+    organizationId: OrganizationId,
+    memberId: MemberId,
+    actorId: ActorId,
+  ): Promise<Member> {
+    await this.authorizationService.getValidOrganization(
+      {
+        type: "id",
+        value: organizationId,
+      },
+      actorId,
+    );
 
     const member = await this.memberRepository.find({
       type: "id",
@@ -81,11 +88,18 @@ export class MembersService {
     return member;
   }
 
-  async getMemberByUser(organizationId: OrganizationId, userId: UserId): Promise<Member> {
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: organizationId,
-    });
+  async getMemberByUser(
+    organizationId: OrganizationId,
+    userId: UserId,
+    actorId?: ActorId,
+  ): Promise<Member> {
+    await this.authorizationService.getValidOrganization(
+      {
+        type: "id",
+        value: organizationId,
+      },
+      actorId,
+    );
 
     const member = await this.memberRepository.find({
       type: "user",
@@ -100,11 +114,14 @@ export class MembersService {
     return member;
   }
 
-  async getMembers(organizationId: OrganizationId): Promise<Member[]> {
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: organizationId,
-    });
+  async getMembers(organizationId: OrganizationId, actorId: ActorId): Promise<Member[]> {
+    await this.authorizationService.getValidOrganization(
+      {
+        type: "id",
+        value: organizationId,
+      },
+      actorId,
+    );
 
     return this.memberRepository.find({ type: "organization", value: organizationId });
   }
@@ -157,7 +174,7 @@ export class MembersService {
     actorId: ActorId,
     roleId: RoleId,
   ): Promise<Member> {
-    const member = await this.getMember(organizationId, memberId);
+    const member = await this.getMember(organizationId, memberId, actorId);
 
     if (member.status !== "active") {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
@@ -213,7 +230,7 @@ export class MembersService {
     memberId: MemberId,
     actorId: ActorId,
   ): Promise<Member> {
-    const member = await this.getMember(organizationId, memberId);
+    const member = await this.getMember(organizationId, memberId, actorId);
 
     if (member.status !== "active") {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
@@ -243,7 +260,7 @@ export class MembersService {
     memberId: MemberId,
     actorId: ActorId,
   ): Promise<Member> {
-    const member = await this.getMember(organizationId, memberId);
+    const member = await this.getMember(organizationId, memberId, actorId);
 
     if (member.status !== "active") {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
@@ -273,7 +290,7 @@ export class MembersService {
     memberId: MemberId,
     actorId: ActorId,
   ): Promise<Member> {
-    const member = await this.getMember(organizationId, memberId);
+    const member = await this.getMember(organizationId, memberId, actorId);
 
     if (member.status !== "suspended") {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_SUSPENDED);

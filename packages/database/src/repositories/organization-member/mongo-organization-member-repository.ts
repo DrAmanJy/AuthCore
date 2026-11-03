@@ -64,6 +64,7 @@ export class MongoMemberRepository implements MemberRepository {
         ...(criteria.type === "id"
           ? { _id: toObjectId(criteria.value) }
           : { userId: criteria.value }),
+        deletedAt: { $exists: false },
       })
         .populate({
           path: "createdBy",
@@ -77,6 +78,7 @@ export class MongoMemberRepository implements MemberRepository {
 
     const members = await MemberModel.find({
       ...(criteria.type === "organization" && { organizationId: criteria.value }),
+      deletedAt: { $exists: false },
     })
       .populate({
         path: "createdBy",

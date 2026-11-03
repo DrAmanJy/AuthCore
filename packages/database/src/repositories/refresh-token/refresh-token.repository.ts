@@ -23,6 +23,11 @@ export interface RefreshTokenRepository {
     usedAt?: Date,
   ): Promise<RefreshTokenRecord | null>;
 
+  consumeIfUnused(
+    refreshTokenId: RefreshTokenId,
+    consumedAt?: Date,
+  ): Promise<RefreshTokenRecord | null>;
+
   revoke(
     refreshTokenId: RefreshTokenId,
     revokedAt?: Date,
