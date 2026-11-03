@@ -1,4 +1,5 @@
 import type { OrganizationId } from "../organization/organization.types.js";
+import type { Permission } from "../permission/permission.types.js";
 import type { CreatedBy } from "../user/user.types.js";
 
 export type RoleId = string & {
@@ -13,7 +14,7 @@ export type Role = {
   name: string;
   createdBy: CreatedBy;
   isSystemRole: boolean;
-  permissions: string[];
+  permissions: Permission["key"][];
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
