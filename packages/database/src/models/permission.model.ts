@@ -2,7 +2,8 @@ import { model, Schema, Types } from "mongoose";
 
 export type IPermissions = {
   _id: Types.ObjectId;
-  name: string;
+  key: string;
+  organizationId: Types.ObjectId;
   description: string;
   roleId: Types.ObjectId;
   deletedAt?: Date;
@@ -13,7 +14,8 @@ export type IPermissions = {
 
 const PermissionSchema = new Schema<IPermissions>(
   {
-    name: { type: String, required: true, trim: true, minlength: 4, maxlength: 16 },
+    key: { type: String, required: true, trim: true, minlength: 4, maxlength: 32 },
+    organizationId: { type: Types.ObjectId, ref: "Organization", required: true },
     description: {
       type: String,
       required: true,
