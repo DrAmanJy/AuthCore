@@ -27,7 +27,11 @@ export class RoleController {
   }
 
   async createRole(
-    req: Request<{ organizationId: OrganizationId }, unknown, CreateRoleData>,
+    req: Request<
+      { organizationId: OrganizationId },
+      unknown,
+      { name: string; permissions: CreateRoleData["permissions"] }
+    >,
     res: Response,
   ) {
     const { sub: actorId } = getAuthToken(req);
