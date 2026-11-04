@@ -6,7 +6,6 @@ export interface IRole {
   organizationId: Types.ObjectId;
   name: string;
   createdBy: Types.ObjectId;
-
   isSystemRole: boolean;
   permissionIds: Types.ObjectId[];
   deletedAt?: Date;
@@ -73,5 +72,8 @@ RoleSchema.index(
     },
   },
 );
+
+RoleSchema.index({ organizationId: 1, deletedAt: 1, _id: 1 });
+RoleSchema.index({ organizationId: 1, isSystemRole: 1, deletedAt: 1 });
 
 export const RoleModel = model<IRole>("Role", RoleSchema);
