@@ -1,56 +1,40 @@
-import type { OrganizationId } from "../organization/organization.types.js";
-import type { ActorId } from "../user/user.types.js";
+import type {
+  HardDeleteRepository,
+  SoftDeleteRepository,
+  StandardRepository,
+} from "../repository.contracts.js";
 import type {
   ApiKey,
   ApiKeyCredentials,
-  ApiKeyId,
-  CreateApiKey,
+  CreateApiKeyData,
   DeleteApiKeyCriteria,
-  KeyHash,
-  UpdateApiKey,
+  FindApiKeyCredentialsCriteria,
+  FindApiKeyCriteria,
+  FindManyApiKeysCriteria,
   UpdateApiKeyCriteria,
+  UpdateApiKeyData,
 } from "./api-key.types.js";
 
-export interface ApiKeyRepository {
-  find(criteria: {
-    type: "id";
-    value: ApiKeyId;
-    orgId: OrganizationId;
-    credentials: true;
-  }): Promise<ApiKeyCredentials | null>;
+export interface ApiKeyRepository
+  extends
+    StandardRepository<
+      ApiKey,
+      FindApiKeyCriteria,
+      FindManyApiKeysCriteria,
+      CreateApiKeyData,
+      UpdateApiKeyCriteria,
+      UpdateApiKeyData
+    >,
+    SoftDeleteRepository<ApiKey, DeleteApiKeyCriteria>,
+    HardDeleteRepository<DeleteApiKeyCriteria> {
+  findCredentials(
+    criteria: FindApiKeyCredentialsCriteria,
+  ): Promise<ApiKeyCredentials | null>;
 
-  find(criteria: {
-    type: "id";
-    value: ApiKeyId;
-    orgId: OrganizationId;
-    credentials: false;
-  }): Promise<ApiKey | null>;
+  revoke(criteria: DeleteApiKeyCriteria): Promise<ApiKey | null>;
 
-  find(criteria: {
-    type: "key";
-    value: KeyHash;
-    orgId?: OrganizationId;
-    credentials: true;
-  }): Promise<ApiKeyCredentials | null>;
-
-  find(criteria: {
-    type: "key";
-    value: KeyHash;
-    orgId?: OrganizationId;
-    credentials: false;
-  }): Promise<ApiKey | null>;
-
-  find(criteria: { type: "organization"; value: OrganizationId }): Promise<ApiKey[]>;
-
-  find(criteria: { type: "all" }): Promise<ApiKey[]>;
-
-  create(data: CreateApiKey, actorId: ActorId): Promise<ApiKey>;
-
-  update(
+  rotate(
     criteria: UpdateApiKeyCriteria,
-    data: UpdateApiKey,
-    actorId?: ActorId,
+    newKeyHash: string,
   ): Promise<ApiKey | null>;
-
-  delete(criteria: DeleteApiKeyCriteria, actorId: ActorId): Promise<ApiKey | null>;
 }
