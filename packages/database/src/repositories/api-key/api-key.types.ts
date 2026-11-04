@@ -1,6 +1,6 @@
 import type { ApiClientStatus } from "../../models/api-key.model.js";
 import type { OrganizationId } from "../organization/organization.types.js";
-import type { CreatedBy } from "../user/user.types.js";
+import type { ActorId, CreatedBy } from "../user/user.types.js";
 
 export type ApiKeyId = string & {
   readonly __brand: "ApiKeyId";
@@ -29,20 +29,56 @@ export type ApiKey = {
 export type ApiKeyCredentials = ApiKey & {
   keyHash: KeyHash;
 };
+
 export type FindApiKeyCriteria =
-  | { type: "id"; value: ApiKeyId; orgId: OrganizationId; credentials: boolean }
-  | { type: "key"; value: KeyHash; orgId?: OrganizationId; credentials: boolean }
-  | { type: "organization"; value: OrganizationId }
-  | { type: "all" };
+  | {
+      by: "id";
+      apiKeyId: ApiKeyId;
+      organizationId: OrganizationId;
+    }
+  | {
+      by: "keyHash";
+      keyHash: KeyHash;
+      organizationId?: OrganizationId;
+    };
 
-export type CreateApiKey = Pick<ApiKeyCredentials, "name" | "organizationId" | "keyHash">;
+export type FindApiKeyCredentialsCriteria =
+  | {
+      by: "id";
+      apiKeyId: ApiKeyId;
+      organizationId: OrganizationId;
+    }
+  | {
+      by: "keyHash";
+      keyHash: KeyHash;
+      organizationId?: OrganizationId;
+    };
 
-export type UpdateApiKey = Partial<
-  Pick<ApiKey, "name" | "status" | "revokedAt" | "lastUsedAt">
->;
+export interface FindManyApiKeysCriteria {
+  organizationId: OrganizationId;
+  status?: ApiClientStatus;
+}
 
-export type UpdateApiKeyCriteria =
-  | { type: "id"; value: ApiKeyId; orgId: OrganizationId }
-  | { type: "key"; value: KeyHash; orgId: OrganizationId };
+export type CreateApiKeyData = {
+  organizationId: OrganizationId;
+  name: string;
+  keyHash: KeyHash;
+  actorId: ActorId;
+};
 
-export type DeleteApiKeyCriteria = UpdateApiKeyCriteria;
+export type UpdateApiKeyData = {
+  name?: string;
+  status?: ApiClientStatus;
+  revokedAt?: Date;
+  lastUsedAt?: Date;
+};
+
+export interface UpdateApiKeyCriteria {
+  apiKeyId: ApiKeyId;
+  organizationId: OrganizationId;
+}
+
+export interface DeleteApiKeyCriteria {
+  apiKeyId: ApiKeyId;
+  organizationId: OrganizationId;
+}
