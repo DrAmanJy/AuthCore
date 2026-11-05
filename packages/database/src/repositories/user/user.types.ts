@@ -25,6 +25,7 @@ export type User = {
   status: UserStatus;
   lastLoginAt?: Date;
   managedBy?: OrganizationId;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -44,35 +45,43 @@ export type UpdateUserData = Partial<Omit<CreateUserData, "passwordHash" | "mana
 
 export type ExistsUserCriteria =
   | {
-      type: "id";
-      value: UserId;
+      by: "id";
+      userId: UserId;
     }
   | {
-      type: "email";
-      value: string;
+      by: "email";
+      email: string;
     };
 
 export type FindUserCriteria =
   | {
-      type: "all";
+      by: "id";
+      userId: UserId;
     }
   | {
-      type: "email";
-      value: string;
-      credentials: false;
-    }
-  | {
-      type: "email";
-      value: string;
-      credentials: true;
-    }
-  | {
-      type: "id";
-      value: UserId;
-      credentials: false;
-    }
-  | {
-      type: "id";
-      value: UserId;
-      credentials: true;
+      by: "email";
+      email: string;
     };
+
+export type FindUserCredentialsCriteria =
+  | {
+      by: "id";
+      userId: UserId;
+    }
+  | {
+      by: "email";
+      email: string;
+    };
+
+export interface FindManyUsersCriteria {
+  status?: UserStatus;
+  managedBy?: OrganizationId;
+}
+
+export interface UpdateUserCriteria {
+  userId: UserId;
+}
+
+export interface DeleteUserCriteria {
+  userId: UserId;
+}
