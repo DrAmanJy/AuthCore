@@ -19,8 +19,8 @@ export class OrganizationService {
   async getById(organizationId: OrganizationId, actorId: ActorId): Promise<Organization> {
     return this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: organizationId,
+        by: "id",
+        organizationId,
       },
       actorId,
     );
@@ -29,25 +29,29 @@ export class OrganizationService {
   async getBySlug(slug: string, actorId: ActorId): Promise<Organization> {
     return this.authorizationService.getValidOrganization(
       {
-        type: "slug",
-        value: slug,
+        by: "slug",
+        slug,
       },
       actorId,
     );
   }
 
   async getByActor(actorId: ActorId): Promise<Organization[]> {
-    return this.organizationRepository.find({ type: "actor", value: actorId });
+    const result = await this.organizationRepository.findMany({ actorId });
+    return result.items;
   }
 
   // no Security checks use securely
   async getAll(): Promise<Organization[]> {
-    return this.organizationRepository.find({ type: "all" });
+    const result = await this.organizationRepository.findMany({});
+    return result.items;
   }
 
-  async create(actorId: ActorId, data: CreateOrganizationData): Promise<Organization> {
-    //todo perform slug exist check
-    const organization = await this.organizationRepository.create(actorId, data);
+  async create(actorId: ActorId, data: Omit<CreateOrganizationData, "actorId">): Promise<Organization> {
+    const organization = await this.organizationRepository.create({
+      ...data,
+      actorId,
+    });
 
     logger.info(
       { event: "organization.create.success", actorId, orgId: organization.id },
@@ -70,8 +74,7 @@ export class OrganizationService {
     );
 
     const updatedOrganization = await this.organizationRepository.update(
-      organizationId,
-      actorId,
+      { organizationId, actorId },
       data,
     );
 
@@ -105,8 +108,7 @@ export class OrganizationService {
     );
 
     const updatedOrganization = await this.organizationRepository.update(
-      organizationId,
-      actorId,
+      { organizationId, actorId },
       { slug },
     );
 
@@ -138,10 +140,10 @@ export class OrganizationService {
       actorId,
     );
 
-    const organizationDeleted = await this.organizationRepository.softDelete(
-      { type: "id", value: organizationId },
+    const organizationDeleted = await this.organizationRepository.softDelete({
+      organizationId,
       actorId,
-    );
+    });
 
     if (!organizationDeleted) {
       throw new InternalServerError();

@@ -1,6 +1,7 @@
 import type { ApiKeyRepository } from "@authcore/database";
 import type {
   Organization,
+  OrganizationId,
   OrganizationRepository,
   FindOrganizationCriteria,
   UserId,
@@ -18,26 +19,20 @@ export class AuthorizationService {
   ) {}
 
   async getValidOrganization(
-    criteria: Exclude<FindOrganizationCriteria, { type: "all" } | { type: "actor" }>,
+    criteria:
+      | FindOrganizationCriteria
+      | { type: "id"; value: OrganizationId }
+      | { type: "slug"; value: string },
     owner?: UserId,
   ): Promise<Organization> {
-    let organization: Organization | null;
+    const normalizedCriteria: FindOrganizationCriteria =
+      "by" in criteria
+        ? criteria
+        : criteria.type === "id"
+          ? { by: "id", organizationId: criteria.value }
+          : { by: "slug", slug: criteria.value };
 
-    switch (criteria.type) {
-      case "id":
-        organization = await this.organizationRepository.find({
-          type: "id",
-          value: criteria.value,
-        });
-        break;
-
-      case "slug":
-        organization = await this.organizationRepository.find({
-          type: "slug",
-          value: criteria.value,
-        });
-        break;
-    }
+    const organization = await this.organizationRepository.find(normalizedCriteria);
 
     if (!organization) {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
@@ -56,9 +51,8 @@ export class AuthorizationService {
     const keyHash = asKeyHash(hashString(key));
 
     const apiKey = await this.apiKeyRepository.find({
-      type: "key",
-      value: keyHash,
-      credentials: false,
+      by: "keyHash",
+      keyHash,
     });
 
     if (!apiKey) {
@@ -66,8 +60,8 @@ export class AuthorizationService {
     }
 
     await this.getValidOrganization({
-      type: "id",
-      value: apiKey.organizationId,
+      by: "id",
+      organizationId: apiKey.organizationId,
     });
 
     return apiKey;
