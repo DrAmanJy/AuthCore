@@ -1,4 +1,4 @@
-import type { Types } from "mongoose";
+import type { QueryFilter, Types } from "mongoose";
 
 import type { IMember } from "../../models/member.model.js";
 import MemberModel from "../../models/member.model.js";
@@ -7,21 +7,20 @@ import {
   asOrganizationId,
   type OrganizationId,
 } from "../organization/organization.types.js";
-
+import type { FindManyOptions, PaginatedResult } from "../repository-pagination.types.js";
 import { asRoleId } from "../role/role.types.js";
-
-import type { ActorId } from "../user/user.types.js";
-import { asUserId, type UserId } from "../user/user.types.js";
-
+import { asUserId } from "../user/user.types.js";
+import type { MemberRepository } from "./organization-member-repository.js";
 import type {
-  Member,
-  MemberId,
-  UpdateMemberData,
   CreateMemberData,
+  DeleteMemberCriteria,
+  FindManyMembersCriteria,
   FindMemberCriteria,
+  Member,
+  UpdateMemberCriteria,
+  UpdateMemberData,
 } from "./organization-member.types.js";
 import { asMemberId } from "./organization-member.types.js";
-import type { MemberRepository } from "./organization-member-repository.js";
 
 type MongoMemberRecord = Pick<
   IMember,
@@ -42,42 +41,29 @@ type MongoMemberRecord = Pick<
 };
 
 export class MongoMemberRepository implements MemberRepository {
-  find(criteria: {
-    type: "id";
-    value: MemberId;
-    orgId: OrganizationId;
-  }): Promise<Member | null>;
+  async find(criteria: FindMemberCriteria): Promise<Member | null> {
+    const filter: QueryFilter<IMember> = {
+      organizationId: toObjectId(criteria.organizationId),
+      deletedAt: { $exists: false },
+      ...(criteria.by === "id"
+        ? { _id: toObjectId(criteria.memberId) }
+        : { userId: toObjectId(criteria.userId) }),
+    };
 
-  find(criteria: {
-    type: "user";
-    value: UserId;
-    orgId: OrganizationId;
-  }): Promise<Member | null>;
-
-  find(criteria: { type: "organization"; value: OrganizationId }): Promise<Member[]>;
-
-  find(criteria: { type: "all" }): Promise<Member[]>;
-  async find(criteria: FindMemberCriteria): Promise<Member[] | Member | null> {
-    if (criteria.type === "id" || criteria.type === "user") {
-      const member = await MemberModel.findOne({
-        organizationId: criteria.orgId,
-        ...(criteria.type === "id"
-          ? { _id: toObjectId(criteria.value) }
-          : { userId: criteria.value }),
-        deletedAt: { $exists: false },
+    const member = await MemberModel.findOne(filter)
+      .populate({
+        path: "createdBy",
+        select: "_id displayName",
       })
-        .populate({
-          path: "createdBy",
-          select: "_id displayName",
-        })
-        .lean<MongoMemberRecord>()
-        .exec();
+      .lean<MongoMemberRecord>()
+      .exec();
 
-      return member ? this.toMember(member) : null;
-    }
+    return member ? this.toMember(member) : null;
+  }
 
+  async findOwners(organizationId: OrganizationId): Promise<Member[]> {
     const members = await MemberModel.find({
-      ...(criteria.type === "organization" && { organizationId: criteria.value }),
+      organizationId: toObjectId(organizationId),
       deletedAt: { $exists: false },
     })
       .populate({
@@ -87,19 +73,55 @@ export class MongoMemberRepository implements MemberRepository {
       .lean<MongoMemberRecord[]>()
       .exec();
 
-    return members.map(member => this.toMember(member));
+    return members.map(m => this.toMember(m));
   }
 
-  async create(
-    actorId: ActorId,
-    organizationId: OrganizationId,
-    data: CreateMemberData,
-  ): Promise<Member> {
+  async findMany(
+    criteria: FindManyMembersCriteria,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Member>> {
+    const filter: QueryFilter<IMember> = {
+      organizationId: toObjectId(criteria.organizationId),
+      deletedAt: { $exists: false },
+      ...(criteria.roleId && { roleId: toObjectId(criteria.roleId) }),
+      ...(criteria.status && { status: criteria.status }),
+    };
+
+    const limit = Math.min(Math.max(options?.limit ?? 20, 1), 100);
+
+    if (options?.cursor) {
+      filter._id = {
+        $gt: toObjectId(options.cursor),
+      };
+    }
+
+    const records = await MemberModel.find(filter)
+      .populate({
+        path: "createdBy",
+        select: "_id displayName",
+      })
+      .sort({ _id: 1 })
+      .limit(limit + 1)
+      .lean<MongoMemberRecord[]>()
+      .exec();
+
+    const hasNextPage = records.length > limit;
+    const pagedRecords = hasNextPage ? records.slice(0, limit) : records;
+    const items = pagedRecords.map(record => this.toMember(record));
+    const nextCursor = hasNextPage ? (items.at(-1)?.id ?? null) : null;
+
+    return {
+      items,
+      nextCursor,
+    };
+  }
+
+  async create(data: CreateMemberData): Promise<Member> {
     const organizationMember = await MemberModel.create({
-      organizationId: toObjectId(organizationId),
+      organizationId: toObjectId(data.organizationId),
       userId: toObjectId(data.userId),
       roleId: toObjectId(data.roleId),
-      createdBy: toObjectId(actorId),
+      createdBy: toObjectId(data.actorId),
     });
 
     const populatedOrganizationMember = await MemberModel.findById(organizationMember._id)
@@ -118,21 +140,23 @@ export class MongoMemberRepository implements MemberRepository {
   }
 
   async update(
-    organizationId: OrganizationId,
-    memberId: MemberId,
+    criteria: UpdateMemberCriteria,
     data: UpdateMemberData,
   ): Promise<Member | null> {
     const organizationMember = await MemberModel.findOneAndUpdate(
       {
-        _id: toObjectId(memberId),
-        organizationId: toObjectId(organizationId),
+        _id: toObjectId(criteria.memberId),
+        organizationId: toObjectId(criteria.organizationId),
         deletedAt: { $exists: false },
       },
       {
-        $set: data,
+        $set: {
+          ...(data.roleId && { roleId: toObjectId(data.roleId) }),
+          ...(data.status && { status: data.status }),
+        },
       },
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true,
       },
     )
@@ -147,13 +171,12 @@ export class MongoMemberRepository implements MemberRepository {
   }
 
   async softDelete(
-    organizationId: OrganizationId,
-    memberId: MemberId,
+    criteria: DeleteMemberCriteria,
   ): Promise<Member | null> {
     const member = await MemberModel.findOneAndUpdate(
       {
-        _id: toObjectId(memberId),
-        organizationId: toObjectId(organizationId),
+        _id: toObjectId(criteria.memberId),
+        organizationId: toObjectId(criteria.organizationId),
         deletedAt: { $exists: false },
       },
       {
@@ -162,7 +185,7 @@ export class MongoMemberRepository implements MemberRepository {
         },
       },
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true,
       },
     )
@@ -174,6 +197,15 @@ export class MongoMemberRepository implements MemberRepository {
       .exec();
 
     return member ? this.toMember(member) : null;
+  }
+
+  async delete(criteria: DeleteMemberCriteria): Promise<boolean> {
+    const result = await MemberModel.findOneAndDelete({
+      _id: toObjectId(criteria.memberId),
+      organizationId: toObjectId(criteria.organizationId),
+    }).exec();
+
+    return Boolean(result);
   }
 
   private toMember(record: MongoMemberRecord): Member {
