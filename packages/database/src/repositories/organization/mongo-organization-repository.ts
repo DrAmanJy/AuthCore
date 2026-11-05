@@ -1,22 +1,27 @@
-import type { Types } from "mongoose";
+import type { QueryFilter, Types } from "mongoose";
 
-import OrganizationModel from "../../models/organization.model.js";
+import OrganizationModel, {
+  type IOrganization,
+} from "../../models/organization.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
-
+import { mapDatabaseError } from "../../errors/database-error.utils.js";
+import type {
+  FindManyOptions,
+  PaginatedResult,
+} from "../repository-pagination.types.js";
+import { asUserId } from "../user/user.types.js";
+import type { OrganizationRepository } from "./organization-repository.js";
 import type {
   CreateOrganizationData,
   DeleteOrganizationCriteria,
+  FindManyOrganizationsCriteria,
   FindOrganizationCriteria,
-  OrganizationStatus,
   Organization,
-  OrganizationId,
+  OrganizationStatus,
+  UpdateOrganizationCriteria,
   UpdateOrganizationData,
 } from "./organization.types.js";
 import { asOrganizationId } from "./organization.types.js";
-import type { ActorId } from "../user/user.types.js";
-import { asUserId } from "../user/user.types.js";
-import type { OrganizationRepository } from "./organization-repository.js";
-import { mapDatabaseError } from "../../errors/database-error.utils.js";
 
 type MongoOrganizationRecord = {
   _id: Types.ObjectId;
@@ -34,149 +39,177 @@ type MongoOrganizationRecord = {
 };
 
 export class MongoOrganizationRepository implements OrganizationRepository {
-  find(criteria: { type: "all" }): Promise<Organization[]>;
-
-  find(criteria: { type: "actor"; value: ActorId }): Promise<Organization[]>;
-
-  find(criteria: { type: "id"; value: OrganizationId }): Promise<Organization | null>;
-
-  find(criteria: { type: "slug"; value: string }): Promise<Organization | null>;
-
-  async find(
-    criteria: FindOrganizationCriteria,
-  ): Promise<Organization[] | Organization | null> {
+  async find(criteria: FindOrganizationCriteria): Promise<Organization | null> {
     try {
-      switch (criteria.type) {
-        case "all": {
-          const organizations = await OrganizationModel.find({
-            deletedAt: { $exists: false },
-          })
-            .populate({ path: "createdBy", select: "displayName _id" })
-            .lean<MongoOrganizationRecord[]>()
-            .exec();
+      const filter: QueryFilter<IOrganization> = {
+        deletedAt: { $exists: false },
+      };
 
-          return organizations.map(organization => this.toOrganization(organization));
-        }
-        case "actor": {
-          const organizations = await OrganizationModel.find({
-            createdBy: criteria.value,
-            deletedAt: { $exists: false },
-          })
-            .populate({ path: "createdBy", select: "displayName _id" })
-            .lean<MongoOrganizationRecord[]>()
-            .exec();
-          return organizations.map(organization => this.toOrganization(organization));
-        }
-        case "id": {
-          const organization = await OrganizationModel.findOne({
-            _id: toObjectId(criteria.value),
-            deletedAt: { $exists: false },
-          })
-            .populate({ path: "createdBy", select: "displayName _id" })
-            .lean<MongoOrganizationRecord>()
-            .exec();
-
-          return organization ? this.toOrganization(organization) : null;
-        }
-        case "slug": {
-          const organization = await OrganizationModel.findOne({
-            slug: criteria.value,
-            deletedAt: { $exists: false },
-          })
-            .populate({ path: "createdBy", select: "displayName _id" })
-            .lean<MongoOrganizationRecord>()
-            .exec();
-
-          return organization ? this.toOrganization(organization) : null;
-        }
+      if (criteria.by === "id") {
+        filter._id = toObjectId(criteria.organizationId);
+      } else {
+        filter.slug = criteria.slug;
       }
+
+      const organization = await OrganizationModel.findOne(filter)
+        .populate({ path: "createdBy", select: "displayName _id" })
+        .lean<MongoOrganizationRecord>()
+        .exec();
+
+      return organization ? this.toOrganization(organization) : null;
     } catch (error) {
       throw mapDatabaseError(error);
     }
   }
 
-  async create(actorId: ActorId, data: CreateOrganizationData): Promise<Organization> {
-    const organization = await OrganizationModel.create({
-      ...data,
-      createdBy: toObjectId(actorId),
-    });
+  async findMany(
+    criteria: FindManyOrganizationsCriteria,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Organization>> {
+    try {
+      const filter: QueryFilter<IOrganization> = {
+        deletedAt: { $exists: false },
+        ...(criteria.actorId && { createdBy: toObjectId(criteria.actorId) }),
+        ...(criteria.status && { status: criteria.status }),
+      };
 
-    const populatedOrganization = await OrganizationModel.findById(organization._id)
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .lean<MongoOrganizationRecord>()
-      .exec();
+      const limit = Math.min(Math.max(options?.limit ?? 20, 1), 100);
 
-    if (!populatedOrganization) {
-      throw new Error("Organization was created but could not be retrieved.");
+      if (options?.cursor) {
+        filter._id = {
+          $gt: toObjectId(options.cursor),
+        };
+      }
+
+      const records = await OrganizationModel.find(filter)
+        .populate({ path: "createdBy", select: "displayName _id" })
+        .sort({ _id: 1 })
+        .limit(limit + 1)
+        .lean<MongoOrganizationRecord[]>()
+        .exec();
+
+      const hasNextPage = records.length > limit;
+      const pagedRecords = hasNextPage ? records.slice(0, limit) : records;
+      const items = pagedRecords.map(record => this.toOrganization(record));
+      const nextCursor = hasNextPage ? (items.at(-1)?.id ?? null) : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    } catch (error) {
+      throw mapDatabaseError(error);
     }
+  }
 
-    return this.toOrganization(populatedOrganization);
+  async create(data: CreateOrganizationData): Promise<Organization> {
+    try {
+      const organization = await OrganizationModel.create({
+        name: data.name,
+        slug: data.slug,
+        frontendUrl: data.frontendUrl,
+        createdBy: toObjectId(data.actorId),
+      });
+
+      const populatedOrganization = await OrganizationModel.findById(organization._id)
+        .populate({
+          path: "createdBy",
+          select: "_id displayName",
+        })
+        .lean<MongoOrganizationRecord>()
+        .exec();
+
+      if (!populatedOrganization) {
+        throw new Error("Organization was created but could not be retrieved.");
+      }
+
+      return this.toOrganization(populatedOrganization);
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
   }
 
   async update(
-    organizationId: OrganizationId,
-    actorId: ActorId,
+    criteria: UpdateOrganizationCriteria,
     data: UpdateOrganizationData,
   ): Promise<Organization | null> {
-    const organization = await OrganizationModel.findOneAndUpdate(
-      {
-        _id: toObjectId(organizationId),
-        createdBy: toObjectId(actorId),
+    try {
+      const filter: QueryFilter<IOrganization> = {
+        _id: toObjectId(criteria.organizationId),
         deletedAt: { $exists: false },
-      },
-      {
-        $set: data,
-      },
-      {
-        new: true,
-        runValidators: true,
-      },
-    )
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .lean<MongoOrganizationRecord>()
-      .exec();
+        ...(criteria.actorId && { createdBy: toObjectId(criteria.actorId) }),
+      };
 
-    return organization ? this.toOrganization(organization) : null;
+      const organization = await OrganizationModel.findOneAndUpdate(
+        filter,
+        {
+          $set: data,
+        },
+        {
+          returnDocument: "after",
+          runValidators: true,
+        },
+      )
+        .populate({
+          path: "createdBy",
+          select: "_id displayName",
+        })
+        .lean<MongoOrganizationRecord>()
+        .exec();
+
+      return organization ? this.toOrganization(organization) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
   }
 
   async softDelete(
     criteria: DeleteOrganizationCriteria,
-    actorId: ActorId,
   ): Promise<Organization | null> {
-    const search = {
-      createdBy: toObjectId(actorId),
-      deletedAt: { $exists: false },
-      ...(criteria.type === "id"
-        ? { _id: toObjectId(criteria.value) }
-        : { slug: criteria.value }),
-    };
+    try {
+      const filter: QueryFilter<IOrganization> = {
+        _id: toObjectId(criteria.organizationId),
+        deletedAt: { $exists: false },
+        ...(criteria.actorId && { createdBy: toObjectId(criteria.actorId) }),
+      };
 
-    const organization = await OrganizationModel.findOneAndUpdate(
-      search,
-      {
-        $set: {
-          deletedAt: new Date(),
+      const organization = await OrganizationModel.findOneAndUpdate(
+        filter,
+        {
+          $set: {
+            deletedAt: new Date(),
+          },
         },
-      },
-      {
-        new: true,
-        runValidators: true,
-      },
-    )
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .lean<MongoOrganizationRecord>()
-      .exec();
+        {
+          returnDocument: "after",
+          runValidators: true,
+        },
+      )
+        .populate({
+          path: "createdBy",
+          select: "_id displayName",
+        })
+        .lean<MongoOrganizationRecord>()
+        .exec();
 
-    return organization ? this.toOrganization(organization) : null;
+      return organization ? this.toOrganization(organization) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
+
+  async delete(criteria: DeleteOrganizationCriteria): Promise<boolean> {
+    try {
+      const filter: QueryFilter<IOrganization> = {
+        _id: toObjectId(criteria.organizationId),
+        ...(criteria.actorId && { createdBy: toObjectId(criteria.actorId) }),
+      };
+
+      const result = await OrganizationModel.findOneAndDelete(filter).exec();
+      return Boolean(result);
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
   }
 
   private toOrganization(record: MongoOrganizationRecord): Organization {
