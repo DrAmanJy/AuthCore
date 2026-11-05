@@ -10,7 +10,7 @@ export const USER_STATUSES = [
   "deactivated",
 ] as const;
 
-interface IUser {
+export interface IUser {
   email: string;
   passwordHash: string;
   displayName: string;
@@ -18,6 +18,7 @@ interface IUser {
   status: UserStatus;
   lastLoginAt?: Date;
   managedBy?: Types.ObjectId;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +68,11 @@ const UserSchema = new Schema<IUser>(
     },
 
     managedBy: { type: Types.ObjectId, ref: "Organization", default: undefined },
+
+    deletedAt: {
+      type: Date,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
@@ -74,7 +80,17 @@ const UserSchema = new Schema<IUser>(
   },
 );
 
-UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      deletedAt: { $exists: false },
+    },
+  },
+);
+
+UserSchema.index({ deletedAt: 1, _id: 1 });
 
 const UserModel = model<IUser>("User", UserSchema);
 
