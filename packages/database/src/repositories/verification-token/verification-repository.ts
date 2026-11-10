@@ -1,26 +1,29 @@
 import type {
+  CreateRepository,
+  HardDeleteRepository,
+  ReadRepository,
+} from "../repository.contracts.js";
+import type {
   CreateVerificationTokenData,
   DeleteVerificationTokenCriteria,
+  FindManyVerificationTokensCriteria,
   FindVerificationTokenCriteria,
   VerificationToken,
   VerificationTokenId,
 } from "./verification-token.types.js";
 
-export interface VerificationTokenRepository {
-  find(
-    criteria: Extract<FindVerificationTokenCriteria, { type: "id" | "hash" }>,
-  ): Promise<VerificationToken | null>;
-
-  find(
-    criteria: Extract<FindVerificationTokenCriteria, { type: "user" }>,
-  ): Promise<VerificationToken[]>;
-
-  create(data: CreateVerificationTokenData): Promise<VerificationToken>;
-
+export interface VerificationTokenRepository
+  extends ReadRepository<
+      VerificationToken,
+      FindVerificationTokenCriteria,
+      FindManyVerificationTokensCriteria
+    >,
+    CreateRepository<VerificationToken, CreateVerificationTokenData>,
+    HardDeleteRepository<DeleteVerificationTokenCriteria> {
   markAsUsed(
     tokenId: VerificationTokenId,
     usedAt?: Date,
   ): Promise<VerificationToken | null>;
 
-  delete(criteria: DeleteVerificationTokenCriteria): Promise<number>;
+  deleteExpired(before?: Date): Promise<number>;
 }
