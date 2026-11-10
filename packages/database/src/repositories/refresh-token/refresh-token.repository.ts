@@ -1,39 +1,42 @@
-import type { SessionId } from "../session/session.types.js";
+import type {
+  CreateRepository,
+  ReadRepository,
+} from "../repository.contracts.js";
 import type {
   CreateRefreshTokenData,
-  RefreshTokenHash,
+  FindManyRefreshTokensCriteria,
+  FindRefreshTokenCriteria,
   RefreshTokenId,
   RefreshTokenRecord,
   TokenFamilyId,
 } from "./refresh-token.types.js";
+import type { SessionId } from "../session/session.types.js";
 
-export interface RefreshTokenRepository {
-  findById(refreshTokenId: RefreshTokenId): Promise<RefreshTokenRecord | null>;
-
-  findByHash(tokenHash: RefreshTokenHash): Promise<RefreshTokenRecord | null>;
-
-  findActiveByHash(tokenHash: RefreshTokenHash): Promise<RefreshTokenRecord | null>;
-
-  findFamily(tokenFamilyId: TokenFamilyId): Promise<RefreshTokenRecord[]>;
-
-  create(data: CreateRefreshTokenData): Promise<RefreshTokenRecord>;
+export interface RefreshTokenRepository
+  extends ReadRepository<
+      RefreshTokenRecord,
+      FindRefreshTokenCriteria,
+      FindManyRefreshTokensCriteria
+    >,
+    CreateRepository<RefreshTokenRecord, CreateRefreshTokenData> {
+  consumeIfUnused(
+    refreshTokenId: RefreshTokenId,
+    consumedAt?: Date,
+  ): Promise<RefreshTokenRecord | null>;
 
   markAsUsed(
     refreshTokenId: RefreshTokenId,
     usedAt?: Date,
   ): Promise<RefreshTokenRecord | null>;
 
-  consumeIfUnused(
+  markReuseDetected(
     refreshTokenId: RefreshTokenId,
-    consumedAt?: Date,
   ): Promise<RefreshTokenRecord | null>;
 
   revoke(
     refreshTokenId: RefreshTokenId,
     revokedAt?: Date,
   ): Promise<RefreshTokenRecord | null>;
-
-  markReuseDetected(refreshTokenId: RefreshTokenId): Promise<RefreshTokenRecord | null>;
 
   revokeFamily(tokenFamilyId: TokenFamilyId, revokedAt?: Date): Promise<number>;
 
