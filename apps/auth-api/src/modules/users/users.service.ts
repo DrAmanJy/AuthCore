@@ -20,9 +20,8 @@ export class UserService {
 
   async getUserById(userId: UserId): Promise<User> {
     const user = await this.userRepository.find({
-      type: "id",
-      value: userId,
-      credentials: false,
+      by: "id",
+      userId,
     });
 
     if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
@@ -32,9 +31,8 @@ export class UserService {
 
   async getUserByEmail(email: string): Promise<User> {
     const user = await this.userRepository.find({
-      type: "email",
-      value: email,
-      credentials: false,
+      by: "email",
+      email,
     });
 
     if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
@@ -47,15 +45,13 @@ export class UserService {
   ): Promise<UserCredentials> {
     const user =
       criteria.type === "id"
-        ? await this.userRepository.find({
-            type: "id",
-            value: criteria.value,
-            credentials: true,
+        ? await this.userRepository.findCredentials({
+            by: "id",
+            userId: criteria.value,
           })
-        : await this.userRepository.find({
-            type: "email",
-            value: criteria.value,
-            credentials: true,
+        : await this.userRepository.findCredentials({
+            by: "email",
+            email: criteria.value,
           });
 
     if (!user) {
@@ -66,13 +62,14 @@ export class UserService {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return this.userRepository.find({ type: "all" });
+    const result = await this.userRepository.findMany({});
+    return result.items;
   }
 
   async create(data: CreateUserData): Promise<User> {
     const existingUser = await this.userRepository.exists({
-      type: "email",
-      value: data.email,
+      by: "email",
+      email: data.email,
     });
 
     if (existingUser) {
@@ -103,9 +100,12 @@ export class UserService {
   async updateProfile(userId: UserId, data: UpdateProfile): Promise<User> {
     await this.getAuthenticatedUser(userId);
 
-    const user = await this.userRepository.update(userId, {
-      displayName: data.displayName,
-    });
+    const user = await this.userRepository.update(
+      { userId },
+      {
+        displayName: data.displayName,
+      },
+    );
 
     if (!user) {
       throw new InternalServerError();
@@ -121,9 +121,12 @@ export class UserService {
   async updateLastLoginAt(userId: UserId): Promise<User> {
     await this.getAuthenticatedUser(userId);
 
-    const user = await this.userRepository.update(userId, {
-      lastLoginAt: new Date(),
-    });
+    const user = await this.userRepository.update(
+      { userId },
+      {
+        lastLoginAt: new Date(),
+      },
+    );
 
     if (!user) {
       throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
@@ -144,10 +147,13 @@ export class UserService {
   }
 
   async verifyEmail(userId: UserId): Promise<User> {
-    const user = await this.userRepository.update(userId, {
-      emailVerified: true,
-      status: "active",
-    });
+    const user = await this.userRepository.update(
+      { userId },
+      {
+        emailVerified: true,
+        status: "active",
+      },
+    );
 
     if (!user) {
       throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
@@ -159,9 +165,12 @@ export class UserService {
   async changeStatus(userId: UserId, data: ChangeStatus): Promise<User> {
     await this.getUserById(userId);
 
-    const user = await this.userRepository.update(userId, {
-      status: data.status,
-    });
+    const user = await this.userRepository.update(
+      { userId },
+      {
+        status: data.status,
+      },
+    );
 
     if (!user) {
       throw new InternalServerError();
@@ -181,12 +190,12 @@ export class UserService {
   async deleteUser(userId: UserId): Promise<User> {
     await this.getUserById(userId);
 
-    const user = await this.userRepository.delete(userId);
+    const success = await this.userRepository.delete({ userId });
 
-    if (!user) {
+    if (!success) {
       throw new InternalServerError();
     }
-    return user;
+    return this.getUserById(userId);
   }
 
   async deactivateUser(userId: UserId) {
