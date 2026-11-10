@@ -1,23 +1,26 @@
-import type { Types } from "mongoose";
+import type { QueryFilter, Types } from "mongoose";
 
-import { toObjectId } from "../../utils/object-id.utils.js";
-
-import { asUserId } from "./user.types.js";
-import type {
-  ExistsUserCriteria,
-  CreateUserData,
-  UpdateUserData,
-  User,
-  UserCredentials,
-  UserId,
-  UserStatus,
-  FindUserCriteria,
-} from "./user.types.js";
-
-import type { UserRepository } from "./user.repository.js";
-import UserModel from "../../models/user.model.js";
 import { mapDatabaseError } from "../../errors/database-error.utils.js";
+import UserModel, { type IUser } from "../../models/user.model.js";
+import { toObjectId } from "../../utils/object-id.utils.js";
 import { asOrganizationId } from "../organization/organization.types.js";
+import type { FindManyOptions, PaginatedResult } from "../repository-pagination.types.js";
+import type { UserRepository } from "./user.repository.js";
+import {
+  asUserId,
+  type CreateUserData,
+  type DeleteUserCriteria,
+  type ExistsUserCriteria,
+  type FindManyUsersCriteria,
+  type FindUserCredentialsCriteria,
+  type FindUserCriteria,
+  type UpdateUserCriteria,
+  type UpdateUserData,
+  type User,
+  type UserCredentials,
+  type UserId,
+  type UserStatus,
+} from "./user.types.js";
 
 type MongoUserRecord = {
   _id: Types.ObjectId;
@@ -28,6 +31,7 @@ type MongoUserRecord = {
   status: UserStatus;
   lastLoginAt?: Date;
   managedBy?: Types.ObjectId;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -35,86 +39,96 @@ type MongoUserRecord = {
 export class MongoUserRepository implements UserRepository {
   async exists(criteria: ExistsUserCriteria): Promise<boolean> {
     try {
-      switch (criteria.type) {
-        case "id": {
-          const objectId = toObjectId(criteria.value);
+      const filter: QueryFilter<IUser> = {
+        deletedAt: { $exists: false },
+        ...(criteria.by === "id"
+          ? { _id: toObjectId(criteria.userId) }
+          : { email: criteria.email.toLowerCase() }),
+      };
 
-          return (await UserModel.exists({ _id: objectId })) !== null;
-        }
+      const count = await UserModel.countDocuments(filter);
 
-        case "email":
-          return (await UserModel.exists({ email: criteria.value })) !== null;
-      }
+      return count > 0;
     } catch (error) {
       throw mapDatabaseError(error);
     }
   }
-  find(criteria: {
-    type: "id";
-    value: UserId;
-    credentials: true;
-  }): Promise<UserCredentials | null>;
 
-  find(criteria: { type: "id"; value: UserId; credentials: false }): Promise<User | null>;
-
-  find(criteria: {
-    type: "email";
-    value: string;
-    credentials: true;
-  }): Promise<UserCredentials | null>;
-
-  find(criteria: {
-    type: "email";
-    value: string;
-    credentials: false;
-  }): Promise<User | null>;
-
-  find(criteria: { type: "all" }): Promise<User[]>;
-  async find(
-    criteria: FindUserCriteria,
-  ): Promise<UserCredentials | User | User[] | null> {
+  async find(criteria: FindUserCriteria): Promise<User | null> {
     try {
-      switch (criteria.type) {
-        case "all": {
-          const users = await UserModel.find().lean().exec();
+      const filter: QueryFilter<IUser> = {
+        deletedAt: { $exists: false },
+        ...(criteria.by === "id"
+          ? { _id: toObjectId(criteria.userId) }
+          : { email: criteria.email.toLowerCase() }),
+      };
 
-          return users.map(user => this.toUserType(user));
-        }
+      const user = await UserModel.findOne(filter)
+        .lean<MongoUserRecord>()
+        .exec();
 
-        case "id": {
-          const userQuery = UserModel.findById(toObjectId(criteria.value));
+      return user ? this.toUser(user) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
 
-          if (criteria.credentials) {
-            userQuery.select("+passwordHash");
-          }
+  async findCredentials(
+    criteria: FindUserCredentialsCriteria,
+  ): Promise<UserCredentials | null> {
+    try {
+      const filter: QueryFilter<IUser> = {
+        deletedAt: { $exists: false },
+        ...(criteria.by === "id"
+          ? { _id: toObjectId(criteria.userId) }
+          : { email: criteria.email.toLowerCase() }),
+      };
 
-          const user = await userQuery.lean().exec();
+      const user = await UserModel.findOne(filter)
+        .select("+passwordHash")
+        .lean<MongoUserRecord>()
+        .exec();
 
-          return user
-            ? criteria.credentials
-              ? this.toUserCredentials(user)
-              : this.toUserType(user)
-            : null;
-        }
+      return user ? this.toUserCredentials(user) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
 
-        case "email": {
-          const userQuery = UserModel.findOne({
-            email: criteria.value,
-          });
+  async findMany(
+    criteria: FindManyUsersCriteria,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<User>> {
+    try {
+      const filter: QueryFilter<IUser> = {
+        deletedAt: { $exists: false },
+        ...(criteria.status && { status: criteria.status }),
+        ...(criteria.managedBy && { managedBy: toObjectId(criteria.managedBy) }),
+      };
 
-          if (criteria.credentials) {
-            userQuery.select("+passwordHash");
-          }
+      const limit = Math.min(Math.max(options?.limit ?? 20, 1), 100);
 
-          const user = await userQuery.lean().exec();
-
-          return user
-            ? criteria.credentials
-              ? this.toUserCredentials(user)
-              : this.toUserType(user)
-            : null;
-        }
+      if (options?.cursor) {
+        filter._id = {
+          $gt: toObjectId(options.cursor),
+        };
       }
+
+      const records = await UserModel.find(filter)
+        .sort({ _id: 1 })
+        .limit(limit + 1)
+        .lean<MongoUserRecord[]>()
+        .exec();
+
+      const hasNextPage = records.length > limit;
+      const pagedRecords = hasNextPage ? records.slice(0, limit) : records;
+      const items = pagedRecords.map(record => this.toUser(record));
+      const nextCursor = hasNextPage ? (items.at(-1)?.id ?? null) : null;
+
+      return {
+        items,
+        nextCursor,
+      };
     } catch (error) {
       throw mapDatabaseError(error);
     }
@@ -123,90 +137,108 @@ export class MongoUserRepository implements UserRepository {
   async create(data: CreateUserData): Promise<User> {
     try {
       const user = await UserModel.create({
-        email: data.email.toLowerCase().trim(),
-        passwordHash: data.passwordHash,
-        displayName: data.displayName,
-        ...(data.emailVerified && { emailVerified: data.emailVerified }),
-        ...(data.status && { status: data.status }),
-        status: data.status ?? "pending",
-        lastLoginAt: data.lastLoginAt,
+        ...data,
+        email: data.email.toLowerCase(),
+        managedBy: data.managedBy ? toObjectId(data.managedBy) : undefined,
       });
 
-      return this.toUserType(user);
+      return this.toUser(user.toObject());
     } catch (error) {
       throw mapDatabaseError(error);
     }
   }
 
-  async update(userId: UserId, data: UpdateUserData): Promise<User | null> {
-    const objectId = toObjectId(userId);
-
+  async update(
+    criteria: UpdateUserCriteria,
+    data: UpdateUserData,
+  ): Promise<User | null> {
     try {
-      const user = await UserModel.findByIdAndUpdate(
-        objectId,
-        { $set: data },
+      const user = await UserModel.findOneAndUpdate(
         {
-          new: true,
-          runValidators: true,
+          _id: toObjectId(criteria.userId),
+          deletedAt: { $exists: false },
         },
+        { $set: data },
+        { returnDocument: "after", runValidators: true },
       )
-        .lean()
+        .lean<MongoUserRecord>()
         .exec();
 
-      if (!user) {
-        return null;
-      }
-
-      return this.toUserType(user);
+      return user ? this.toUser(user) : null;
     } catch (error) {
       throw mapDatabaseError(error);
     }
   }
 
-  async updatePassword(userId: UserId, passwordHash: string): Promise<User | null> {
-    const record = await UserModel.findByIdAndUpdate(
-      toObjectId(userId),
-      {
-        $set: { passwordHash },
-      },
-      {
-        new: true,
-        runValidators: true,
-      },
-    )
-      .lean()
-      .exec();
-
-    return record ? this.toUserType(record) : null;
-  }
-
-  async delete(userId: UserId): Promise<User | null> {
-    const objectId = toObjectId(userId);
-
+  async updatePassword(
+    userId: UserId,
+    passwordHash: string,
+  ): Promise<User | null> {
     try {
-      const user = await UserModel.findByIdAndDelete(objectId).lean().exec();
+      const user = await UserModel.findOneAndUpdate(
+        {
+          _id: toObjectId(userId),
+          deletedAt: { $exists: false },
+        },
+        { $set: { passwordHash } },
+        { returnDocument: "after", runValidators: true },
+      )
+        .lean<MongoUserRecord>()
+        .exec();
 
-      if (!user) {
-        return null;
-      }
-
-      return this.toUserType(user);
+      return user ? this.toUser(user) : null;
     } catch (error) {
       throw mapDatabaseError(error);
     }
   }
 
-  private toUserType(record: MongoUserRecord): User {
+  async softDelete(criteria: DeleteUserCriteria): Promise<User | null> {
+    try {
+      const user = await UserModel.findOneAndUpdate(
+        {
+          _id: toObjectId(criteria.userId),
+          deletedAt: { $exists: false },
+        },
+        {
+          $set: { deletedAt: new Date() },
+        },
+        { returnDocument: "after", runValidators: true },
+      )
+        .lean<MongoUserRecord>()
+        .exec();
+
+      return user ? this.toUser(user) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
+
+  async delete(criteria: DeleteUserCriteria): Promise<boolean> {
+    try {
+      const result = await UserModel.findByIdAndDelete(
+        toObjectId(criteria.userId),
+      ).exec();
+
+      return Boolean(result);
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
+
+  private toUser(record: MongoUserRecord): User {
     return {
       id: asUserId(record._id.toString()),
       email: record.email,
       displayName: record.displayName,
       status: record.status,
-      ...(record.lastLoginAt && {
+      ...(record.lastLoginAt !== undefined && {
         lastLoginAt: record.lastLoginAt,
       }),
-      ...(record.managedBy && {
+      ...(record.managedBy !== undefined && {
         managedBy: asOrganizationId(record.managedBy.toString()),
+      }),
+      ...(record.deletedAt !== undefined && {
+        deletedAt: record.deletedAt,
       }),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
@@ -215,20 +247,9 @@ export class MongoUserRepository implements UserRepository {
 
   private toUserCredentials(record: MongoUserRecord): UserCredentials {
     return {
-      id: asUserId(record._id.toString()),
-      email: record.email,
+      ...this.toUser(record),
       emailVerified: record.emailVerified,
       passwordHash: record.passwordHash,
-      displayName: record.displayName,
-      status: record.status,
-      lastLoginAt: record.lastLoginAt,
-      ...(record.managedBy && {
-        managedBy: asOrganizationId(record.managedBy.toString()),
-      }),
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
     };
   }
 }
-
-export default MongoUserRepository;
