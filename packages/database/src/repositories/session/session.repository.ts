@@ -1,28 +1,25 @@
 import type {
+  CreateRepository,
+  ReadRepository,
+} from "../repository.contracts.js";
+import type {
   CreateSessionData,
+  FindManySessionsCriteria,
   FindSessionCriteria,
+  RevokeSessionCriteria,
   Session,
   SessionId,
   UpdateSessionData,
 } from "./session.types.js";
-
 import type { UserId } from "../user/user.types.js";
 import type { OrganizationId } from "../organization/organization.types.js";
 
-export interface SessionRepository {
-  findSession(
-    criteria: Extract<FindSessionCriteria, { type: "id" }>,
-  ): Promise<Session | null>;
+export interface SessionRepository
+  extends ReadRepository<Session, FindSessionCriteria, FindManySessionsCriteria>,
+    CreateRepository<Session, CreateSessionData> {
+  update(sessionId: SessionId, data: UpdateSessionData): Promise<Session | null>;
 
-  findSession(
-    criteria: Extract<FindSessionCriteria, { type: "user" }>,
-  ): Promise<Session[]>;
-
-  create(data: CreateSessionData): Promise<Session>;
-
-  updateSession(sessionId: SessionId, data: UpdateSessionData): Promise<Session | null>;
-
-  revoke(sessionId: SessionId, userId: UserId, reason?: string): Promise<Session | null>;
+  revoke(criteria: RevokeSessionCriteria): Promise<Session | null>;
 
   revokeAllByUserId(
     userId: UserId,
