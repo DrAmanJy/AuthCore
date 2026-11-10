@@ -1,10 +1,25 @@
 import type { UserId } from "../user/user.types.js";
 
+export type VerificationTokenId = string & {
+  readonly __brand: "VerificationTokenId";
+};
+
+export type VerificationTokenHash = string & {
+  readonly __brand: "VerificationTokenHash";
+};
+
 export const asVerificationTokenId = (id: string): VerificationTokenId =>
   id as VerificationTokenId;
 
 export const asVerificationTokenHash = (hash: string): VerificationTokenHash =>
   hash as VerificationTokenHash;
+
+export const VERIFICATION_TOKEN_TYPES = [
+  "EMAIL_VERIFICATION",
+  "PASSWORD_RESET",
+] as const;
+
+export type VerificationTokenType = (typeof VERIFICATION_TOKEN_TYPES)[number];
 
 export const asVerificationTokenType = (
   type: VerificationTokenType,
@@ -21,14 +36,6 @@ export type VerificationToken = {
   updatedAt: Date;
 };
 
-export type VerificationTokenId = string & { readonly __brand: "VerificationTokenId" };
-
-export type VerificationTokenHash = string & {
-  readonly __brand: "VerificationTokenHash";
-};
-
-export type VerificationTokenType = "EMAIL_VERIFICATION" | "PASSWORD_RESET";
-
 export type CreateVerificationTokenData = {
   userId: UserId;
   type: VerificationTokenType;
@@ -43,34 +50,31 @@ export type UpdateVerificationTokenData = {
 
 export type FindVerificationTokenCriteria =
   | {
-      type: "id";
-      value: VerificationTokenId;
+      by: "id";
+      tokenId: VerificationTokenId;
     }
   | {
-      type: "hash";
-      value: VerificationTokenHash;
-    }
-  | {
-      type: "user";
-      userId: UserId;
-      tokenType?: VerificationTokenType;
+      by: "hash";
+      tokenHash: VerificationTokenHash;
     };
+
+export interface FindManyVerificationTokensCriteria {
+  userId: UserId;
+  tokenType?: VerificationTokenType;
+  unusedOnly?: boolean;
+}
 
 export type DeleteVerificationTokenCriteria =
   | {
-      type: "id";
-      value: VerificationTokenId;
+      by: "id";
+      tokenId: VerificationTokenId;
     }
   | {
-      type: "hash";
-      value: VerificationTokenHash;
+      by: "hash";
+      tokenHash: VerificationTokenHash;
     }
   | {
-      type: "user";
+      by: "user";
       userId: UserId;
       tokenType?: VerificationTokenType;
-    }
-  | {
-      type: "expired";
-      before?: Date;
     };

@@ -1,4 +1,7 @@
-import type { InvitationStatus, TargetType } from "../../models/invitation.model.js";
+import type {
+  InvitationStatus,
+  TargetType,
+} from "../../models/invitation.model.js";
 import type { OrganizationId } from "../organization/organization.types.js";
 import type { RoleId } from "../role/role.types.js";
 import type { ActorId, UserId } from "../user/user.types.js";
@@ -24,24 +27,63 @@ export type Invitation = {
   updatedAt: Date;
 };
 
-export type CreateInvitation = Pick<
-  Invitation,
-  | "organizationId"
-  | "roleId"
-  | "targetType"
-  | "targetEmail"
-  | "targetUserId"
-  | "invitedBy"
-  | "tokenHash"
-  | "expiresAt"
->;
-
-export type UpdateInvitation = {
-  status: Exclude<InvitationStatus, "pending" | "revoked">;
+export type CreateInvitationData = {
+  organizationId: OrganizationId;
+  roleId: RoleId;
+  targetType: TargetType;
+  targetEmail?: string;
+  targetUserId?: UserId;
+  invitedBy: UserId;
+  tokenHash: string;
+  expiresAt: Date;
 };
 
+export type CreateInvitation = CreateInvitationData;
+
+export type UpdateInvitationData = {
+  status: Exclude<InvitationStatus, "pending" | "revoked"> | "expired";
+  actionBy?: ActorId;
+};
+
+export type UpdateInvitation = UpdateInvitationData;
+
 export type FindInvitationCriteria =
-  | { type: "email"; value: string; orgId?: OrganizationId }
-  | { type: "id"; value: InvitationId }
-  | { type: "user"; value: UserId; orgId?: OrganizationId }
-  | { type: "organization"; value: OrganizationId };
+  | {
+      by: "id";
+      invitationId: InvitationId;
+      organizationId?: OrganizationId;
+    }
+  | {
+      by: "tokenHash";
+      tokenHash: string;
+    }
+  | {
+      by: "user";
+      userId: UserId;
+      organizationId: OrganizationId;
+    }
+  | {
+      by: "email";
+      email: string;
+      organizationId: OrganizationId;
+    };
+
+export interface FindManyInvitationsCriteria {
+  organizationId?: OrganizationId;
+  userId?: UserId;
+  email?: string;
+  status?: InvitationStatus;
+  activeOnly?: boolean;
+}
+
+export interface UpdateInvitationCriteria {
+  invitationId: InvitationId;
+  organizationId: OrganizationId;
+}
+
+export interface RevokeInvitationCriteria {
+  invitationId: InvitationId;
+  organizationId: OrganizationId;
+  actorId: ActorId;
+  reason?: string;
+}

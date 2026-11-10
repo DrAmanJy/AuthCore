@@ -70,4 +70,11 @@ const ApiKeySchema = new Schema<IApiKey>(
   },
 );
 
+ApiKeySchema.index(
+  { keyHash: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: { $exists: false } } },
+);
+
+ApiKeySchema.index({ organizationId: 1, deletedAt: 1, _id: 1 });
+
 export const ApiKeyModel = model<IApiKey>("ApiKey", ApiKeySchema);

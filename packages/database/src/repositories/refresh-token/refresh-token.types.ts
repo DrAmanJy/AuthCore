@@ -52,3 +52,19 @@ export type UpdateRefreshTokenData = {
   revokedAt?: Date;
   reuseDetected?: boolean;
 };
+
+export type FindRefreshTokenCriteria =
+  | {
+      by: "id";
+      refreshTokenId: RefreshTokenId;
+    }
+  | {
+      by: "hash";
+      tokenHash: RefreshTokenHash;
+      activeOnly?: boolean;
+    };
+
+export interface FindManyRefreshTokensCriteria {
+  tokenFamilyId?: TokenFamilyId;
+  sessionId?: SessionId;
+}

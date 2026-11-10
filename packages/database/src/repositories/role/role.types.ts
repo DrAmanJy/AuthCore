@@ -1,6 +1,6 @@
 import type { OrganizationId } from "../organization/organization.types.js";
 import type { Permission } from "../permission/permission.types.js";
-import type { CreatedBy } from "../user/user.types.js";
+import type { ActorId, CreatedBy } from "../user/user.types.js";
 
 export type RoleId = string & {
   readonly __brand: "RoleId";
@@ -20,25 +20,39 @@ export type Role = {
   updatedAt: Date;
 };
 
-export type CreateRoleData = Pick<Role, "name" | "isSystemRole" | "permissions">;
+export type CreateRoleData = Pick<Role, "name" | "isSystemRole" | "permissions"> & {
+  organizationId: OrganizationId;
+  actorId: ActorId;
+};
 
-export type UpdateRoleData = Omit<CreateRoleData, "isSystemRole">;
+export type UpdateRoleData = {
+  name?: string;
+  permissions?: Permission["key"][];
+};
 
 export type FindRoleCriteria =
   | {
-      type: "id";
-      value: RoleId;
-      orgId: OrganizationId;
+      by: "id";
+      roleId: RoleId;
+      organizationId: OrganizationId;
     }
   | {
-      type: "name";
-      value: string;
-      orgId: OrganizationId;
-    }
-  | {
-      type: "organization";
-      value: OrganizationId;
-    }
-  | {
-      type: "all";
+      by: "name";
+      name: string;
+      organizationId: OrganizationId;
     };
+
+export interface FindManyRolesCriteria {
+  organizationId: OrganizationId;
+  isSystemRole?: boolean;
+}
+
+export interface UpdateRoleCriteria {
+  roleId: RoleId;
+  organizationId: OrganizationId;
+}
+
+export interface DeleteRoleCriteria {
+  roleId: RoleId;
+  organizationId: OrganizationId;
+}

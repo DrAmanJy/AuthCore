@@ -19,23 +19,6 @@ export class RoleService {
     private readonly authorizationService: AuthorizationService,
   ) {}
 
-  // async getMemberPermissions(
-  //   organizationId: OrganizationId,
-  //   userId: UserId,
-  // ): Promise<string[]> {
-  //   const member = await this.getMemberByUser(organizationId, userId);
-  //   if (member.status !== "active") {
-  //     return [];
-  //   }
-
-  //   const role = await this.roleRepository.findById(member.roleId);
-  //   if (!role) {
-  //     return [];
-  //   }
-
-  //   return role.permissions ?? [];
-  // }
-
   // ─────────────────────────────────────────────
 
   async getRole(params: {
@@ -52,9 +35,9 @@ export class RoleService {
     );
 
     const role = await this.roleRepository.find({
-      type: "id",
-      value: params.roleId,
-      orgId: params.organizationId,
+      by: "id",
+      roleId: params.roleId,
+      organizationId: params.organizationId,
     });
 
     if (!role) {
@@ -78,9 +61,9 @@ export class RoleService {
     );
 
     const role = await this.roleRepository.find({
-      type: "name",
-      value: params.name,
-      orgId: params.organizationId,
+      by: "name",
+      name: params.name,
+      organizationId: params.organizationId,
     });
 
     if (!role) {
@@ -99,16 +82,20 @@ export class RoleService {
       actorId,
     );
 
-    return this.roleRepository.find({
-      type: "organization",
-      value: organizationId,
+    const result = await this.roleRepository.findMany({
+      organizationId,
     });
+
+    return result.items;
   }
 
   async createRole(params: {
     organizationId: OrganizationId;
     actorId: ActorId;
-    data: Omit<CreateRoleData, "isSystemRole">;
+    data: {
+      name: string;
+      permissions: CreateRoleData["permissions"];
+    };
   }): Promise<Role> {
     await this.authorizationService.getValidOrganization(
       {
@@ -119,18 +106,21 @@ export class RoleService {
     );
 
     const existingRole = await this.roleRepository.find({
-      type: "name",
-      value: params.data.name,
-      orgId: params.organizationId,
+      by: "name",
+      name: params.data.name,
+      organizationId: params.organizationId,
     });
 
     if (existingRole) {
       throw new ResourceError(ERROR_CODES.ROLE_ALREADY_EXISTS);
     }
 
-    const role = await this.roleRepository.create(params.organizationId, params.actorId, {
+    const role = await this.roleRepository.create({
+      organizationId: params.organizationId,
+      actorId: params.actorId,
       isSystemRole: false,
-      ...params.data,
+      name: params.data.name,
+      permissions: params.data.permissions,
     });
 
     logger.info(
@@ -153,8 +143,10 @@ export class RoleService {
     }
 
     const updatedRole = await this.roleRepository.update(
-      params.organizationId,
-      params.roleId,
+      {
+        roleId: params.roleId,
+        organizationId: params.organizationId,
+      },
       params.data,
     );
 
@@ -180,10 +172,10 @@ export class RoleService {
       throw new ResourceError(ERROR_CODES.ROLE_SYSTEM_PROTECTED);
     }
 
-    const deletedRole = await this.roleRepository.softDelete(
-      params.organizationId,
-      params.roleId,
-    );
+    const deletedRole = await this.roleRepository.softDelete({
+      roleId: params.roleId,
+      organizationId: params.organizationId,
+    });
 
     if (!deletedRole) {
       throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);

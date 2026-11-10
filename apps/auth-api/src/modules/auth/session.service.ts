@@ -79,9 +79,9 @@ export class SessionService {
   }
 
   async getSessionById(sessionId: SessionId): Promise<Session> {
-    const session = await this.sessionRepository.findSession({
-      type: "id",
-      value: sessionId,
+    const session = await this.sessionRepository.find({
+      by: "id",
+      sessionId,
     });
 
     return this.assertSession(session);
@@ -101,20 +101,25 @@ export class SessionService {
   }
 
   async getUserSessions(data: FindUserAllSessionType): Promise<Session[]> {
-    return this.sessionRepository.findSession({
-      type: "user",
-      ...data,
+    const result = await this.sessionRepository.findMany({
+      userId: data.userId,
+      organizationId: data.organizationId,
+      activeOnly: data.activeOnly,
     });
+    return result.items;
   }
 
   async updateSession(sessionId: SessionId, data: UpdateSessionData): Promise<Session> {
-    const session = await this.sessionRepository.updateSession(sessionId, data);
+    const session = await this.sessionRepository.update(sessionId, data);
 
     return this.assertSession(session);
   }
 
   async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
-    const session = await this.sessionRepository.revoke(sessionId, actorId);
+    const session = await this.sessionRepository.revoke({
+      sessionId,
+      userId: actorId,
+    });
 
     return this.assertSession(session);
   }
@@ -144,8 +149,10 @@ export class SessionService {
   async rotateRefreshToken(refreshToken: RefreshToken): Promise<CreateSessionResult> {
     const refreshTokenHash = this.hashRefreshToken(refreshToken);
 
-    const currentRefreshToken =
-      await this.refreshTokenRepository.findByHash(refreshTokenHash);
+    const currentRefreshToken = await this.refreshTokenRepository.find({
+      by: "hash",
+      tokenHash: refreshTokenHash,
+    });
 
     if (!currentRefreshToken) {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
@@ -157,9 +164,9 @@ export class SessionService {
       throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
-    const session = await this.sessionRepository.findSession({
-      type: "id",
-      value: currentRefreshToken.sessionId,
+    const session = await this.sessionRepository.find({
+      by: "id",
+      sessionId: currentRefreshToken.sessionId,
     });
 
     if (!session) {
@@ -216,9 +223,9 @@ export class SessionService {
   }
 
   async validateSession(sessionId: SessionId): Promise<boolean> {
-    const session = await this.sessionRepository.findSession({
-      type: "id",
-      value: sessionId,
+    const session = await this.sessionRepository.find({
+      by: "id",
+      sessionId,
     });
 
     if (!session) {

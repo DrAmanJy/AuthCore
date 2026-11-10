@@ -48,6 +48,8 @@ export type {
   CreateSessionData,
   UpdateSessionData,
   FindSessionCriteria,
+  FindManySessionsCriteria,
+  RevokeSessionCriteria,
 } from "./repositories/session/session.types.js";
 
 export type { SessionRepository } from "./repositories/session/session.repository.js";
@@ -73,6 +75,8 @@ export type {
   RefreshTokenRecord,
   CreateRefreshTokenData,
   UpdateRefreshTokenData,
+  FindRefreshTokenCriteria,
+  FindManyRefreshTokensCriteria,
 } from "./repositories/refresh-token/refresh-token.types.js";
 
 export type { RefreshTokenRepository } from "./repositories/refresh-token/refresh-token.repository.js";
@@ -96,6 +100,7 @@ export type {
   CreateVerificationTokenData,
   UpdateVerificationTokenData,
   FindVerificationTokenCriteria,
+  FindManyVerificationTokensCriteria,
   DeleteVerificationTokenCriteria,
 } from "./repositories/verification-token/verification-token.types.js";
 
@@ -142,6 +147,29 @@ export type { MemberRepository } from "./repositories/organization-member/organi
 export { MongoMemberRepository } from "./repositories/organization-member/mongo-organization-member-repository.js";
 
 // ─────────────────────────────────────────────
+// Shared Repositories
+// ─────────────────────────────────────────────
+
+export type {
+  ReadRepository,
+  CreateRepository,
+  UpdateRepository,
+  SoftDeleteRepository,
+  HardDeleteRepository,
+  StandardRepository,
+} from "./repositories/repository.contracts.js";
+
+export type {
+  FindManyOptions,
+  PaginatedResult,
+} from "./repositories/repository-pagination.types.js";
+
+export type {
+  RepositoryContext,
+  MutationContext,
+} from "./repositories/repository-context.types.js";
+
+// ─────────────────────────────────────────────
 // Role
 // ─────────────────────────────────────────────
 
@@ -153,6 +181,9 @@ export type {
   CreateRoleData,
   UpdateRoleData,
   FindRoleCriteria,
+  FindManyRolesCriteria,
+  UpdateRoleCriteria,
+  DeleteRoleCriteria,
 } from "./repositories/role/role.types.js";
 
 export type { RoleRepository } from "./repositories/role/role-repository.js";
@@ -169,12 +200,14 @@ export type {
   ApiKey,
   ApiKeyCredentials,
   ApiKeyId,
-  CreateApiKey,
-  DeleteApiKeyCriteria,
-  FindApiKeyCriteria,
   KeyHash,
-  UpdateApiKey,
+  CreateApiKeyData,
+  UpdateApiKeyData,
+  FindApiKeyCriteria,
+  FindApiKeyCredentialsCriteria,
+  FindManyApiKeysCriteria,
   UpdateApiKeyCriteria,
+  DeleteApiKeyCriteria,
 } from "./repositories/api-key/api-key.types.js";
 
 export type { ApiKeyRepository } from "./repositories/api-key/api-key-repository.js";
@@ -191,8 +224,13 @@ export type {
   InvitationId,
   Invitation,
   CreateInvitation,
+  CreateInvitationData,
   UpdateInvitation,
+  UpdateInvitationData,
   FindInvitationCriteria,
+  FindManyInvitationsCriteria,
+  UpdateInvitationCriteria,
+  RevokeInvitationCriteria,
 } from "./repositories/invitation/invitation-types.js";
 export type { TargetType } from "./models/invitation.model.js";
 

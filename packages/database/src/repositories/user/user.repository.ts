@@ -1,41 +1,39 @@
 import type {
+  HardDeleteRepository,
+  SoftDeleteRepository,
+  StandardRepository,
+} from "../repository.contracts.js";
+import type {
   CreateUserData,
+  DeleteUserCriteria,
   ExistsUserCriteria,
+  FindManyUsersCriteria,
+  FindUserCredentialsCriteria,
+  FindUserCriteria,
+  UpdateUserCriteria,
   UpdateUserData,
   User,
   UserCredentials,
   UserId,
 } from "./user.types.js";
 
-export interface UserRepository {
+export interface UserRepository
+  extends
+    StandardRepository<
+      User,
+      FindUserCriteria,
+      FindManyUsersCriteria,
+      CreateUserData,
+      UpdateUserCriteria,
+      UpdateUserData
+    >,
+    SoftDeleteRepository<User, DeleteUserCriteria>,
+    HardDeleteRepository<DeleteUserCriteria> {
   exists(criteria: ExistsUserCriteria): Promise<boolean>;
 
-  find(criteria: {
-    type: "id";
-    value: UserId;
-    credentials: true;
-  }): Promise<UserCredentials | null>;
-
-  find(criteria: { type: "id"; value: UserId; credentials: false }): Promise<User | null>;
-
-  find(criteria: {
-    type: "email";
-    value: string;
-    credentials: true;
-  }): Promise<UserCredentials | null>;
-
-  find(criteria: {
-    type: "email";
-    value: string;
-    credentials: false;
-  }): Promise<User | null>;
-
-  find(criteria: { type: "all" }): Promise<User[]>;
-  create(data: CreateUserData): Promise<User>;
-
-  update(userId: UserId, data: UpdateUserData): Promise<User | null>;
+  findCredentials(
+    criteria: FindUserCredentialsCriteria,
+  ): Promise<UserCredentials | null>;
 
   updatePassword(userId: UserId, passwordHash: string): Promise<User | null>;
-
-  delete(userId: UserId): Promise<User | null>;
 }

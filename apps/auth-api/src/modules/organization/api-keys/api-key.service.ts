@@ -32,10 +32,9 @@ export class ApiKeyService {
     );
 
     const apiKey = await this.apiKeyRepository.find({
-      type: "id",
-      value: params.apiKeyId,
-      orgId: params.organizationId,
-      credentials: false,
+      by: "id",
+      apiKeyId: params.apiKeyId,
+      organizationId: params.organizationId,
     });
 
     if (!apiKey) {
@@ -61,10 +60,9 @@ export class ApiKeyService {
     const keyHash = asKeyHash(hashString(params.rawKey));
 
     const apiKey = await this.apiKeyRepository.find({
-      type: "key",
-      value: keyHash,
-      orgId: params.organizationId,
-      credentials: false,
+      by: "keyHash",
+      keyHash,
+      organizationId: params.organizationId,
     });
 
     if (!apiKey) {
@@ -85,12 +83,12 @@ export class ApiKeyService {
       },
       params.actorId,
     );
-    const apiKey = await this.apiKeyRepository.find({
-      type: "organization",
-      value: params.organizationId,
+
+    const result = await this.apiKeyRepository.findMany({
+      organizationId: params.organizationId,
     });
 
-    return apiKey;
+    return result.items;
   }
 
   async create(params: {
@@ -109,10 +107,12 @@ export class ApiKeyService {
 
     const keyHash = asKeyHash(hashString(params.key));
 
-    return this.apiKeyRepository.create(
-      { keyHash, name: params.name, organizationId: params.organizationId },
-      params.actorId,
-    );
+    return this.apiKeyRepository.create({
+      keyHash,
+      name: params.name,
+      organizationId: params.organizationId,
+      actorId: params.actorId,
+    });
   }
 
   async revokeByKey(params: {
@@ -128,16 +128,26 @@ export class ApiKeyService {
       params.actorId,
     );
     const keyHash = asKeyHash(hashString(params.key));
-    const apiKey = await this.apiKeyRepository.update(
-      { type: "key", value: keyHash, orgId: params.organizationId },
-      { status: "revoked", revokedAt: new Date() },
-    );
+    const apiKey = await this.apiKeyRepository.find({
+      by: "keyHash",
+      keyHash,
+      organizationId: params.organizationId,
+    });
 
     if (!apiKey) {
       throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
-    return apiKey;
+    const revoked = await this.apiKeyRepository.revoke({
+      apiKeyId: apiKey.id,
+      organizationId: params.organizationId,
+    });
+
+    if (!revoked) {
+      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+    }
+
+    return revoked;
   }
 
   async revokeById(params: {
@@ -152,10 +162,11 @@ export class ApiKeyService {
       },
       params.actorId,
     );
-    const apiKey = await this.apiKeyRepository.update(
-      { type: "id", value: params.apiKeyId, orgId: params.organizationId },
-      { status: "revoked", revokedAt: new Date() },
-    );
+
+    const apiKey = await this.apiKeyRepository.revoke({
+      apiKeyId: params.apiKeyId,
+      organizationId: params.organizationId,
+    });
 
     if (!apiKey) {
       throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
@@ -168,15 +179,16 @@ export class ApiKeyService {
     apiKeyId: ApiKeyId;
     organizationId: OrganizationId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization(
-      {
-        type: "id",
-        value: params.organizationId,
-      },
-      // params.actorId,
-    );
+    await this.authorizationService.getValidOrganization({
+      type: "id",
+      value: params.organizationId,
+    });
+
     const apiKey = await this.apiKeyRepository.update(
-      { type: "id", value: params.apiKeyId, orgId: params.organizationId },
+      {
+        apiKeyId: params.apiKeyId,
+        organizationId: params.organizationId,
+      },
       {
         lastUsedAt: new Date(),
       },
@@ -188,20 +200,32 @@ export class ApiKeyService {
 
     return apiKey;
   }
+
   async markUsedByKey(params: {
     key: string;
     organizationId: OrganizationId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization(
-      {
-        type: "id",
-        value: params.organizationId,
-      },
-      // params.actorId,
-    );
+    await this.authorizationService.getValidOrganization({
+      type: "id",
+      value: params.organizationId,
+    });
+
     const keyHash = asKeyHash(hashString(params.key));
+    const existing = await this.apiKeyRepository.find({
+      by: "keyHash",
+      keyHash,
+      organizationId: params.organizationId,
+    });
+
+    if (!existing) {
+      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+    }
+
     const apiKey = await this.apiKeyRepository.update(
-      { type: "key", value: keyHash, orgId: params.organizationId },
+      {
+        apiKeyId: existing.id,
+        organizationId: params.organizationId,
+      },
       {
         lastUsedAt: new Date(),
       },
@@ -226,10 +250,11 @@ export class ApiKeyService {
       },
       params.actorId,
     );
-    const apiKey = await this.apiKeyRepository.delete(
-      { type: "id", value: params.apiKeyId, orgId: params.organizationId },
-      params.actorId,
-    );
+
+    const apiKey = await this.apiKeyRepository.softDelete({
+      apiKeyId: params.apiKeyId,
+      organizationId: params.organizationId,
+    });
 
     if (!apiKey) {
       throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
@@ -237,6 +262,7 @@ export class ApiKeyService {
 
     return apiKey;
   }
+
   async softDeleteByKey(params: {
     organizationId: OrganizationId;
     key: string;
@@ -249,11 +275,22 @@ export class ApiKeyService {
       },
       params.actorId,
     );
+
     const keyHash = asKeyHash(hashString(params.key));
-    const apiKey = await this.apiKeyRepository.delete(
-      { type: "key", value: keyHash, orgId: params.organizationId },
-      params.actorId,
-    );
+    const existing = await this.apiKeyRepository.find({
+      by: "keyHash",
+      keyHash,
+      organizationId: params.organizationId,
+    });
+
+    if (!existing) {
+      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+    }
+
+    const apiKey = await this.apiKeyRepository.softDelete({
+      apiKeyId: existing.id,
+      organizationId: params.organizationId,
+    });
 
     if (!apiKey) {
       throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);

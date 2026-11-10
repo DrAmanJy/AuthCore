@@ -1,44 +1,31 @@
-import type { OrganizationId } from "../organization/organization.types.js";
-import type { ActorId, UserId } from "../user/user.types.js";
 import type {
-  CreateInvitation,
+  CreateRepository,
+  ReadRepository,
+  UpdateRepository,
+} from "../repository.contracts.js";
+import type {
+  CreateInvitationData,
+  FindManyInvitationsCriteria,
+  FindInvitationCriteria,
   Invitation,
-  InvitationId,
-  UpdateInvitation,
+  RevokeInvitationCriteria,
+  UpdateInvitationCriteria,
+  UpdateInvitationData,
 } from "./invitation-types.js";
 
-export interface InvitationRepository {
-  find(criteria: { type: "user"; value: UserId }): Promise<Invitation[]>;
+export interface InvitationRepository
+  extends ReadRepository<
+      Invitation,
+      FindInvitationCriteria,
+      FindManyInvitationsCriteria
+    >,
+    CreateRepository<Invitation, CreateInvitationData>,
+    UpdateRepository<
+      Invitation,
+      UpdateInvitationCriteria,
+      UpdateInvitationData
+    > {
+  revoke(criteria: RevokeInvitationCriteria): Promise<Invitation | null>;
 
-  find(criteria: {
-    type: "user";
-    value: UserId;
-    orgId: OrganizationId;
-  }): Promise<Invitation | null>;
-  find(criteria: { type: "id"; value: InvitationId }): Promise<Invitation | null>;
-
-  find(criteria: { type: "email"; value: string }): Promise<Invitation[]>;
-
-  find(criteria: {
-    type: "email";
-    value: string;
-    orgId: OrganizationId;
-  }): Promise<Invitation | null>;
-
-  find(criteria: { type: "organization"; value: OrganizationId }): Promise<Invitation[]>;
-
-  create(data: CreateInvitation): Promise<Invitation>;
-
-  update(
-    id: InvitationId,
-    organizationId: OrganizationId,
-    data: UpdateInvitation,
-    actorId: ActorId,
-  ): Promise<Invitation | null>;
-
-  revoke(
-    id: InvitationId,
-    organizationId: OrganizationId,
-    actorId: ActorId,
-  ): Promise<Invitation | null>;
+  findPending(criteria: FindInvitationCriteria): Promise<Invitation | null>;
 }

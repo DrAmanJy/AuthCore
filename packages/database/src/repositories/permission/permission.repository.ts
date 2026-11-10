@@ -1,33 +1,30 @@
 import type { OrganizationId } from "../organization/organization.types.js";
-import type { ActorId } from "../user/user.types.js";
 import type {
-  CreatePermission,
+  HardDeleteRepository,
+  SoftDeleteRepository,
+  StandardRepository,
+} from "../repository.contracts.js";
+import type {
+  CreatePermissionData,
+  DeletePermissionCriteria,
+  FindManyPermissionsCriteria,
+  FindPermissionCriteria,
   Permission,
-  PermissionId,
-  UpdatePermission,
+  UpdatePermissionCriteria,
+  UpdatePermissionData,
 } from "./permission.types.js";
 
-export interface PermissionRepository {
-  find(
-    organizationId: OrganizationId,
-    permissionId: PermissionId,
-  ): Promise<Permission | null>;
-  create(
-    organizationId: OrganizationId,
-    data: CreatePermission,
-    actorId: ActorId,
-  ): Promise<Permission | null>;
-  update(
-    organizationId: OrganizationId,
-    permissionId: PermissionId,
-    data: UpdatePermission,
-  ): Promise<Permission | null>;
-  softDelete(
-    organizationId: OrganizationId,
-    permissionId: PermissionId,
-  ): Promise<Permission | null>;
-  delete(
-    organizationId: OrganizationId,
-    permissionId: PermissionId,
-  ): Promise<Permission | null>;
+export interface PermissionRepository
+  extends
+    StandardRepository<
+      Permission,
+      FindPermissionCriteria,
+      FindManyPermissionsCriteria,
+      CreatePermissionData,
+      UpdatePermissionCriteria,
+      UpdatePermissionData
+    >,
+    SoftDeleteRepository<Permission, DeletePermissionCriteria>,
+    HardDeleteRepository<DeletePermissionCriteria> {
+  findSystemPermissions(organizationId: OrganizationId): Promise<Permission[]>;
 }

@@ -1,66 +1,24 @@
 import type {
   ActorId,
   CreateMemberData,
-  OrganizationId,
   Member,
   MemberId,
   MemberRepository,
-  UserId,
+  OrganizationId,
   RoleId,
+  UserId,
 } from "@authcore/database";
-import { logger } from "@authcore/logger";
 import { ResourceError } from "../../../errors/resource-error.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
-import { InternalServerError } from "../../../errors/internal-server-error.js";
+import { logger } from "@authcore/logger";
 import type { AuthorizationService } from "../authorization/authorization.service.js";
+import { InternalServerError } from "../../../errors/internal-server-error.js";
 
 export class MembersService {
   constructor(
     private readonly memberRepository: MemberRepository,
     private readonly authorizationService: AuthorizationService,
   ) {}
-
-  //   async transferOwnership(
-  //     organizationId: OrganizationId,
-  //     actorId: ActorId,
-  //     newOwnerUserId: UserId,
-  //   ): Promise<Organization> {
-  //     const organization = await this.authorizationService.getValidOrganization(
-  //       {
-  //         type: "id",
-  //         value: organizationId,
-  //       },
-  //       actorId,
-  //     );
-
-  //     const targetMember = await this.getMemberByUser(organizationId, newOwnerUserId);
-  //     if (targetMember.status !== "active") {
-  //       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
-  //     }
-
-  //     const ownerRole = await this.roleRepository.findByName(organizationId);
-  //     if (!ownerRole) {
-  //       throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
-  //     }
-
-  //     await this.MemberRepository.update(organizationId, targetMember.id, {
-  //       roleId: ownerRole.id,
-  //     });
-
-  //     logger.info(
-  //       {
-  //         event: "organization.ownership.transferred",
-  //         organizationId,
-  //         fromActorId: actorId,
-  //         toUserId: newOwnerUserId,
-  //       },
-  //       "Organization ownership transferred successfully",
-  //     );
-
-  //     return organization;
-  //   }
-
-  // ─────────────────────────────────────────────
 
   async getMember(
     organizationId: OrganizationId,
@@ -69,16 +27,16 @@ export class MembersService {
   ): Promise<Member> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: organizationId,
+        by: "id",
+        organizationId,
       },
       actorId,
     );
 
     const member = await this.memberRepository.find({
-      type: "id",
-      value: memberId,
-      orgId: organizationId,
+      by: "id",
+      memberId,
+      organizationId,
     });
 
     if (!member) {
@@ -95,16 +53,16 @@ export class MembersService {
   ): Promise<Member> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: organizationId,
+        by: "id",
+        organizationId,
       },
       actorId,
     );
 
     const member = await this.memberRepository.find({
-      type: "user",
-      value: userId,
-      orgId: organizationId,
+      by: "user",
+      userId,
+      organizationId,
     });
 
     if (!member) {
@@ -117,35 +75,35 @@ export class MembersService {
   async getMembers(organizationId: OrganizationId, actorId: ActorId): Promise<Member[]> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: organizationId,
+        by: "id",
+        organizationId,
       },
       actorId,
     );
 
-    return this.memberRepository.find({ type: "organization", value: organizationId });
+    const result = await this.memberRepository.findMany({ organizationId });
+    return result.items;
   }
 
   async addMember(
     organizationId: OrganizationId,
     actorId: ActorId,
-    data: CreateMemberData,
+    data: Omit<CreateMemberData, "organizationId" | "actorId">,
   ): Promise<Member> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: organizationId,
+        by: "id",
+        organizationId,
       },
       actorId,
     );
 
     const existingMember = await this.memberRepository.find({
-      type: "user",
-      value: data.userId,
-      orgId: organizationId,
+      by: "user",
+      userId: data.userId,
+      organizationId,
     });
 
-    //todo implement can reinvite removed members
     if (existingMember) {
       logger.warn(
         {
@@ -159,7 +117,11 @@ export class MembersService {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_ALREADY_EXISTS);
     }
 
-    const member = await this.memberRepository.create(actorId, organizationId, data);
+    const member = await this.memberRepository.create({
+      ...data,
+      organizationId,
+      actorId,
+    });
     logger.info(
       { event: "organization.member.create.success", actorId, memberId: member.id },
       "Organization member created successfully",
@@ -180,9 +142,10 @@ export class MembersService {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
-    const updatedMember = await this.memberRepository.update(organizationId, memberId, {
-      roleId,
-    });
+    const updatedMember = await this.memberRepository.update(
+      { memberId, organizationId },
+      { roleId },
+    );
 
     if (!updatedMember) {
       throw new InternalServerError();
@@ -199,32 +162,6 @@ export class MembersService {
     return updatedMember;
   }
 
-  // private async ensureNotLastOwner(
-  //   organizationId: OrganizationId,
-  //   memberId: MemberId,
-  // ): Promise<void> {
-  //   const member = await this.MemberRepository.find({
-  //     type: "id",
-  //     value: memberId,
-  //     orgId: organizationId,
-  //   });
-  //   if (!member) return;
-
-  //   const role = await this.roleRepository.findById(member.roleId);
-  //   if (!role || role.name !== SYSTEM_ROLE_NAMES.OWNER) {
-  //     return;
-  //   }
-
-  //   const allMembers = await this.MemberRepository.findByOrganization(organizationId);
-  //   const activeOwnerCount = allMembers.filter(
-  //     m => m.status === "active" && m.roleId === member.roleId && m.id !== memberId,
-  //   ).length;
-
-  //   if (activeOwnerCount === 0) {
-  //     throw new ResourceError(ERROR_CODES.ORGANIZATION_LAST_OWNER_PROTECTION);
-  //   }
-  // }
-
   async removeMember(
     organizationId: OrganizationId,
     memberId: MemberId,
@@ -236,9 +173,10 @@ export class MembersService {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
-    const updatedMember = await this.memberRepository.update(organizationId, memberId, {
-      status: "removed",
-    });
+    const updatedMember = await this.memberRepository.update(
+      { memberId, organizationId },
+      { status: "removed" },
+    );
 
     if (!updatedMember) {
       throw new InternalServerError();
@@ -266,9 +204,10 @@ export class MembersService {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
-    const updatedMember = await this.memberRepository.update(organizationId, memberId, {
-      status: "suspended",
-    });
+    const updatedMember = await this.memberRepository.update(
+      { memberId, organizationId },
+      { status: "suspended" },
+    );
 
     if (!updatedMember) {
       throw new InternalServerError();
@@ -296,9 +235,10 @@ export class MembersService {
       throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_SUSPENDED);
     }
 
-    const updatedMember = await this.memberRepository.update(organizationId, memberId, {
-      status: "active",
-    });
+    const updatedMember = await this.memberRepository.update(
+      { memberId, organizationId },
+      { status: "active" },
+    );
 
     if (!updatedMember) {
       throw new InternalServerError();

@@ -7,9 +7,6 @@ export type SessionId = string & {
 
 export const asSessionId = (id: string): SessionId => id as SessionId;
 
-// export const asRefreshTokenHash = (hash: string): RefreshTokenHash =>
-//   hash as RefreshTokenHash;
-
 export type Device = {
   name: string;
   userAgent: string;
@@ -18,18 +15,13 @@ export type Device = {
 
 export type Session = {
   id: SessionId;
-
   userId: UserId;
   organizationId: OrganizationId;
-
   device: Device;
-
   lastUsedAt: Date;
   expiresAt: Date;
-
   revokedAt?: Date;
   revokedReason?: string;
-
   createdAt: Date;
   updatedAt: Date;
 };
@@ -37,10 +29,9 @@ export type Session = {
 export type CreateSessionData = {
   userId: UserId;
   organizationId: OrganizationId;
-
   device: Device;
-
   expiresAt: Date;
+  lastUsedAt?: Date;
 };
 
 export type UpdateSessionData = {
@@ -48,14 +39,21 @@ export type UpdateSessionData = {
   lastUsedAt?: Date;
 };
 
-export type FindSessionCriteria =
-  | {
-      type: "id";
-      value: SessionId;
-    }
-  | {
-      type: "user";
-      userId: UserId;
-      organizationId: OrganizationId;
-      activeOnly?: boolean;
-    };
+export type FindSessionCriteria = {
+  by: "id";
+  sessionId: SessionId;
+  organizationId?: OrganizationId;
+};
+
+export interface FindManySessionsCriteria {
+  userId: UserId;
+  organizationId?: OrganizationId;
+  activeOnly?: boolean;
+}
+
+export interface RevokeSessionCriteria {
+  sessionId: SessionId;
+  userId?: UserId;
+  organizationId?: OrganizationId;
+  reason?: string;
+}

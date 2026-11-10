@@ -25,28 +25,28 @@ export class InvitationService {
   ) {}
 
   async getInvitesByActorId(actorId: ActorId): Promise<Invitation[]> {
-    const invitations = await this.invitationRepository.find({
-      type: "user",
-      value: actorId,
+    const invitations = await this.invitationRepository.findMany({
+      userId: actorId,
+      activeOnly: true,
     });
-    return invitations;
+    return invitations.items;
   }
 
   async getInvitesByUserId(userId: UserId): Promise<Invitation[]> {
-    const invitations = await this.invitationRepository.find({
-      type: "user",
-      value: userId,
+    const invitations = await this.invitationRepository.findMany({
+      userId,
+      activeOnly: true,
     });
-    return invitations;
+    return invitations.items;
   }
 
   //don't use without checking ownership
   async getInvitesByEmail(email: string): Promise<Invitation[]> {
-    const invitations = await this.invitationRepository.find({
-      type: "email",
-      value: email,
+    const invitations = await this.invitationRepository.findMany({
+      email,
+      activeOnly: true,
     });
-    return invitations;
+    return invitations.items;
   }
 
   async getOrganizationInvitesByUserId(
@@ -59,9 +59,9 @@ export class InvitationService {
     });
 
     const invitation = await this.invitationRepository.find({
-      type: "user",
-      value: userId,
-      orgId: organizationId,
+      by: "user",
+      userId,
+      organizationId,
     });
 
     if (!invitation) {
@@ -81,9 +81,9 @@ export class InvitationService {
     });
 
     const invitation = await this.invitationRepository.find({
-      type: "email",
-      value: email,
-      orgId: organizationId,
+      by: "email",
+      email,
+      organizationId,
     });
 
     if (!invitation) {
@@ -99,12 +99,12 @@ export class InvitationService {
       value: organizationId,
     });
 
-    const invitations = await this.invitationRepository.find({
-      type: "organization",
-      value: organizationId,
+    const invitations = await this.invitationRepository.findMany({
+      organizationId,
+      activeOnly: true,
     });
 
-    return invitations;
+    return invitations.items;
   }
 
   async sendInvite(params: {
@@ -163,9 +163,9 @@ export class InvitationService {
     });
 
     const invitation = await this.invitationRepository.find({
-      type: "email",
-      value: email,
-      orgId: organizationId,
+      by: "email",
+      email,
+      organizationId,
     });
 
     if (!invitation) {
@@ -175,10 +175,8 @@ export class InvitationService {
     await this.validInvitation(invitation, organizationId, actorId, "accepted");
 
     const acceptedInvitation = await this.invitationRepository.update(
-      invitation.id,
-      organizationId,
-      { status: "accepted" },
-      actorId,
+      { invitationId: invitation.id, organizationId },
+      { status: "accepted", actionBy: actorId },
     );
 
     if (!acceptedInvitation) {
@@ -192,8 +190,8 @@ export class InvitationService {
     actorId: ActorId,
   ): Promise<Member> {
     const invitation = await this.invitationRepository.find({
-      type: "id",
-      value: invitationId,
+      by: "id",
+      invitationId,
     });
 
     if (!invitation) {
@@ -213,10 +211,8 @@ export class InvitationService {
     });
 
     const acceptedInvitation = await this.invitationRepository.update(
-      invitationId,
-      organizationId,
-      { status: "accepted" },
-      actorId,
+      { invitationId, organizationId },
+      { status: "accepted", actionBy: actorId },
     );
 
     if (!acceptedInvitation) {
@@ -232,8 +228,8 @@ export class InvitationService {
     actorId: ActorId,
   ): Promise<void> {
     const invitation = await this.invitationRepository.find({
-      type: "id",
-      value: invitationId,
+      by: "id",
+      invitationId,
     });
     if (!invitation) {
       throw new Error("Change at L133");
@@ -242,10 +238,8 @@ export class InvitationService {
     await this.validInvitation(invitation, organizationId, actorId, "rejected");
 
     const rejectInvitation = await this.invitationRepository.update(
-      invitationId,
-      organizationId,
-      { status: "rejected" },
-      actorId,
+      { invitationId, organizationId },
+      { status: "rejected", actionBy: actorId },
     );
     if (!rejectInvitation) {
       throw new Error("Change at L140");
@@ -259,8 +253,8 @@ export class InvitationService {
     actorId: ActorId,
   ) {
     const invitation = await this.invitationRepository.find({
-      type: "id",
-      value: invitationId,
+      by: "id",
+      invitationId,
     });
 
     if (!invitation) {
@@ -277,11 +271,11 @@ export class InvitationService {
 
     await this.validInvitation(invitation, organizationId, actorId, "accepted");
 
-    const revokeInvitation = await this.invitationRepository.revoke(
-      invitation.id,
+    const revokeInvitation = await this.invitationRepository.revoke({
+      invitationId: invitation.id,
       organizationId,
       actorId,
-    );
+    });
 
     if (!revokeInvitation) {
       throw new Error("change at L234");
@@ -296,10 +290,8 @@ export class InvitationService {
   ): Promise<void> {
     if (invitation.status !== "expired" && invitation.expiresAt <= new Date()) {
       await this.invitationRepository.update(
-        invitation.id,
-        organizationId,
-        { status: "expired" },
-        actorId,
+        { invitationId: invitation.id, organizationId },
+        { status: "expired", actionBy: actorId },
       );
       throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths
     }

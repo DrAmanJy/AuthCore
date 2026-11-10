@@ -1,104 +1,125 @@
 import type { QueryFilter } from "mongoose";
-import type { IInvitation } from "../../models/invitation.model.js";
-import type { OrganizationId } from "../organization/organization.types.js";
-import type {
-  CreateInvitation,
-  FindInvitationCriteria,
-  Invitation,
-  InvitationId,
-  UpdateInvitation,
-} from "./invitation-types.js";
+
+import InvitationModel, { type IInvitation } from "../../models/invitation.model.js";
+import { toObjectId } from "../../utils/object-id.utils.js";
+import { mapDatabaseError } from "../../errors/database-error.utils.js";
+
 import type { InvitationRepository } from "./invitation-repository.js";
-import type { ActorId, UserId } from "../user/user.types.js";
-
-import InvitationModel from "../../models/invitation.model.js";
-
+import type {
+  FindManyOptions,
+  PaginatedResult,
+} from "../repository-pagination.types.js";
+import {
+  asInvitationId,
+  type CreateInvitationData,
+  type FindManyInvitationsCriteria,
+  type FindInvitationCriteria,
+  type Invitation,
+  type RevokeInvitationCriteria,
+  type UpdateInvitationCriteria,
+  type UpdateInvitationData,
+} from "./invitation-types.js";
 import { asOrganizationId } from "../organization/organization.types.js";
 import { asActorId, asUserId } from "../user/user.types.js";
-import { asInvitationId } from "./invitation-types.js";
 import { asRoleId } from "../role/role.types.js";
 
-import { mapDatabaseError } from "../../errors/database-error.utils.js";
-import { toObjectId } from "../../utils/object-id.utils.js";
-
 export class MongoInvitationRepository implements InvitationRepository {
-  find(criteria: { type: "user"; value: UserId }): Promise<Invitation[]>;
-
-  find(criteria: {
-    type: "user";
-    value: UserId;
-    orgId: OrganizationId;
-  }): Promise<Invitation | null>;
-  find(criteria: { type: "id"; value: InvitationId }): Promise<Invitation | null>;
-
-  find(criteria: { type: "email"; value: string }): Promise<Invitation[]>;
-
-  find(criteria: {
-    type: "email";
-    value: string;
-    orgId: OrganizationId;
-  }): Promise<Invitation | null>;
-
-  find(criteria: { type: "organization"; value: OrganizationId }): Promise<Invitation[]>;
-
-  async find(
-    criteria: FindInvitationCriteria,
-  ): Promise<Invitation | Invitation[] | null> {
+  async find(criteria: FindInvitationCriteria): Promise<Invitation | null> {
     try {
-      const filter: QueryFilter<IInvitation> = {
-        status: "pending",
-        expiresAt: { $gt: new Date() },
-      };
+      const filter = this.buildFindFilter(criteria);
 
-      switch (criteria.type) {
-        case "user":
-          filter.targetUserId = toObjectId(criteria.value);
+      const invitation = await InvitationModel.findOne(filter).exec();
 
-          if (criteria.orgId) {
-            filter.organizationId = toObjectId(criteria.orgId);
-          }
-          break;
-
-        case "id":
-          filter._id = toObjectId(criteria.value);
-          break;
-
-        case "email":
-          filter.targetEmail = criteria.value.trim().toLowerCase();
-
-          if (criteria.orgId) {
-            filter.organizationId = toObjectId(criteria.orgId);
-          }
-          break;
-
-        case "organization":
-          filter.organizationId = toObjectId(criteria.value);
-          break;
-      }
-
-      if (criteria.type === "id") {
-        const invitation = await InvitationModel.findOne(filter).exec();
-
-        return invitation ? this.toInvitation(invitation) : null;
-      }
-
-      if ((criteria.type === "user" || criteria.type === "email") && criteria.orgId) {
-        const invitation = await InvitationModel.findOne(filter).exec();
-
-        return invitation ? this.toInvitation(invitation) : null;
-      }
-
-      const invitations = await InvitationModel.find(filter).exec();
-
-      return invitations.map(invitation => this.toInvitation(invitation));
+      return invitation ? this.toInvitation(invitation) : null;
     } catch (error) {
       throw mapDatabaseError(error);
     }
   }
 
-  async create(data: CreateInvitation): Promise<Invitation> {
+  async findPending(criteria: FindInvitationCriteria): Promise<Invitation | null> {
     try {
-      const invitation = await InvitationModel.create(data);
+      const filter = this.buildFindFilter(criteria);
+      filter.status = "pending";
+      filter.expiresAt = { $gt: new Date() };
+
+      const invitation = await InvitationModel.findOne(filter).exec();
+
+      return invitation ? this.toInvitation(invitation) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
+
+  async findMany(
+    criteria: FindManyInvitationsCriteria,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Invitation>> {
+    try {
+      const limit = Math.max(1, Math.min(options?.limit ?? 50, 100));
+
+      const filter: QueryFilter<IInvitation> = {};
+
+      if (criteria.organizationId) {
+        filter.organizationId = toObjectId(criteria.organizationId);
+      }
+
+      if (criteria.userId) {
+        filter.targetUserId = toObjectId(criteria.userId);
+      }
+
+      if (criteria.email) {
+        filter.targetEmail = criteria.email.trim().toLowerCase();
+      }
+
+      if (criteria.status) {
+        filter.status = criteria.status;
+      }
+
+      if (criteria.activeOnly) {
+        filter.status = "pending";
+        filter.expiresAt = { $gt: new Date() };
+      }
+
+      if (options?.cursor) {
+        filter._id = { $gt: toObjectId(options.cursor) };
+      }
+
+      const records = await InvitationModel.find(filter)
+        .sort({ _id: 1 })
+        .limit(limit + 1)
+        .lean<IInvitation[]>()
+        .exec();
+
+      const hasNextPage = records.length > limit;
+      const pagedRecords = hasNextPage ? records.slice(0, limit) : records;
+      const invitations = pagedRecords.map(record => this.toInvitation(record));
+      const nextCursor = hasNextPage ? (invitations.at(-1)?.id ?? null) : null;
+
+      return {
+        items: invitations,
+        nextCursor,
+      };
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
+
+  async create(data: CreateInvitationData): Promise<Invitation> {
+    try {
+      const invitation = await InvitationModel.create({
+        organizationId: toObjectId(data.organizationId),
+        roleId: toObjectId(data.roleId),
+        targetType: data.targetType,
+        ...(data.targetEmail && {
+          targetEmail: data.targetEmail.trim().toLowerCase(),
+        }),
+        ...(data.targetUserId && {
+          targetUserId: toObjectId(data.targetUserId),
+        }),
+        invitedBy: toObjectId(data.invitedBy),
+        tokenHash: data.tokenHash,
+        expiresAt: data.expiresAt,
+      });
 
       return this.toInvitation(invitation);
     } catch (error) {
@@ -107,52 +128,95 @@ export class MongoInvitationRepository implements InvitationRepository {
   }
 
   async update(
-    id: InvitationId,
-    organizationId: OrganizationId,
-    data: UpdateInvitation,
-    actorId: ActorId,
+    criteria: UpdateInvitationCriteria,
+    data: UpdateInvitationData,
   ): Promise<Invitation | null> {
-    const invitation = await InvitationModel.findOneAndUpdate(
-      {
-        _id: toObjectId(id),
-        organizationId,
-        status: "pending",
-        expiresAt: { $gt: new Date() },
-      },
-      { status: data.status, actionAt: new Date(), actionBy: toObjectId(actorId) },
-      {
-        returnDocument: "after",
-        runValidators: true,
-      },
-    )
-      .lean()
-      .exec();
+    try {
+      const invitation = await InvitationModel.findOneAndUpdate(
+        {
+          _id: toObjectId(criteria.invitationId),
+          organizationId: toObjectId(criteria.organizationId),
+        },
+        {
+          $set: {
+            status: data.status,
+            actionAt: new Date(),
+            ...(data.actionBy && { actionBy: toObjectId(data.actionBy) }),
+          },
+        },
+        {
+          returnDocument: "after",
+          runValidators: true,
+        },
+      )
+        .lean<IInvitation>()
+        .exec();
 
-    return invitation ? this.toInvitation(invitation) : null;
+      return invitation ? this.toInvitation(invitation) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
   }
 
-  async revoke(
-    id: InvitationId,
-    organizationId: OrganizationId,
-    actorId: ActorId,
-  ): Promise<Invitation | null> {
-    const invitation = await InvitationModel.findOneAndUpdate(
-      {
-        _id: toObjectId(id),
-        organizationId,
-        status: "pending",
-        expiresAt: { $gt: new Date() },
-      },
-      { status: "revoked", actionAt: new Date(), actionBy: toObjectId(actorId) },
-      {
-        returnDocument: "after",
-        runValidators: true,
-      },
-    )
-      .lean()
-      .exec();
+  async revoke(criteria: RevokeInvitationCriteria): Promise<Invitation | null> {
+    try {
+      const invitation = await InvitationModel.findOneAndUpdate(
+        {
+          _id: toObjectId(criteria.invitationId),
+          organizationId: toObjectId(criteria.organizationId),
+          status: "pending",
+          expiresAt: { $gt: new Date() },
+        },
+        {
+          $set: {
+            status: "revoked",
+            actionAt: new Date(),
+            actionBy: toObjectId(criteria.actorId),
+          },
+        },
+        {
+          returnDocument: "after",
+          runValidators: true,
+        },
+      )
+        .lean<IInvitation>()
+        .exec();
 
-    return invitation ? this.toInvitation(invitation) : null;
+      return invitation ? this.toInvitation(invitation) : null;
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  }
+
+  private buildFindFilter(
+    criteria: FindInvitationCriteria,
+  ): QueryFilter<IInvitation> {
+    const filter: QueryFilter<IInvitation> = {};
+
+    switch (criteria.by) {
+      case "id":
+        filter._id = toObjectId(criteria.invitationId);
+        if (criteria.organizationId) {
+          filter.organizationId = toObjectId(criteria.organizationId);
+        }
+        break;
+
+      case "tokenHash":
+        filter.tokenHash = criteria.tokenHash;
+        break;
+
+      case "user":
+        filter.targetUserId = toObjectId(criteria.userId);
+        filter.organizationId = toObjectId(criteria.organizationId);
+        break;
+
+      case "email":
+        filter.targetEmail = criteria.email.trim().toLowerCase();
+        filter.organizationId = toObjectId(criteria.organizationId);
+        break;
+    }
+
+    return filter;
   }
 
   private toInvitation(record: IInvitation): Invitation {
