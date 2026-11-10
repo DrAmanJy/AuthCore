@@ -64,8 +64,8 @@ export class RecoveryService {
     const tokenHash = this.hashToken(token);
 
     const verificationToken = await this.verificationTokenRepository.find({
-      type: "hash",
-      value: tokenHash,
+      by: "hash",
+      tokenHash,
     });
 
     if (!verificationToken) {
