@@ -19,7 +19,10 @@ export type Organization = {
   updatedAt: Date;
 };
 
-export type CreateOrganizationData = Pick<Organization, "name" | "slug" | "frontendUrl"> & {
+export type CreateOrganizationData = Pick<
+  Organization,
+  "name" | "slug" | "frontendUrl"
+> & {
   actorId: ActorId;
 };
 
@@ -35,21 +38,12 @@ export type FindOrganizationCriteria =
   | {
       by: "slug";
       slug: string;
-    };
+    }
+  | { by: "actor"; actorId: ActorId };
 
-export interface FindManyOrganizationsCriteria {
-  actorId?: ActorId;
-  status?: OrganizationStatus;
-}
-
-export interface UpdateOrganizationCriteria {
-  organizationId: OrganizationId;
-  actorId?: ActorId;
-}
-
-export interface DeleteOrganizationCriteria {
-  organizationId: OrganizationId;
-  actorId?: ActorId;
-}
+export type FindManyOrganizationsCriteria =
+  | { by: "actor"; actorId: ActorId; status: OrganizationStatus }
+  | { by: "status"; status: OrganizationStatus }
+  | { by: "all" };
 
 export type { OrganizationStatus };
