@@ -114,3 +114,5 @@ export type {
   AuditQuery,
   OrganizationAuditParams,
 } from "./audit/schemas/audit-query.schema.js";
+export { SYSTEM_PERMISSIONS } from "./roles/permissions.js";
+export type { PermissionKey } from "./roles/permissions.js";
