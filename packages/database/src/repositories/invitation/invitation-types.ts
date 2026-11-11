@@ -1,7 +1,4 @@
-import type {
-  InvitationStatus,
-  TargetType,
-} from "../../models/invitation.model.js";
+import type { InvitationStatus, TargetType } from "../../models/invitation.model.js";
 import type { OrganizationId } from "../organization/organization.types.js";
 import type { RoleId } from "../role/role.types.js";
 import type { ActorId, UserId } from "../user/user.types.js";
@@ -65,7 +62,7 @@ export type FindInvitationCriteria =
   | {
       by: "email";
       email: string;
-      organizationId: OrganizationId;
+      organizationId?: OrganizationId;
     };
 
 export interface FindManyInvitationsCriteria {
