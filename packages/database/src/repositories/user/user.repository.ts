@@ -31,9 +31,7 @@ export interface UserRepository
     HardDeleteRepository<DeleteUserCriteria> {
   exists(criteria: ExistsUserCriteria): Promise<boolean>;
 
-  findCredentials(
-    criteria: FindUserCredentialsCriteria,
-  ): Promise<UserCredentials | null>;
+  findCredentials(criteria: FindUserCredentialsCriteria): Promise<UserCredentials | null>;
 
   updatePassword(userId: UserId, passwordHash: string): Promise<User | null>;
 }
