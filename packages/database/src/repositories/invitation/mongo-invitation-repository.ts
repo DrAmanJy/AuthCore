@@ -5,10 +5,7 @@ import { toObjectId } from "../../utils/object-id.utils.js";
 import { mapDatabaseError } from "../../errors/database-error.utils.js";
 
 import type { InvitationRepository } from "./invitation-repository.js";
-import type {
-  FindManyOptions,
-  PaginatedResult,
-} from "../repository-pagination.types.js";
+import type { FindManyOptions, PaginatedResult } from "../repository-pagination.types.js";
 import {
   asInvitationId,
   type CreateInvitationData,
@@ -188,9 +185,7 @@ export class MongoInvitationRepository implements InvitationRepository {
     }
   }
 
-  private buildFindFilter(
-    criteria: FindInvitationCriteria,
-  ): QueryFilter<IInvitation> {
+  private buildFindFilter(criteria: FindInvitationCriteria): QueryFilter<IInvitation> {
     const filter: QueryFilter<IInvitation> = {};
 
     switch (criteria.by) {
@@ -212,7 +207,9 @@ export class MongoInvitationRepository implements InvitationRepository {
 
       case "email":
         filter.targetEmail = criteria.email.trim().toLowerCase();
-        filter.organizationId = toObjectId(criteria.organizationId);
+        if (criteria.organizationId) {
+          filter.organizationId = toObjectId(criteria.organizationId);
+        }
         break;
     }
 
