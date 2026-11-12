@@ -3,12 +3,14 @@ import type { QueryFilter, Types } from "mongoose";
 import type { IMember } from "../../models/member.model.js";
 import MemberModel from "../../models/member.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
+import type { Organization } from "../organization/organization.types.js";
 import {
   asOrganizationId,
   type OrganizationId,
 } from "../organization/organization.types.js";
 import type { FindManyOptions, PaginatedResult } from "../repository-pagination.types.js";
 import { asRoleId } from "../role/role.types.js";
+import type { UserId } from "../user/user.types.js";
 import { asUserId } from "../user/user.types.js";
 import type { MemberRepository } from "./organization-member-repository.js";
 import type {
@@ -21,6 +23,7 @@ import type {
   UpdateMemberData,
 } from "./organization-member.types.js";
 import { asMemberId } from "./organization-member.types.js";
+import type { MongoOrganizationRecord } from "../organization/mongo-organization-repository.js";
 
 type MongoMemberRecord = Pick<
   IMember,
@@ -30,11 +33,12 @@ type MongoMemberRecord = Pick<
   | "roleId"
   | "status"
   | "joinedAt"
+  | "isOwner"
   | "deletedAt"
   | "createdAt"
   | "updatedAt"
 > & {
-  createdBy: {
+  invitedBy: {
     _id: Types.ObjectId;
     displayName: string;
   };
@@ -52,7 +56,7 @@ export class MongoMemberRepository implements MemberRepository {
 
     const member = await MemberModel.findOne(filter)
       .populate({
-        path: "createdBy",
+        path: "invitedBy",
         select: "_id displayName",
       })
       .lean<MongoMemberRecord>()
@@ -65,15 +69,87 @@ export class MongoMemberRepository implements MemberRepository {
     const members = await MemberModel.find({
       organizationId: toObjectId(organizationId),
       deletedAt: { $exists: false },
+      isOwner: true,
     })
       .populate({
-        path: "createdBy",
+        path: "invitedBy",
         select: "_id displayName",
       })
       .lean<MongoMemberRecord[]>()
       .exec();
 
     return members.map(m => this.toMember(m));
+  }
+
+  async findUserOrganizations(userId: UserId): Promise<Organization[]> {
+    const organizations = await MemberModel.aggregate<MongoOrganizationRecord>([
+      {
+        $match: {
+          userId: toObjectId(userId),
+          status: "active",
+        },
+      },
+      {
+        $lookup: {
+          from: "organizations",
+          localField: "organizationId",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $match: {
+                status: "active",
+                deletedAt: null,
+              },
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "createdBy",
+                foreignField: "_id",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      displayName: 1,
+                    },
+                  },
+                ],
+                as: "createdBy",
+              },
+            },
+            {
+              $unwind: {
+                path: "$createdBy",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                slug: 1,
+                status: 1,
+                frontendUrl: 1,
+                createdBy: 1,
+                createdAt: 1,
+                updatedAt: 1,
+              },
+            },
+          ],
+          as: "organization",
+        },
+      },
+      {
+        $unwind: "$organization",
+      },
+      {
+        $replaceRoot: {
+          newRoot: "$organization",
+        },
+      },
+    ]);
+
+    return organizations.map(organization => this.toOrganization(organization));
   }
 
   async findMany(
@@ -97,7 +173,7 @@ export class MongoMemberRepository implements MemberRepository {
 
     const records = await MemberModel.find(filter)
       .populate({
-        path: "createdBy",
+        path: "invitedBy",
         select: "_id displayName",
       })
       .sort({ _id: 1 })
@@ -121,12 +197,15 @@ export class MongoMemberRepository implements MemberRepository {
       organizationId: toObjectId(data.organizationId),
       userId: toObjectId(data.userId),
       roleId: toObjectId(data.roleId),
-      createdBy: toObjectId(data.actorId),
+      invitedBy: toObjectId(data.actorId),
+      status: data.status,
+      ...(data.isOwner && { isOwner: data.isOwner }),
+      ...(data.joinedAt && { joinedAt: data.joinedAt }),
     });
 
     const populatedOrganizationMember = await MemberModel.findById(organizationMember._id)
       .populate({
-        path: "createdBy",
+        path: "invitedBy",
         select: "_id displayName",
       })
       .lean<MongoMemberRecord>()
@@ -161,7 +240,7 @@ export class MongoMemberRepository implements MemberRepository {
       },
     )
       .populate({
-        path: "createdBy",
+        path: "invitedBy",
         select: "_id displayName",
       })
       .lean<MongoMemberRecord>()
@@ -170,9 +249,7 @@ export class MongoMemberRepository implements MemberRepository {
     return organizationMember ? this.toMember(organizationMember) : null;
   }
 
-  async softDelete(
-    criteria: DeleteMemberCriteria,
-  ): Promise<Member | null> {
+  async softDelete(criteria: DeleteMemberCriteria): Promise<Member | null> {
     const member = await MemberModel.findOneAndUpdate(
       {
         _id: toObjectId(criteria.memberId),
@@ -190,7 +267,7 @@ export class MongoMemberRepository implements MemberRepository {
       },
     )
       .populate({
-        path: "createdBy",
+        path: "invitedBy",
         select: "_id displayName",
       })
       .lean<MongoMemberRecord>()
@@ -215,16 +292,39 @@ export class MongoMemberRepository implements MemberRepository {
       userId: asUserId(record.userId.toString()),
       roleId: asRoleId(record.roleId.toString()),
       status: record.status,
-      createdBy: {
-        id: asUserId(record.createdBy._id.toString()),
-        displayName: record.createdBy.displayName,
+      invitedBy: {
+        id: asUserId(record.invitedBy._id.toString()),
+        displayName: record.invitedBy.displayName,
       },
       ...(record.joinedAt !== undefined && {
         joinedAt: record.joinedAt,
       }),
+      isOwner: record.isOwner,
       ...(record.deletedAt !== undefined && {
         deletedAt: record.deletedAt,
       }),
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    };
+  }
+
+  private toOrganization(record: MongoOrganizationRecord): Organization {
+    return {
+      id: asOrganizationId(record._id.toString()),
+      name: record.name,
+      slug: record.slug,
+      status: record.status,
+      frontendUrl: record.frontendUrl,
+
+      ...(record.deletedAt !== undefined && {
+        deletedAt: record.deletedAt,
+      }),
+
+      createdBy: {
+        id: asUserId(record.createdBy._id.toString()),
+        displayName: record.createdBy.displayName,
+      },
+
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
