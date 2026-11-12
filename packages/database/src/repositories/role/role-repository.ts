@@ -1,4 +1,5 @@
 import type { OrganizationId } from "../organization/organization.types.js";
+import type { PermissionId } from "../permission/permission.types.js";
 import type {
   HardDeleteRepository,
   SoftDeleteRepository,
@@ -6,11 +7,9 @@ import type {
 } from "../repository.contracts.js";
 import type {
   CreateRoleData,
-  DeleteRoleCriteria,
   FindManyRolesCriteria,
   FindRoleCriteria,
   Role,
-  UpdateRoleCriteria,
   UpdateRoleData,
 } from "./role.types.js";
 
@@ -21,10 +20,19 @@ export interface RoleRepository
       FindRoleCriteria,
       FindManyRolesCriteria,
       CreateRoleData,
-      UpdateRoleCriteria,
+      FindRoleCriteria,
       UpdateRoleData
     >,
-    SoftDeleteRepository<Role, DeleteRoleCriteria>,
-    HardDeleteRepository<DeleteRoleCriteria> {
+    SoftDeleteRepository<Role, FindRoleCriteria>,
+    HardDeleteRepository<FindRoleCriteria> {
   findDefault(organizationId: OrganizationId): Promise<Role | null>;
+  createSystemRole(data: CreateRoleData): Promise<Role | null>;
+  addPermissions(
+    criteria: FindRoleCriteria,
+    permissions: PermissionId[],
+  ): Promise<Role | null>;
+  removePermissions(
+    criteria: FindRoleCriteria,
+    permissions: PermissionId[],
+  ): Promise<Role | null>;
 }
