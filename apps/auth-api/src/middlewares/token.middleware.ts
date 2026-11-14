@@ -2,30 +2,28 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
 import { ERROR_CODES } from "../errors/error-codes.js";
-import {
-  AuthenticationError,
-  TokenExpiredError,
-} from "../errors/authentication-error.js";
+
 import { config } from "@authcore/config";
 import { asOrganizationId, asSessionId, asUserId } from "@authcore/database";
 import type { AccessTokenPayload } from "../modules/auth/auth.types.js";
-import { authorizationService } from "../container.js";
+import { authorizationService, sessionService } from "../container.js";
+import { AppError } from "../errors/app-error.js";
 
-export function validateAccessToken(
+export async function validateAccessToken(
   req: Request,
   _res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   const authorization = req.headers.authorization;
 
   if (!authorization) {
-    throw new AuthenticationError(ERROR_CODES.AUTHORIZATION_HEADER_MISSING);
+    throw new AppError(ERROR_CODES.AUTH_HEADER_MISSING);
   }
 
   const [scheme, token, ...extra] = authorization.trim().split(/\s+/);
 
   if (scheme !== "Bearer" || !token || extra.length > 0) {
-    throw new AuthenticationError(ERROR_CODES.AUTHORIZATION_HEADER_INVALID);
+    throw new AppError(ERROR_CODES.AUTH_HEADER_INVALID);
   }
 
   let decoded: string | jwt.JwtPayload;
@@ -37,18 +35,18 @@ export function validateAccessToken(
     });
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      throw new TokenExpiredError(ERROR_CODES.AUTH_TOKEN_EXPIRED, error.expiredAt, {
+      throw new AppError(ERROR_CODES.AUTH_TOKEN_EXPIRED, {
         cause: error,
       });
     }
 
-    throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_TOKEN, {
+    throw new AppError(ERROR_CODES.AUTH_INVALID_TOKEN, {
       cause: error,
     });
   }
 
   if (typeof decoded === "string") {
-    throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_TOKEN);
+    throw new AppError(ERROR_CODES.AUTH_INVALID_TOKEN);
   }
 
   if (
@@ -58,7 +56,7 @@ export function validateAccessToken(
     typeof decoded.jti !== "string" ||
     decoded.type !== "access"
   ) {
-    throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_TOKEN);
+    throw new AppError(ERROR_CODES.AUTH_INVALID_TOKEN);
   }
 
   const accessToken: AccessTokenPayload = {
@@ -69,8 +67,15 @@ export function validateAccessToken(
     type: "access",
   };
 
+  const session = await sessionService.getSessionById(accessToken.sid);
+
+  if (!session) throw new AppError("AUTH_SESSION_NOT_FOUND");
+  if (session.revokedAt) throw new AppError("AUTH_SESSION_REVOKED");
+  if (session.expiresAt < new Date()) throw new AppError("AUTH_SESSION_EXPIRED");
+  if (session.userId !== decoded.sub || session.organizationId !== decoded.orgId)
+    throw new AppError("AUTH_INVALID_TOKEN");
+
   req.token = accessToken;
-  req.user = { userId: accessToken.sub };
 
   next();
 }
@@ -84,19 +89,19 @@ export async function validateApiToken(
     const authorization = req.get("authorization");
 
     if (!authorization) {
-      throw new AuthenticationError(ERROR_CODES.AUTHORIZATION_HEADER_MISSING);
+      throw new AppError(ERROR_CODES.AUTH_HEADER_MISSING);
     }
 
     const match = /^Bearer\s+(\S+)$/i.exec(authorization.trim());
 
     if (!match?.[1]) {
-      throw new AuthenticationError(ERROR_CODES.AUTHORIZATION_HEADER_INVALID);
+      throw new AppError(ERROR_CODES.AUTH_HEADER_INVALID);
     }
 
     const apiKey = await authorizationService.getByKey(match[1]);
 
     if (apiKey.status !== "active") {
-      throw new AuthenticationError(ERROR_CODES.API_KEY_REVOKED);
+      throw new AppError(ERROR_CODES.API_KEY_REVOKED);
     }
 
     req.apiKey = apiKey;
