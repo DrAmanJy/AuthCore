@@ -1,15 +1,31 @@
 import { Router } from "express";
 import { apiKeyController } from "../../../container.js";
+import { requirePermission } from "../../../middlewares/permission.js";
 
 const apiKeyRouter = Router({ mergeParams: true });
 
-apiKeyRouter.post("/api-keys", apiKeyController.createApiKey);
+apiKeyRouter.get(
+  "/",
+  requirePermission("api_keys:read"),
+  apiKeyController.getALlOrganizationApiKey,
+);
 
-apiKeyRouter.get("/api-keys", apiKeyController.getALlOrganizationApiKey);
-apiKeyRouter.get("/api-keys/:apiKeyId", apiKeyController.getApiKeyById);
+apiKeyRouter.post(
+  "/",
+  requirePermission("api_keys:create"),
+  apiKeyController.createApiKey,
+);
 
-apiKeyRouter.patch("/api-keys/:key/revoke", apiKeyController.revokeApiKey);
+apiKeyRouter.get(
+  "/:apiKeyId",
+  requirePermission("api_keys:read"),
+  apiKeyController.getApiKeyById,
+);
 
-apiKeyRouter.delete("/api-keys/:apiKeyId", apiKeyController.deleteApiKey);
+apiKeyRouter.patch(
+  "/:key/revoke",
+  requirePermission("api_keys:revoke"),
+  apiKeyController.revokeApiKey,
+);
 
 export default apiKeyRouter;
