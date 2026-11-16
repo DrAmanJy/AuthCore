@@ -1,18 +1,17 @@
 import type {
   ActorId,
-  CreateMemberData,
   Member,
   MemberId,
   MemberRepository,
+  Organization,
   OrganizationId,
   RoleId,
   UserId,
 } from "@authcore/database";
-import { ResourceError } from "../../../errors/resource-error.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
 import { logger } from "@authcore/logger";
 import type { AuthorizationService } from "../authorization/authorization.service.js";
-import { InternalServerError } from "../../../errors/internal-server-error.js";
+import { AppError } from "../../../errors/app-error.js";
 
 export class MembersService {
   constructor(
@@ -40,7 +39,7 @@ export class MembersService {
     });
 
     if (!member) {
-      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
+      throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
     }
 
     return member;
@@ -66,7 +65,7 @@ export class MembersService {
     });
 
     if (!member) {
-      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
+      throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
     }
 
     return member;
@@ -85,23 +84,29 @@ export class MembersService {
     return result.items;
   }
 
-  async addMember(
-    organizationId: OrganizationId,
-    actorId: ActorId,
-    data: Omit<CreateMemberData, "organizationId" | "actorId">,
-  ): Promise<Member> {
+  getUserOrganizations(userId: UserId): Promise<Organization[]> {
+    return this.memberRepository.findUserOrganizations(userId);
+  }
+
+  async addMember(params: {
+    organizationId: OrganizationId;
+    userId: UserId;
+    actorId: ActorId;
+    roleId: RoleId;
+    status: "invited" | "active";
+  }): Promise<Member> {
     await this.authorizationService.getValidOrganization(
       {
         by: "id",
-        organizationId,
+        organizationId: params.organizationId,
       },
-      actorId,
+      params.actorId,
     );
 
     const existingMember = await this.memberRepository.find({
       by: "user",
-      userId: data.userId,
-      organizationId,
+      userId: params.userId,
+      organizationId: params.organizationId,
     });
 
     if (existingMember) {
@@ -109,21 +114,28 @@ export class MembersService {
         {
           event: "organization.member.create.failed",
           reason: "organization_already_exists",
-          actorId,
-          organizationId,
+          actorId: params.actorId,
+          organizationId: params.organizationId,
         },
         "Failed to create member: already exists",
       );
-      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_ALREADY_EXISTS);
+      throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_ALREADY_EXISTS);
     }
 
     const member = await this.memberRepository.create({
-      ...data,
-      organizationId,
-      actorId,
+      organizationId: params.organizationId,
+      actorId: params.actorId,
+      roleId: params.roleId,
+      status: params.status,
+      userId: params.userId,
+      ...(params.status === "active" && { joinedAt: new Date() }),
     });
     logger.info(
-      { event: "organization.member.create.success", actorId, memberId: member.id },
+      {
+        event: "organization.member.create.success",
+        actorId: params.actorId,
+        memberId: member.id,
+      },
       "Organization member created successfully",
     );
 
@@ -139,7 +151,7 @@ export class MembersService {
     const member = await this.getMember(organizationId, memberId, actorId);
 
     if (member.status !== "active") {
-      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
+      throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
     const updatedMember = await this.memberRepository.update(
@@ -148,7 +160,7 @@ export class MembersService {
     );
 
     if (!updatedMember) {
-      throw new InternalServerError();
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
     logger.info(
@@ -170,7 +182,7 @@ export class MembersService {
     const member = await this.getMember(organizationId, memberId, actorId);
 
     if (member.status !== "active") {
-      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
+      throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
     const updatedMember = await this.memberRepository.update(
@@ -179,7 +191,7 @@ export class MembersService {
     );
 
     if (!updatedMember) {
-      throw new InternalServerError();
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
     logger.info(
@@ -201,7 +213,7 @@ export class MembersService {
     const member = await this.getMember(organizationId, memberId, actorId);
 
     if (member.status !== "active") {
-      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
+      throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_ACTIVE);
     }
 
     const updatedMember = await this.memberRepository.update(
@@ -210,7 +222,7 @@ export class MembersService {
     );
 
     if (!updatedMember) {
-      throw new InternalServerError();
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
     logger.info(
@@ -232,7 +244,7 @@ export class MembersService {
     const member = await this.getMember(organizationId, memberId, actorId);
 
     if (member.status !== "suspended") {
-      throw new ResourceError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_SUSPENDED);
+      throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_SUSPENDED);
     }
 
     const updatedMember = await this.memberRepository.update(
@@ -241,7 +253,7 @@ export class MembersService {
     );
 
     if (!updatedMember) {
-      throw new InternalServerError();
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
     logger.info(
