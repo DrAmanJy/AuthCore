@@ -8,6 +8,8 @@ import getAuthToken from "../../../utils/token.js";
 import type { MembersService } from "./member.service.js";
 import { sendCreated, sendSuccess } from "../../../utils/response.utils.js";
 import type { Request, Response } from "express";
+import { AppError } from "../../../errors/app-error.js";
+import { ERROR_CODES } from "../../../errors/error-codes.js";
 
 export class MemberController {
   constructor(private readonly membersService: MembersService) {
@@ -36,7 +38,7 @@ export class MemberController {
     const { organizationId } = req.params;
 
     if (!organizationId) {
-      throw new Error("change at L10");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     const members = await this.membersService.getMembers(organizationId, sub);
 
@@ -52,11 +54,14 @@ export class MemberController {
     const { roleId, userId } = req.body;
 
     if (!organizationId) {
-      throw new Error("change at L10");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
-    const member = await this.membersService.addMember(organizationId, sub, {
-      roleId,
+    const member = await this.membersService.addMember({
+      organizationId,
       userId,
+      actorId: sub,
+      roleId,
+      status: "invited",
     });
 
     sendCreated(res, member, "Organization Member successfully created");
@@ -70,7 +75,7 @@ export class MemberController {
     const { organizationId, memberId } = req.params;
 
     if (!organizationId || !memberId) {
-      throw new Error("change at L10");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     const member = await this.membersService.getMember(organizationId, memberId, sub);
 
@@ -90,7 +95,7 @@ export class MemberController {
     const { roleId } = req.body;
 
     if (!organizationId || !memberId) {
-      throw new Error("change at L10");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     const member = await this.membersService.changeRole(
       req.params.organizationId,
@@ -110,7 +115,7 @@ export class MemberController {
     const { organizationId, memberId } = req.params;
 
     if (!organizationId || !memberId) {
-      throw new Error("change at L10");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     const member = await this.membersService.activateMember(
       organizationId,
@@ -129,7 +134,7 @@ export class MemberController {
     const { organizationId, memberId } = req.params;
 
     if (!organizationId || !memberId) {
-      throw new Error("change at L10");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     const member = await this.membersService.suspendMember(organizationId, memberId, sub);
 
@@ -144,7 +149,7 @@ export class MemberController {
     const { organizationId, memberId } = req.params;
 
     if (!organizationId || !memberId) {
-      throw new Error("change at L10");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     const member = await this.membersService.removeMember(organizationId, memberId, sub);
 

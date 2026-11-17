@@ -5,9 +5,8 @@ export interface IRole {
   _id: Types.ObjectId;
   organizationId: Types.ObjectId;
   name: string;
-  createdBy: Types.ObjectId;
-  isSystemRole: boolean;
   permissionIds: Types.ObjectId[];
+  createdBy: Types.ObjectId;
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -30,19 +29,6 @@ const RoleSchema = new Schema<IRole>(
       maxlength: 32,
     },
 
-    createdBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      immutable: true,
-    },
-
-    isSystemRole: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-
     permissionIds: {
       type: [
         {
@@ -51,6 +37,12 @@ const RoleSchema = new Schema<IRole>(
         },
       ],
       default: [],
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      immutable: true,
     },
     deletedAt: {
       type: Date,

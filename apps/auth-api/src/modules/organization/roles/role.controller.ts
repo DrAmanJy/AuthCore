@@ -30,17 +30,17 @@ export class RoleController {
     req: Request<
       { organizationId: OrganizationId },
       unknown,
-      { name: string; permissions: CreateRoleData["permissions"] }
+      { name: string; permissionIds: CreateRoleData["permissionIds"] }
     >,
     res: Response,
   ) {
     const { sub: actorId } = getAuthToken(req);
     const { organizationId } = req.params;
-    const { name, permissions } = req.body;
+    const { name, permissionIds } = req.body;
     const role = await this.roleService.createRole({
       organizationId,
       actorId,
-      data: { name, permissions },
+      data: { name, permissionIds },
     });
 
     sendCreated(res, role, "Role successfully created");
@@ -67,14 +67,13 @@ export class RoleController {
   ) {
     const { organizationId, roleId } = req.params;
     const { sub: actorId } = getAuthToken(req);
-    const { name, permissions } = req.body;
+    const { name } = req.body;
     const role = await this.roleService.updateRole({
       organizationId,
       roleId,
       actorId,
       data: {
         name,
-        permissions,
       },
     });
 

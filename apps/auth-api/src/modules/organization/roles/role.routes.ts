@@ -1,15 +1,25 @@
 import { Router } from "express";
+import { requirePermission } from "../../../middlewares/permission.js";
 import { roleController } from "../../../container.js";
 
 const roleRouter = Router({ mergeParams: true });
 
-roleRouter.get("/roles", roleController.getRoles);
+roleRouter.get("/", requirePermission("roles:read"), roleController.getRoles);
 
-roleRouter.post("/roles", roleController.createRole);
+roleRouter.post("/", requirePermission("roles:create"), roleController.createRole);
 
-roleRouter.get("/roles/:roleId", roleController.getRole);
-roleRouter.patch("/roles/:roleId", roleController.updateRole);
+roleRouter.get("/:roleId", requirePermission("roles:read"), roleController.getRole);
 
-roleRouter.delete("/roles/:roleId", roleController.deleteRole);
+roleRouter.patch(
+  "/:roleId",
+  requirePermission("roles:update"),
+  roleController.updateRole,
+);
+
+roleRouter.delete(
+  "/:roleId",
+  requirePermission("roles:delete"),
+  roleController.deleteRole,
+);
 
 export default roleRouter;

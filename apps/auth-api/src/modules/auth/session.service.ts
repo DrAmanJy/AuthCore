@@ -30,12 +30,8 @@ import type {
   FindUserAllSessionType,
 } from "./auth.types.js";
 
-import {
-  AuthenticationError,
-  TokenExpiredError,
-} from "../../errors/authentication-error.js";
-
 import { ERROR_CODES } from "../../errors/error-codes.js";
+import { AppError } from "../../errors/app-error.js";
 
 export class SessionService {
   constructor(
@@ -78,7 +74,7 @@ export class SessionService {
     };
   }
 
-  async getSessionById(sessionId: SessionId): Promise<Session> {
+  async getSessionById(sessionId: SessionId): Promise<Session | null> {
     const session = await this.sessionRepository.find({
       by: "id",
       sessionId,
@@ -155,13 +151,13 @@ export class SessionService {
     });
 
     if (!currentRefreshToken) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
+      throw new AppError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
     const now = new Date();
 
     if (currentRefreshToken.revokedAt || currentRefreshToken.expiresAt <= now) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
+      throw new AppError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
     const session = await this.sessionRepository.find({
@@ -170,15 +166,15 @@ export class SessionService {
     });
 
     if (!session) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_SESSION_NOT_FOUND);
+      throw new AppError(ERROR_CODES.AUTH_SESSION_NOT_FOUND);
     }
 
     if (session.revokedAt) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_SESSION_REVOKED);
+      throw new AppError(ERROR_CODES.AUTH_SESSION_REVOKED);
     }
 
     if (session.expiresAt <= now) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_SESSION_EXPIRED);
+      throw new AppError(ERROR_CODES.AUTH_SESSION_EXPIRED);
     }
 
     const consumedToken = await this.refreshTokenRepository.consumeIfUnused(
@@ -187,7 +183,7 @@ export class SessionService {
     );
 
     if (!consumedToken) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
+      throw new AppError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
     const { refreshToken: newRefreshToken, refreshTokenHash: newRefreshTokenHash } =
@@ -257,12 +253,12 @@ export class SessionService {
       }) as AccessTokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        throw new TokenExpiredError(ERROR_CODES.AUTH_TOKEN_EXPIRED, error.expiredAt, {
+        throw new AppError(ERROR_CODES.AUTH_TOKEN_EXPIRED, {
           cause: error,
         });
       }
 
-      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_TOKEN, {
+      throw new AppError(ERROR_CODES.AUTH_INVALID_TOKEN, {
         cause: error,
       });
     }
@@ -270,7 +266,7 @@ export class SessionService {
 
   private assertSession(session: Session | null): Session {
     if (!session) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_SESSION_NOT_FOUND);
+      throw new AppError(ERROR_CODES.AUTH_SESSION_NOT_FOUND);
     }
 
     return session;

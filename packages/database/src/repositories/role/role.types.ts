@@ -1,5 +1,5 @@
 import type { OrganizationId } from "../organization/organization.types.js";
-import type { Permission } from "../permission/permission.types.js";
+import type { Permission, PermissionId } from "../permission/permission.types.js";
 import type { ActorId, CreatedBy } from "../user/user.types.js";
 
 export type RoleId = string & {
@@ -12,22 +12,20 @@ export type Role = {
   id: RoleId;
   organizationId: OrganizationId;
   name: string;
-  createdBy: CreatedBy;
-  isSystemRole: boolean;
   permissions: Permission["key"][];
+  createdBy: CreatedBy;
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type CreateRoleData = Pick<Role, "name" | "isSystemRole" | "permissions"> & {
-  organizationId: OrganizationId;
-  actorId: ActorId;
+export type CreateRoleData = Pick<Role, "name" | "organizationId"> & {
+  permissionIds: PermissionId[];
+  createdBy: ActorId;
 };
 
 export type UpdateRoleData = {
   name?: string;
-  permissions?: Permission["key"][];
 };
 
 export type FindRoleCriteria =
@@ -43,16 +41,5 @@ export type FindRoleCriteria =
     };
 
 export interface FindManyRolesCriteria {
-  organizationId: OrganizationId;
-  isSystemRole?: boolean;
-}
-
-export interface UpdateRoleCriteria {
-  roleId: RoleId;
-  organizationId: OrganizationId;
-}
-
-export interface DeleteRoleCriteria {
-  roleId: RoleId;
   organizationId: OrganizationId;
 }

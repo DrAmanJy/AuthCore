@@ -1,20 +1,39 @@
 import { Router } from "express";
 import { memberController } from "../../../container.js";
+import { requirePermission } from "../../../middlewares/permission.js";
 
 const memberRouter = Router({ mergeParams: true });
 
-memberRouter.get("/members", memberController.getMembers);
+memberRouter.get("/", requirePermission("members:read"), memberController.getMembers);
 
-memberRouter.post("/members", memberController.createMember);
+memberRouter.get(
+  "/:memberId",
+  requirePermission("members:read"),
+  memberController.getMember,
+);
 
-memberRouter.get("/members/:memberId", memberController.getMember);
+memberRouter.patch(
+  "/:memberId/role",
+  requirePermission("members:update"),
+  memberController.changeRole,
+);
 
-memberRouter.patch("/members/:memberId/role", memberController.changeRole);
+memberRouter.post(
+  "/:memberId/activate",
+  requirePermission("members:update"),
+  memberController.activateMember,
+);
 
-memberRouter.post("/members/:memberId/activate", memberController.activateMember);
+memberRouter.post(
+  "/:memberId/suspend",
+  requirePermission("members:update"),
+  memberController.suspendMember,
+);
 
-memberRouter.post("/members/:memberId/suspend", memberController.suspendMember);
-
-memberRouter.post("/members/:memberId", memberController.removeMember);
+memberRouter.delete(
+  "/:memberId",
+  requirePermission("members:remove"),
+  memberController.removeMember,
+);
 
 export default memberRouter;

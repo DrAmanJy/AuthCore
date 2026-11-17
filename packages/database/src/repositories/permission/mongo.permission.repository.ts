@@ -1,33 +1,27 @@
 import type { QueryFilter } from "mongoose";
-import type { IPermissions } from "../../models/permission.model.js";
+import type { IPermission } from "../../models/permission.model.js";
 import PermissionModel from "../../models/permission.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
-import {
-  asOrganizationId,
-  type OrganizationId,
-} from "../organization/organization.types.js";
+import { asOrganizationId } from "../organization/organization.types.js";
 import type { FindManyOptions, PaginatedResult } from "../repository-pagination.types.js";
-import { asRoleId } from "../role/role.types.js";
 import type { CreatedBy } from "../user/user.types.js";
 import type { PermissionRepository } from "./permission.repository.js";
 import {
   asPermissionId,
   type CreatePermissionData,
-  type DeletePermissionCriteria,
   type FindManyPermissionsCriteria,
   type FindPermissionCriteria,
   type Permission,
-  type UpdatePermissionCriteria,
   type UpdatePermissionData,
 } from "./permission.types.js";
 
-type PermissionRecord = IPermissions & {
+type PermissionRecord = IPermission & {
   createdBy: CreatedBy;
 };
 
 export class MongoPermissionRepository implements PermissionRepository {
   async find(criteria: FindPermissionCriteria): Promise<Permission | null> {
-    const filter: QueryFilter<IPermissions> = {
+    const filter: QueryFilter<IPermission> = {
       organizationId: toObjectId(criteria.organizationId),
       deletedAt: { $exists: false },
       ...(criteria.by === "id"
@@ -46,11 +40,9 @@ export class MongoPermissionRepository implements PermissionRepository {
     return permission ? this.toPermission(permission) : null;
   }
 
-  async findSystemPermissions(
-    organizationId: OrganizationId,
-  ): Promise<Permission[]> {
+  async findSystemPermissions(): Promise<Permission[]> {
     const permissions = await PermissionModel.find({
-      organizationId: toObjectId(organizationId),
+      scope: "system",
       deletedAt: { $exists: false },
     })
       .populate({
@@ -67,7 +59,7 @@ export class MongoPermissionRepository implements PermissionRepository {
     criteria: FindManyPermissionsCriteria,
     options?: FindManyOptions,
   ): Promise<PaginatedResult<Permission>> {
-    const filter: QueryFilter<IPermissions> = {
+    const filter: QueryFilter<IPermission> = {
       organizationId: toObjectId(criteria.organizationId),
       deletedAt: { $exists: false },
       ...(criteria.roleId && { roleId: toObjectId(criteria.roleId) }),
@@ -104,11 +96,11 @@ export class MongoPermissionRepository implements PermissionRepository {
 
   async create(data: CreatePermissionData): Promise<Permission> {
     const permission = await PermissionModel.create({
-      createdBy: toObjectId(data.actorId),
-      organizationId: toObjectId(data.organizationId),
-      roleId: toObjectId(data.roleId),
+      ...(data.organizationId && { organizationId: toObjectId(data.organizationId) }),
       key: data.key,
       description: data.description,
+      ...(data.scope && { scope: data.scope }),
+      ...(data.createdBy && { createdBy: toObjectId(data.createdBy) }),
     });
 
     const permissionRecord = await PermissionModel.findById(permission.id)
@@ -127,19 +119,20 @@ export class MongoPermissionRepository implements PermissionRepository {
   }
 
   async update(
-    criteria: UpdatePermissionCriteria,
+    criteria: FindPermissionCriteria,
     data: UpdatePermissionData,
   ): Promise<Permission | null> {
     const permission = await PermissionModel.findOneAndUpdate(
       {
-        _id: toObjectId(criteria.permissionId),
+        ...(criteria.by === "id"
+          ? { _id: toObjectId(criteria.permissionId) }
+          : { key: criteria.key }),
         organizationId: toObjectId(criteria.organizationId),
         deletedAt: { $exists: false },
       },
       {
         $set: {
-          ...(data.description !== undefined && { description: data.description }),
-          ...(data.roleId !== undefined && { roleId: toObjectId(data.roleId) }),
+          data,
         },
       },
       { returnDocument: "after", runValidators: true },
@@ -154,12 +147,12 @@ export class MongoPermissionRepository implements PermissionRepository {
     return permission ? this.toPermission(permission) : null;
   }
 
-  async softDelete(
-    criteria: DeletePermissionCriteria,
-  ): Promise<Permission | null> {
+  async softDelete(criteria: FindPermissionCriteria): Promise<Permission | null> {
     const permission = await PermissionModel.findOneAndUpdate(
       {
-        _id: toObjectId(criteria.permissionId),
+        ...(criteria.by === "id"
+          ? { _id: toObjectId(criteria.permissionId) }
+          : { key: criteria.key }),
         organizationId: toObjectId(criteria.organizationId),
         deletedAt: { $exists: false },
       },
@@ -178,10 +171,13 @@ export class MongoPermissionRepository implements PermissionRepository {
     return permission ? this.toPermission(permission) : null;
   }
 
-  async delete(criteria: DeletePermissionCriteria): Promise<boolean> {
+  async delete(criteria: FindPermissionCriteria): Promise<boolean> {
     const result = await PermissionModel.findOneAndDelete({
-      _id: toObjectId(criteria.permissionId),
+      ...(criteria.by === "id"
+        ? { _id: toObjectId(criteria.permissionId) }
+        : { key: criteria.key }),
       organizationId: toObjectId(criteria.organizationId),
+      deletedAt: { $exists: true },
     }).exec();
 
     return Boolean(result);
@@ -190,10 +186,12 @@ export class MongoPermissionRepository implements PermissionRepository {
   private toPermission(record: PermissionRecord): Permission {
     return {
       id: asPermissionId(record._id.toString()),
+      scope: record.scope,
+      ...(record.organizationId && {
+        organizationId: asOrganizationId(record.organizationId.toString()),
+      }),
       key: record.key,
-      organizationId: asOrganizationId(record.organizationId.toString()),
       description: record.description,
-      roleId: asRoleId(record.roleId.toString()),
       ...(record.deletedAt && { deletedAt: record.deletedAt }),
       createdBy: record.createdBy,
       createdAt: record.createdAt,

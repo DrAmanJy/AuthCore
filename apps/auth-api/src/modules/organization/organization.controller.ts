@@ -11,8 +11,8 @@ import type {
 import type { OrganizationService } from "./organization.service.js";
 import type { AccessTokenPayload } from "../auth/auth.types.js";
 import { sendCreated, sendSuccess } from "../../utils/response.utils.js";
-import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
+import { AppError } from "../../errors/app-error.js";
 
 export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {
@@ -101,7 +101,7 @@ export class OrganizationController {
 
   private getAuthToken(req: { token?: AccessTokenPayload }): AccessTokenPayload {
     if (!req.token) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
+      throw new AppError(ERROR_CODES.AUTH_UNAUTHORIZED);
     }
     return req.token;
   }

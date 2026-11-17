@@ -5,25 +5,22 @@ import OrganizationModel, {
 } from "../../models/organization.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
 import { mapDatabaseError } from "../../errors/database-error.utils.js";
-import type {
-  FindManyOptions,
-  PaginatedResult,
-} from "../repository-pagination.types.js";
+import type { FindManyOptions, PaginatedResult } from "../repository-pagination.types.js";
 import { asUserId } from "../user/user.types.js";
 import type { OrganizationRepository } from "./organization-repository.js";
 import type {
   CreateOrganizationData,
-  DeleteOrganizationCriteria,
   FindManyOrganizationsCriteria,
   FindOrganizationCriteria,
   Organization,
   OrganizationStatus,
-  UpdateOrganizationCriteria,
   UpdateOrganizationData,
 } from "./organization.types.js";
 import { asOrganizationId } from "./organization.types.js";
+import MemberModel from "../../models/member.model.js";
+import { RoleModel } from "../../models/role.model.js";
 
-type MongoOrganizationRecord = {
+export type MongoOrganizationRecord = {
   _id: Types.ObjectId;
   name: string;
   slug: string;
@@ -47,8 +44,10 @@ export class MongoOrganizationRepository implements OrganizationRepository {
 
       if (criteria.by === "id") {
         filter._id = toObjectId(criteria.organizationId);
-      } else {
+      } else if (criteria.by === "slug") {
         filter.slug = criteria.slug;
+      } else {
+        filter.createdBy = toObjectId(criteria.actorId);
       }
 
       const organization = await OrganizationModel.findOne(filter)
@@ -69,8 +68,8 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     try {
       const filter: QueryFilter<IOrganization> = {
         deletedAt: { $exists: false },
-        ...(criteria.actorId && { createdBy: toObjectId(criteria.actorId) }),
-        ...(criteria.status && { status: criteria.status }),
+        ...(criteria.by === "actor" && { createdBy: criteria.actorId }),
+        ...(criteria.by !== "all" && { status: criteria.status }),
       };
 
       const limit = Math.min(Math.max(options?.limit ?? 20, 1), 100);
@@ -111,6 +110,21 @@ export class MongoOrganizationRepository implements OrganizationRepository {
         createdBy: toObjectId(data.actorId),
       });
 
+      const role = await RoleModel.create({
+        organizationId: organization._id,
+        name: data.name,
+        createdBy: toObjectId(data.actorId),
+      });
+
+      await MemberModel.create({
+        organizationId: organization._id,
+        userId: toObjectId(data.actorId),
+        roleId: role._id,
+        invitedBy: toObjectId(data.actorId),
+        status: "active",
+        isOwner: true,
+      });
+
       const populatedOrganization = await OrganizationModel.findById(organization._id)
         .populate({
           path: "createdBy",
@@ -130,14 +144,15 @@ export class MongoOrganizationRepository implements OrganizationRepository {
   }
 
   async update(
-    criteria: UpdateOrganizationCriteria,
+    criteria: FindOrganizationCriteria,
     data: UpdateOrganizationData,
   ): Promise<Organization | null> {
     try {
       const filter: QueryFilter<IOrganization> = {
-        _id: toObjectId(criteria.organizationId),
+        ...(criteria.by === "actor" && { createdBy: criteria.actorId }),
+        ...(criteria.by === "id" && { createdBy: toObjectId(criteria.organizationId) }),
+        ...(criteria.by === "slug" && { createdBy: criteria.slug }),
         deletedAt: { $exists: false },
-        ...(criteria.actorId && { createdBy: toObjectId(criteria.actorId) }),
       };
 
       const organization = await OrganizationModel.findOneAndUpdate(
@@ -163,16 +178,14 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     }
   }
 
-  async softDelete(
-    criteria: DeleteOrganizationCriteria,
-  ): Promise<Organization | null> {
+  async softDelete(criteria: FindOrganizationCriteria): Promise<Organization | null> {
     try {
       const filter: QueryFilter<IOrganization> = {
-        _id: toObjectId(criteria.organizationId),
+        ...(criteria.by === "actor" && { createdBy: criteria.actorId }),
+        ...(criteria.by === "id" && { createdBy: toObjectId(criteria.organizationId) }),
+        ...(criteria.by === "slug" && { createdBy: criteria.slug }),
         deletedAt: { $exists: false },
-        ...(criteria.actorId && { createdBy: toObjectId(criteria.actorId) }),
       };
-
       const organization = await OrganizationModel.findOneAndUpdate(
         filter,
         {
@@ -198,11 +211,13 @@ export class MongoOrganizationRepository implements OrganizationRepository {
     }
   }
 
-  async delete(criteria: DeleteOrganizationCriteria): Promise<boolean> {
+  async delete(criteria: FindOrganizationCriteria): Promise<boolean> {
     try {
       const filter: QueryFilter<IOrganization> = {
-        _id: toObjectId(criteria.organizationId),
-        ...(criteria.actorId && { createdBy: toObjectId(criteria.actorId) }),
+        ...(criteria.by === "actor" && { createdBy: criteria.actorId }),
+        ...(criteria.by === "id" && { createdBy: toObjectId(criteria.organizationId) }),
+        ...(criteria.by === "slug" && { createdBy: criteria.slug }),
+        deletedAt: { $exists: true },
       };
 
       const result = await OrganizationModel.findOneAndDelete(filter).exec();

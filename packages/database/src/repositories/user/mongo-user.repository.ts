@@ -63,9 +63,7 @@ export class MongoUserRepository implements UserRepository {
           : { email: criteria.email.toLowerCase() }),
       };
 
-      const user = await UserModel.findOne(filter)
-        .lean<MongoUserRecord>()
-        .exec();
+      const user = await UserModel.findOne(filter).lean<MongoUserRecord>().exec();
 
       return user ? this.toUser(user) : null;
     } catch (error) {
@@ -148,10 +146,7 @@ export class MongoUserRepository implements UserRepository {
     }
   }
 
-  async update(
-    criteria: UpdateUserCriteria,
-    data: UpdateUserData,
-  ): Promise<User | null> {
+  async update(criteria: UpdateUserCriteria, data: UpdateUserData): Promise<User | null> {
     try {
       const user = await UserModel.findOneAndUpdate(
         {
@@ -170,10 +165,7 @@ export class MongoUserRepository implements UserRepository {
     }
   }
 
-  async updatePassword(
-    userId: UserId,
-    passwordHash: string,
-  ): Promise<User | null> {
+  async updatePassword(userId: UserId, passwordHash: string): Promise<User | null> {
     try {
       const user = await UserModel.findOneAndUpdate(
         {

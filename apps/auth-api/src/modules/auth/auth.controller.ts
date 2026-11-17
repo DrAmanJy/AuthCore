@@ -11,11 +11,11 @@ import type {
 } from "@authcore/contracts";
 
 import type { AuthService } from "./auth.service.js";
-import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { sendCreated, sendNoContent, sendSuccess } from "../../utils/response.utils.js";
 import getAuthToken from "../../utils/token.js";
 import type { LoginType } from "./auth.types.js";
+import { AppError } from "../../errors/app-error.js";
 
 const REFRESH_TOKEN_COOKIE =
   config.nodeEnv === "production" ? "__Host-refresh_token" : "refresh_token";
@@ -91,7 +91,7 @@ export class AuthController {
     const refreshToken: unknown = cookies[REFRESH_TOKEN_COOKIE];
 
     if (typeof refreshToken !== "string") {
-      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_NOT_FOUND);
+      throw new AppError(ERROR_CODES.AUTH_INVALID_REFRESH_TOKEN);
     }
 
     const result = await this.authService.refreshAccessToken(
@@ -107,7 +107,7 @@ export class AuthController {
     const { token } = req.query;
 
     if (typeof token !== "string" || !token.trim()) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_REQUIRED);
+      throw new AppError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_MISSING);
     }
 
     await this.authService.verifyEmail(token);
@@ -119,7 +119,7 @@ export class AuthController {
     const { email } = req.query;
 
     if (typeof email !== "string" || !email.trim()) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_EMAIL_REQUIRED);
+      throw new AppError(ERROR_CODES.AUTH_EMAIL_MISSING);
     }
 
     await this.authService.resendVerification(email);

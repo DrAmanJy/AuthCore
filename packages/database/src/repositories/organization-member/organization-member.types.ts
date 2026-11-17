@@ -18,21 +18,23 @@ export type Member = {
   userId: UserId;
   roleId: RoleId;
   status: MemberStatus;
-  createdBy: CreatedBy;
+  invitedBy: CreatedBy;
   joinedAt?: Date;
+  isOwner: boolean;
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type CreateMemberData = {
-  organizationId: OrganizationId;
-  userId: UserId;
-  roleId: RoleId;
+export type CreateMemberData = Pick<
+  Member,
+  "organizationId" | "userId" | "roleId" | "status" | "joinedAt"
+> & {
   actorId: ActorId;
+  isOwner?: boolean;
 };
 
-export type UpdateMemberData = Partial<Pick<Member, "roleId" | "status">>;
+export type UpdateMemberData = Partial<Pick<Member, "roleId" | "status" | "isOwner" | "joinedAt">>;
 
 export type FindMemberCriteria =
   | {

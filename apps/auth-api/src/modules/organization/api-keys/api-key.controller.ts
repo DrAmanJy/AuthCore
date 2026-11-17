@@ -18,20 +18,15 @@ export class ApiKeyController {
   }
 
   async createApiKey(
-    req: Request<
-      { organizationId: OrganizationId },
-      unknown,
-      { name: string; key: string }
-    >,
+    req: Request<{ organizationId: OrganizationId }, unknown, { name: string }>,
     res: Response,
   ) {
     const { sub: actorId } = getAuthToken(req);
-    const { name, key } = req.body;
+    const { name } = req.body;
     const { organizationId } = req.params;
 
     const apiKey = await this.apiKeyService.create({
       name,
-      key,
       organizationId,
       actorId,
     });

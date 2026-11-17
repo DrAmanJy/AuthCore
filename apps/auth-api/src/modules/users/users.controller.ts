@@ -5,10 +5,11 @@ import { asUserId } from "@authcore/database";
 import type { ChangeStatus, UpdateProfile } from "@authcore/contracts";
 
 import type { UserService } from "./users.service.js";
-import { AuthenticationError } from "../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { sendSuccess } from "../../utils/response.utils.js";
 import type { AccessTokenPayload } from "../auth/auth.types.js";
+import { AppError } from "../../errors/app-error.js";
+import getAuthToken from "../../utils/token.js";
 
 type UserParams = {
   userId: string;
@@ -23,6 +24,7 @@ export class UserController {
     this.updateUserProfile = this.updateUserProfile.bind(this);
     this.deleteUser = this.deleteUser.bind(this);
     this.getAllUsers = this.getAllUsers.bind(this);
+    this.getUserOrganizations = this.getUserOrganizations.bind(this);
     this.changeUserStatus = this.changeUserStatus.bind(this);
     this.deactivateUser = this.deactivateUser.bind(this);
   }
@@ -62,6 +64,13 @@ export class UserController {
     sendSuccess(res, users, "Users successfully retrieved");
   }
 
+  async getUserOrganizations(req: Request, res: Response) {
+    const { sub } = getAuthToken(req);
+    const organizations = await this.userService.getUserOrganizations(sub);
+
+    sendSuccess(res, organizations, "Organizations successfully retrieved");
+  }
+
   async changeUserStatus(req: UserRequest<ChangeStatus>, res: Response) {
     const user = await this.userService.changeStatus(asUserId(req.params.userId), {
       status: req.body.status,
@@ -77,7 +86,7 @@ export class UserController {
 
   private getAuthToken(req: { token?: AccessTokenPayload }): AccessTokenPayload {
     if (!req.token) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
+      throw new AppError(ERROR_CODES.AUTH_UNAUTHORIZED);
     }
     return req.token;
   }

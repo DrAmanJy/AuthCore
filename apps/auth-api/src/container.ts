@@ -39,13 +39,14 @@ const roleRepository = new MongoRoleRepository();
 const apiKeyRepository = new MongoApiKeyRepository();
 const invitationRepository = new MongoInvitationRepository();
 
-const userService = new UserService(userRepository);
 const sessionService = new SessionService(sessionRepository, refreshTokenRepository);
 const passwordService = new PasswordService();
 const recoveryService = new RecoveryService(verificationTokenRepository);
 const authorizationService = new AuthorizationService(
   organizationRepository,
   apiKeyRepository,
+  memberRepository,
+  roleRepository,
 );
 const organizationService = new OrganizationService(
   organizationRepository,
@@ -54,6 +55,9 @@ const organizationService = new OrganizationService(
 const apiKeyService = new ApiKeyService(apiKeyRepository, authorizationService);
 const memberService = new MembersService(memberRepository, authorizationService);
 const roleService = new RoleService(roleRepository, authorizationService);
+
+const userService = new UserService(userRepository, memberService);
+
 const invitationService = new InvitationService(
   invitationRepository,
   userService,
@@ -66,6 +70,8 @@ const authService = new AuthService(
   passwordService,
   recoveryService,
   memberService,
+  invitationService,
+  organizationService,
 );
 
 const userController = new UserController(userService);
@@ -80,6 +86,7 @@ export {
   userController,
   authController,
   userService,
+  sessionService,
   organizationController,
   apiKeyController,
   authorizationService,

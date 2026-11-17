@@ -11,7 +11,8 @@ export interface IMember {
   userId: Types.ObjectId;
   roleId: Types.ObjectId;
   status: MemberStatus;
-  createdBy: Types.ObjectId;
+  invitedBy: Types.ObjectId;
+  isOwner: boolean;
   joinedAt?: Date;
   deletedAt?: Date;
   createdAt: Date;
@@ -47,11 +48,17 @@ const MemberSchema = new Schema<IMember>(
       default: "invited",
     },
 
-    createdBy: {
+    invitedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
       immutable: true,
+    },
+
+    isOwner: {
+      type: Boolean,
+      default: false,
+      required: false,
     },
 
     joinedAt: {

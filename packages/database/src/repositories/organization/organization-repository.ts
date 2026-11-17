@@ -5,11 +5,9 @@ import type {
 } from "../repository.contracts.js";
 import type {
   CreateOrganizationData,
-  DeleteOrganizationCriteria,
   FindManyOrganizationsCriteria,
   FindOrganizationCriteria,
   Organization,
-  UpdateOrganizationCriteria,
   UpdateOrganizationData,
 } from "./organization.types.js";
 
@@ -20,8 +18,8 @@ export interface OrganizationRepository
       FindOrganizationCriteria,
       FindManyOrganizationsCriteria,
       CreateOrganizationData,
-      UpdateOrganizationCriteria,
+      FindOrganizationCriteria,
       UpdateOrganizationData
     >,
-    SoftDeleteRepository<Organization, DeleteOrganizationCriteria>,
-    HardDeleteRepository<DeleteOrganizationCriteria> {}
+    SoftDeleteRepository<Organization, FindOrganizationCriteria>,
+    HardDeleteRepository<FindOrganizationCriteria> {}

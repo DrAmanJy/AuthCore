@@ -1,62 +1,108 @@
-import { randomBytes } from "crypto";
-import type { InvitationId, ActorId, Invitation, Member } from "@authcore/database";
-import { getExpiryTime } from "@authcore/database";
+import { randomBytes } from "node:crypto";
+
 import type {
+  InvitationId,
+  ActorId,
+  Invitation,
+  Member,
   InvitationRepository,
   OrganizationId,
   RoleId,
   UserId,
   TargetType,
+  Organization,
 } from "@authcore/database";
+
+import { getExpiryTime } from "@authcore/database";
 import { config } from "@authcore/config";
+
 import { hashString } from "../../../utils/hashString.js";
-import { ResourceError } from "../../../errors/resource-error.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
+import { AppError } from "../../../errors/app-error.js";
+
 import type { UserService } from "../../users/users.service.js";
 import type { AuthorizationService } from "../authorization/authorization.service.js";
 import type { MembersService } from "../members/member.service.js";
+import { invitationEmailTemplate } from "@authcore/email";
+import type { RoleService } from "../roles/role.service.js";
+
+type InvitationAction = "accepted" | "rejected" | "revoked";
+
+type InvitationStatus = Invitation["status"];
+
+type SendInvitationParams = {
+  organization: Organization;
+  roleId: RoleId;
+  targetType: TargetType;
+  actorId: ActorId;
+  targetEmail?: string;
+  targetUserId?: UserId;
+};
+
+const INVITATION_TRANSITIONS: Record<InvitationStatus, readonly InvitationAction[]> = {
+  pending: ["accepted", "rejected", "revoked"],
+  accepted: [],
+  rejected: [],
+  revoked: [],
+  expired: [],
+};
 
 export class InvitationService {
   constructor(
     private readonly invitationRepository: InvitationRepository,
     private readonly userService: UserService,
     private readonly memberService: MembersService,
+    private readonly roleService: RoleService,
     private readonly authorizationService: AuthorizationService,
   ) {}
 
   async getInvitesByActorId(actorId: ActorId): Promise<Invitation[]> {
-    const invitations = await this.invitationRepository.findMany({
+    const result = await this.invitationRepository.findMany({
       userId: actorId,
       activeOnly: true,
     });
-    return invitations.items;
+
+    return result.items;
   }
 
   async getInvitesByUserId(userId: UserId): Promise<Invitation[]> {
-    const invitations = await this.invitationRepository.findMany({
+    const result = await this.invitationRepository.findMany({
       userId,
       activeOnly: true,
     });
-    return invitations.items;
+
+    return result.items;
+  }
+  async getInviteByToken(token: string): Promise<Invitation> {
+    const tokenHash = hashString(token);
+    const invitation = await this.invitationRepository.find({
+      by: "tokenHash",
+      tokenHash,
+    });
+    if (!invitation) throw new AppError("INVITATION_NOT_FOUND");
+
+    return invitation;
   }
 
-  //don't use without checking ownership
-  async getInvitesByEmail(email: string): Promise<Invitation[]> {
-    const invitations = await this.invitationRepository.findMany({
+  /**
+   * Do not expose this method without verifying email ownership.
+   */
+  async getInviteByEmail(email: string): Promise<Invitation> {
+    const invitation = await this.invitationRepository.find({
+      by: "email",
       email,
-      activeOnly: true,
     });
-    return invitations.items;
+
+    if (!invitation) throw new AppError("INVITATION_NOT_FOUND");
+
+    return invitation;
   }
 
   async getOrganizationInvitesByUserId(
     userId: UserId,
     organizationId: OrganizationId,
   ): Promise<Invitation> {
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: organizationId,
-    });
+    await this.validateOrganization(organizationId);
 
     const invitation = await this.invitationRepository.find({
       by: "user",
@@ -65,7 +111,7 @@ export class InvitationService {
     });
 
     if (!invitation) {
-      throw new Error("Invitation not found");
+      throw new AppError(ERROR_CODES.INVITATION_NOT_FOUND);
     }
 
     return invitation;
@@ -75,151 +121,125 @@ export class InvitationService {
     email: string,
     organizationId: OrganizationId,
   ): Promise<Invitation> {
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: organizationId,
-    });
+    await this.validateOrganization(organizationId);
 
     const invitation = await this.invitationRepository.find({
       by: "email",
-      email,
+      email: this.normalizeEmail(email),
       organizationId,
     });
 
     if (!invitation) {
-      throw new Error("Invitation not found");
+      throw new AppError(ERROR_CODES.INVITATION_NOT_FOUND);
     }
 
     return invitation;
   }
 
   async getOrganizationInvites(organizationId: OrganizationId): Promise<Invitation[]> {
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: organizationId,
-    });
+    await this.validateOrganization(organizationId);
 
-    const invitations = await this.invitationRepository.findMany({
+    const result = await this.invitationRepository.findMany({
       organizationId,
       activeOnly: true,
     });
 
-    return invitations.items;
+    return result.items;
   }
 
-  async sendInvite(params: {
-    organizationId: OrganizationId;
-    roleId: RoleId;
-    targetType: TargetType;
-    actorId: ActorId;
-    targetEmail?: string;
-    targetUserId?: UserId;
-  }): Promise<Invitation> {
-    let _email: string;
+  async sendInvite(params: SendInvitationParams): Promise<Invitation> {
+    await this.authorizationService.getValidOrganization({
+      by: "id",
+      organizationId: params.organization.id,
+    });
+    let targetUser;
 
-    await this.authorizationService.getValidOrganization(
-      {
-        type: "id",
-        value: params.organizationId,
-      },
-      params.actorId,
-    );
+    let targetEmail = params.targetEmail
+      ? this.normalizeEmail(params.targetEmail)
+      : undefined;
 
     if (params.targetType === "user") {
       if (!params.targetUserId) {
-        throw new ResourceError(ERROR_CODES.VALIDATION_FAILED);
+        throw new AppError(ERROR_CODES.VALIDATION_FAILED);
       }
 
-      const user = await this.userService.getAuthenticatedUser(params.targetUserId);
+      targetUser = await this.userService.getAuthenticatedUser(params.targetUserId);
 
-      _email = user.email;
+      targetEmail = this.normalizeEmail(targetUser.email);
+    } else if (!targetEmail) {
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
+
+    const role = await this.roleService.getRole({
+      organizationId: params.organization.id,
+      roleId: params.roleId,
+      actorId: params.actorId,
+    });
 
     const token = randomBytes(32).toString("base64url");
     const tokenHash = hashString(token);
 
     const invitation = await this.invitationRepository.create({
+      organizationId: params.organization.id,
+      roleId: params.roleId,
+      targetType: params.targetType,
+      targetUserId: params.targetUserId,
+      targetEmail,
       invitedBy: params.actorId,
       tokenHash,
       expiresAt: getExpiryTime(config.auth.invitationExpiry),
-      ...params,
     });
 
-    // TODO: Send the invitation email to `email` with the raw `token`.
-    // Store only the token hash in the database.
+    const {} = invitationEmailTemplate({
+      expiresAt: invitation.expiresAt.toISOString(),
+      inviterName: invitation.invitedBy,
+      inviteUrl: `${params.organization.frontendUrl}/accept-invitation/:`,
+      organizationName: params.organization.name,
+      roleName: role.name,
+      displayName: targetUser?.displayName ?? "Not available",
+    });
 
     return invitation;
-  }
-
-  // use Id for now
-  async acceptInviteByEmail(
-    email: string,
-    organizationId: OrganizationId,
-    actorId: ActorId,
-  ): Promise<void> {
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: organizationId,
-    });
-
-    const invitation = await this.invitationRepository.find({
-      by: "email",
-      email,
-      organizationId,
-    });
-
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
-
-    await this.validInvitation(invitation, organizationId, actorId, "accepted");
-
-    const acceptedInvitation = await this.invitationRepository.update(
-      { invitationId: invitation.id, organizationId },
-      { status: "accepted", actionBy: actorId },
-    );
-
-    if (!acceptedInvitation) {
-      throw new Error("Invitation not found");
-    }
   }
 
   async acceptInvite(
     invitationId: InvitationId,
     organizationId: OrganizationId,
     actorId: ActorId,
-  ): Promise<Member> {
-    const invitation = await this.invitationRepository.find({
+  ): Promise<{ member: Member; organization: Organization }> {
+    const invitation = await this.findInvitationById(invitationId);
+
+    const organization = await this.authorizationService.getValidOrganization({
       by: "id",
-      invitationId,
+      organizationId: organizationId,
     });
 
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
+    await this.validateInvitationAction(invitation, organizationId, actorId, "accepted");
 
-    await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: invitation.organizationId,
-    });
-
-    await this.validInvitation(invitation, organizationId, actorId, "accepted");
-
-    const member = await this.memberService.addMember(organizationId, actorId, {
+    const member = await this.memberService.addMember({
+      organizationId,
+      actorId,
       roleId: invitation.roleId,
       userId: actorId,
+      status: "active",
     });
 
-    const acceptedInvitation = await this.invitationRepository.update(
-      { invitationId, organizationId },
-      { status: "accepted", actionBy: actorId },
+    const updated = await this.invitationRepository.update(
+      {
+        invitationId,
+        organizationId,
+      },
+      {
+        status: "accepted",
+        actionBy: actorId,
+      },
     );
 
-    if (!acceptedInvitation) {
-      throw new Error("Invitation not found");
+    if (!updated) {
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
-    return member;
+    return { member, organization };
   }
 
   async rejectInvitation(
@@ -227,97 +247,181 @@ export class InvitationService {
     organizationId: OrganizationId,
     actorId: ActorId,
   ): Promise<void> {
-    const invitation = await this.invitationRepository.find({
-      by: "id",
-      invitationId,
-    });
-    if (!invitation) {
-      throw new Error("Change at L133");
-    }
+    const invitation = await this.findInvitationById(invitationId);
 
-    await this.validInvitation(invitation, organizationId, actorId, "rejected");
+    await this.validateInvitationAction(invitation, organizationId, actorId, "rejected");
 
-    const rejectInvitation = await this.invitationRepository.update(
-      { invitationId, organizationId },
-      { status: "rejected", actionBy: actorId },
+    const updated = await this.invitationRepository.update(
+      {
+        invitationId,
+        organizationId,
+      },
+      {
+        status: "rejected",
+        actionBy: actorId,
+      },
     );
-    if (!rejectInvitation) {
-      throw new Error("Change at L140");
+
+    if (!updated) {
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
   }
 
-  //todo improve validInvitation its not allowing revoking invited user
   async revokeInvitation(
     invitationId: InvitationId,
     organizationId: OrganizationId,
     actorId: ActorId,
-  ) {
-    const invitation = await this.invitationRepository.find({
-      by: "id",
-      invitationId,
-    });
+  ): Promise<void> {
+    const invitation = await this.findInvitationById(invitationId);
 
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
-
+    // Only an authorized organization member can revoke an invitation.
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: invitation.organizationId,
+        by: "id",
+        organizationId: invitation.organizationId,
       },
       actorId,
     );
 
-    await this.validInvitation(invitation, organizationId, actorId, "accepted");
+    await this.validateInvitationAction(
+      invitation,
+      organizationId,
+      actorId,
+      "revoked",
+      false,
+    );
 
-    const revokeInvitation = await this.invitationRepository.revoke({
+    const revoked = await this.invitationRepository.revoke({
       invitationId: invitation.id,
       organizationId,
       actorId,
     });
 
-    if (!revokeInvitation) {
-      throw new Error("change at L234");
+    if (!revoked) {
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
   }
 
-  private async validInvitation(
+  private async validateOrganization(organizationId: OrganizationId): Promise<void> {
+    await this.authorizationService.getValidOrganization({
+      by: "id",
+      organizationId: organizationId,
+    });
+  }
+
+  private assertOrganizationOwnership(
     invitation: Invitation,
     organizationId: OrganizationId,
+  ): void {
+    if (invitation.organizationId !== organizationId) {
+      throw new AppError(ERROR_CODES.INVITATION_NOT_FOUND);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Recipient validation
+  // ---------------------------------------------------------------------------
+
+  private assertInvitationRecipient(invitation: Invitation, actorId: ActorId): void {
+    if (invitation.targetType === "user" && invitation.targetUserId !== actorId) {
+      throw new AppError(ERROR_CODES.AUTH_FORBIDDEN);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Expiration validation
+  // ---------------------------------------------------------------------------
+
+  private async assertInvitationNotExpired(
+    invitation: Invitation,
     actorId: ActorId,
-    status: "accepted" | "rejected",
   ): Promise<void> {
-    if (invitation.status !== "expired" && invitation.expiresAt <= new Date()) {
-      await this.invitationRepository.update(
-        { invitationId: invitation.id, organizationId },
-        { status: "expired", actionBy: actorId },
-      );
-      throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths
+    if (invitation.status === "expired") {
+      throw new AppError(ERROR_CODES.INVITATION_EXPIRED);
+    }
+
+    if (invitation.expiresAt.getTime() > Date.now()) {
+      return;
+    }
+
+    await this.invitationRepository.update(
+      {
+        invitationId: invitation.id,
+        organizationId: invitation.organizationId,
+      },
+      {
+        status: "expired",
+        actionBy: actorId,
+      },
+    );
+
+    throw new AppError(ERROR_CODES.INVITATION_EXPIRED);
+  }
+
+  // ---------------------------------------------------------------------------
+  // State transition validation
+  // ---------------------------------------------------------------------------
+
+  private assertInvitationTransition(
+    invitation: Invitation,
+    action: InvitationAction,
+  ): void {
+    const allowedTransitions = INVITATION_TRANSITIONS[invitation.status];
+
+    if (allowedTransitions.includes(action)) {
+      return;
     }
 
     switch (invitation.status) {
       case "accepted":
-        if (status !== "rejected") {
-          throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths}
-        }
-        break;
-      case "expired":
-        throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths}
+        throw new AppError(ERROR_CODES.INVITATION_ALREADY_ACCEPTED);
 
       case "rejected":
-        if (status !== "accepted") {
-          throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths}
-        }
-        break;
+        throw new AppError(ERROR_CODES.INVITATION_ALREADY_REJECTED);
+
       case "revoked":
-        throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths}
+        throw new AppError(ERROR_CODES.INVITATION_REVOKED);
+
+      case "expired":
+        throw new AppError(ERROR_CODES.INVITATION_EXPIRED);
+
       case "pending":
-        break;
+        throw new AppError(ERROR_CODES.VALIDATION_FAILED);
+    }
+  }
+
+  private async validateInvitationAction(
+    invitation: Invitation,
+    organizationId: OrganizationId,
+    actorId: ActorId,
+    action: InvitationAction,
+    validateRecipient = true,
+  ): Promise<void> {
+    this.assertOrganizationOwnership(invitation, organizationId);
+
+    if (validateRecipient) {
+      this.assertInvitationRecipient(invitation, actorId);
     }
 
-    if (invitation.targetType === "user" && invitation.targetUserId !== actorId) {
-      throw new ResourceError(ERROR_CODES.VALIDATION_FAILED); //todo change ths}
+    await this.assertInvitationNotExpired(invitation, actorId);
+
+    this.assertInvitationTransition(invitation, action);
+  }
+
+  private async findInvitationById(invitationId: InvitationId): Promise<Invitation> {
+    const invitation = await this.invitationRepository.find({
+      by: "id",
+      invitationId,
+    });
+
+    if (!invitation) {
+      throw new AppError(ERROR_CODES.INVITATION_NOT_FOUND);
     }
+
+    return invitation;
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 }

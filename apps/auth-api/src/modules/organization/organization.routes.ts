@@ -1,31 +1,41 @@
 import { Router } from "express";
-
 import { validateAccessToken } from "../../middlewares/token.middleware.js";
+import { resolveOrgContext, requirePermission } from "../../middlewares/permission.js";
+import { organizationController } from "../../container.js";
+
+import roleRouter from "./roles/role.routes.js";
+import memberRouter from "./members/members.routes.js";
 import apiKeyRouter from "./api-keys/api-key.routes.js";
 import invitationRouter from "./invitations/invitations.routes.js";
-import memberRouter from "./members/members.routes.js";
-import roleRouter from "./roles/role.routes.js";
-import { organizationController } from "../../container.js";
 
 const organizationRouter = Router();
 
 organizationRouter.use(validateAccessToken);
 
 organizationRouter.get("/", organizationController.getOrganizations);
-
 organizationRouter.post("/", organizationController.createOrganization);
 
-organizationRouter.get("/by-slug/:slug", organizationController.getOrganizationBySlug);
+organizationRouter.use("/:organizationId/invitations", invitationRouter);
 
-organizationRouter.get("/:organizationId", organizationController.getOrganization);
+const scopedRouter = Router({ mergeParams: true });
+scopedRouter.use(resolveOrgContext);
 
-organizationRouter.patch("/:organizationId", organizationController.updateOrganization);
+scopedRouter.get("/", organizationController.getOrganization);
+scopedRouter.patch(
+  "/",
+  requirePermission("org:update"),
+  organizationController.updateOrganization,
+);
+scopedRouter.delete(
+  "/",
+  requirePermission("org:delete"),
+  organizationController.deleteOrganization,
+);
 
-organizationRouter.delete("/:organizationId", organizationController.deleteOrganization);
+scopedRouter.use("/roles", roleRouter);
+scopedRouter.use("/members", memberRouter);
+scopedRouter.use("/api-keys", apiKeyRouter);
 
-organizationRouter.use("/:organizationId", apiKeyRouter);
-organizationRouter.use("/:organizationId", invitationRouter);
-organizationRouter.use("/:organizationId", memberRouter);
-organizationRouter.use("/:organizationId", roleRouter);
+organizationRouter.use("/:organizationId", scopedRouter);
 
 export { organizationRouter };

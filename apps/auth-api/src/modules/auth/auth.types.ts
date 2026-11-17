@@ -4,12 +4,14 @@ export type RegisterType = {
   displayName: string;
   email: string;
   password: string;
+  organization?: { frontendUrl: string; name: string; slug: string };
+  InvitationToken?: string;
 };
 
 export type LoginType = {
   email: string;
   password: string;
-  organizationId: OrganizationId;
+  organizationId?: OrganizationId;
   device: Device;
 };
 

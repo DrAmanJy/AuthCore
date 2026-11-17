@@ -12,9 +12,10 @@ import {
   sendNoContent,
   sendSuccess,
 } from "../../../utils/response.utils.js";
-import { AuthenticationError } from "../../../errors/authentication-error.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
 import type { AccessTokenPayload } from "../../auth/auth.types.js";
+import { AppError } from "../../../errors/app-error.js";
+import getAuthToken from "../../../utils/token.js";
 
 export class InvitationController {
   constructor(private readonly invitationService: InvitationService) {
@@ -28,7 +29,7 @@ export class InvitationController {
 
   async sendInvitation(
     req: Request<
-      { organizationId: OrganizationId },
+      unknown,
       unknown,
       {
         roleId: RoleId;
@@ -40,11 +41,11 @@ export class InvitationController {
     res: Response,
   ) {
     const { roleId, targetType, targetEmail, targetUserId } = req.body;
-    const { sub: actorId } = this.getAuthToken(req);
-    const { organizationId } = req.params;
+    const { sub: actorId } = getAuthToken(req);
+    if (!req.orgContext) throw new AppError("AUTH_FORBIDDEN");
 
     const invitation = await this.invitationService.sendInvite({
-      organizationId,
+      organization: req.orgContext.organization,
       roleId,
       targetType,
       actorId,
@@ -61,7 +62,7 @@ export class InvitationController {
   ) {
     const { organizationId } = req.params;
     if (!organizationId) {
-      throw new Error("change at L10");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     const invitations =
       await this.invitationService.getOrganizationInvites(organizationId);
@@ -88,7 +89,7 @@ export class InvitationController {
     const { sub } = this.getAuthToken(req);
 
     if (!invitationId) {
-      throw new Error("Change at L39");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     await this.invitationService.acceptInvite(invitationId, organizationId, sub);
 
@@ -107,7 +108,7 @@ export class InvitationController {
     const { sub } = this.getAuthToken(req);
 
     if (!invitationId) {
-      throw new Error("Change at L56");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     await this.invitationService.rejectInvitation(invitationId, organizationId, sub);
 
@@ -126,7 +127,7 @@ export class InvitationController {
     const { sub } = this.getAuthToken(req);
 
     if (!invitationId) {
-      throw new Error("Change at L71");
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
     await this.invitationService.revokeInvitation(invitationId, organizationId, sub);
 
@@ -135,7 +136,7 @@ export class InvitationController {
 
   private getAuthToken(req: { token?: AccessTokenPayload }): AccessTokenPayload {
     if (!req.token) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_UNAUTHORIZED);
+      throw new AppError(ERROR_CODES.AUTH_UNAUTHORIZED);
     }
     return req.token;
   }

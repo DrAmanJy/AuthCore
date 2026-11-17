@@ -7,11 +7,10 @@ import type {
   RoleRepository,
   UpdateRoleData,
 } from "@authcore/database";
-import { ResourceError } from "../../../errors/resource-error.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
 import { logger } from "@authcore/logger";
 import type { AuthorizationService } from "../authorization/authorization.service.js";
-import { InternalServerError } from "../../../errors/internal-server-error.js";
+import { AppError } from "../../../errors/app-error.js";
 
 export class RoleService {
   constructor(
@@ -28,8 +27,8 @@ export class RoleService {
   }): Promise<Role> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -41,7 +40,7 @@ export class RoleService {
     });
 
     if (!role) {
-      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
+      throw new AppError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     return role;
@@ -54,8 +53,8 @@ export class RoleService {
   }): Promise<Role> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -67,7 +66,7 @@ export class RoleService {
     });
 
     if (!role) {
-      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
+      throw new AppError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     return role;
@@ -76,8 +75,8 @@ export class RoleService {
   async getRoles(organizationId: OrganizationId, actorId?: ActorId): Promise<Role[]> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: organizationId,
+        by: "id",
+        organizationId,
       },
       actorId,
     );
@@ -94,13 +93,13 @@ export class RoleService {
     actorId: ActorId;
     data: {
       name: string;
-      permissions: CreateRoleData["permissions"];
+      permissionIds: CreateRoleData["permissionIds"];
     };
   }): Promise<Role> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -112,15 +111,14 @@ export class RoleService {
     });
 
     if (existingRole) {
-      throw new ResourceError(ERROR_CODES.ROLE_ALREADY_EXISTS);
+      throw new AppError(ERROR_CODES.ROLE_ALREADY_EXISTS);
     }
 
     const role = await this.roleRepository.create({
       organizationId: params.organizationId,
-      actorId: params.actorId,
-      isSystemRole: false,
+      createdBy: params.actorId,
       name: params.data.name,
-      permissions: params.data.permissions,
+      permissionIds: params.data.permissionIds,
     });
 
     logger.info(
@@ -136,14 +134,9 @@ export class RoleService {
     actorId: ActorId;
     data: UpdateRoleData;
   }): Promise<Role> {
-    const role = await this.getRole(params);
-
-    if (role.isSystemRole) {
-      throw new ResourceError(ERROR_CODES.ROLE_SYSTEM_PROTECTED);
-    }
-
     const updatedRole = await this.roleRepository.update(
       {
+        by: "id",
         roleId: params.roleId,
         organizationId: params.organizationId,
       },
@@ -151,7 +144,7 @@ export class RoleService {
     );
 
     if (!updatedRole) {
-      throw new InternalServerError();
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
     logger.info(
@@ -166,19 +159,14 @@ export class RoleService {
     roleId: RoleId;
     actorId: ActorId;
   }): Promise<Role> {
-    const role = await this.getRole(params);
-
-    if (role.isSystemRole) {
-      throw new ResourceError(ERROR_CODES.ROLE_SYSTEM_PROTECTED);
-    }
-
     const deletedRole = await this.roleRepository.softDelete({
+      by: "id",
       roleId: params.roleId,
       organizationId: params.organizationId,
     });
 
     if (!deletedRole) {
-      throw new ResourceError(ERROR_CODES.ROLE_NOT_FOUND);
+      throw new AppError(ERROR_CODES.ROLE_NOT_FOUND);
     }
 
     logger.info(

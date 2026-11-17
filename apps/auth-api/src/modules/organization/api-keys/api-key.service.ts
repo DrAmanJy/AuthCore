@@ -8,9 +8,10 @@ import type {
 } from "@authcore/database";
 
 import { hashString } from "../../../utils/hashString.js";
-import { ResourceError } from "../../../errors/resource-error.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
 import type { AuthorizationService } from "../authorization/authorization.service.js";
+import { AppError } from "../../../errors/app-error.js";
+import { randomBytes } from "node:crypto";
 
 export class ApiKeyService {
   constructor(
@@ -25,8 +26,8 @@ export class ApiKeyService {
   }): Promise<ApiKey> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -38,7 +39,7 @@ export class ApiKeyService {
     });
 
     if (!apiKey) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     return apiKey;
@@ -51,8 +52,8 @@ export class ApiKeyService {
   }): Promise<ApiKey> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -66,7 +67,7 @@ export class ApiKeyService {
     });
 
     if (!apiKey) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     return apiKey;
@@ -78,8 +79,8 @@ export class ApiKeyService {
   }): Promise<ApiKey[]> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -94,25 +95,27 @@ export class ApiKeyService {
   async create(params: {
     name: string;
     organizationId: OrganizationId;
-    key: string;
     actorId: ActorId;
-  }): Promise<ApiKey> {
+  }): Promise<{ apiKey: ApiKey; key: string }> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
 
-    const keyHash = asKeyHash(hashString(params.key));
+    const key = randomBytes(64).toString("base64url");
+    const keyHash = asKeyHash(hashString(key));
 
-    return this.apiKeyRepository.create({
+    const apiKey = await this.apiKeyRepository.create({
       keyHash,
       name: params.name,
       organizationId: params.organizationId,
       actorId: params.actorId,
     });
+
+    return { apiKey, key };
   }
 
   async revokeByKey(params: {
@@ -122,8 +125,8 @@ export class ApiKeyService {
   }): Promise<ApiKey> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -135,7 +138,7 @@ export class ApiKeyService {
     });
 
     if (!apiKey) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     const revoked = await this.apiKeyRepository.revoke({
@@ -144,7 +147,7 @@ export class ApiKeyService {
     });
 
     if (!revoked) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     return revoked;
@@ -157,8 +160,8 @@ export class ApiKeyService {
   }): Promise<ApiKey> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -169,7 +172,7 @@ export class ApiKeyService {
     });
 
     if (!apiKey) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     return apiKey;
@@ -180,8 +183,8 @@ export class ApiKeyService {
     organizationId: OrganizationId;
   }): Promise<ApiKey> {
     await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: params.organizationId,
+      by: "id",
+      organizationId: params.organizationId,
     });
 
     const apiKey = await this.apiKeyRepository.update(
@@ -195,7 +198,7 @@ export class ApiKeyService {
     );
 
     if (!apiKey) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     return apiKey;
@@ -206,8 +209,8 @@ export class ApiKeyService {
     organizationId: OrganizationId;
   }): Promise<ApiKey> {
     await this.authorizationService.getValidOrganization({
-      type: "id",
-      value: params.organizationId,
+      by: "id",
+      organizationId: params.organizationId,
     });
 
     const keyHash = asKeyHash(hashString(params.key));
@@ -218,7 +221,7 @@ export class ApiKeyService {
     });
 
     if (!existing) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     const apiKey = await this.apiKeyRepository.update(
@@ -232,7 +235,7 @@ export class ApiKeyService {
     );
 
     if (!apiKey) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     return apiKey;
@@ -245,8 +248,8 @@ export class ApiKeyService {
   }): Promise<ApiKey> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -257,7 +260,7 @@ export class ApiKeyService {
     });
 
     if (!apiKey) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     return apiKey;
@@ -270,8 +273,8 @@ export class ApiKeyService {
   }): Promise<ApiKey> {
     await this.authorizationService.getValidOrganization(
       {
-        type: "id",
-        value: params.organizationId,
+        by: "id",
+        organizationId: params.organizationId,
       },
       params.actorId,
     );
@@ -284,7 +287,7 @@ export class ApiKeyService {
     });
 
     if (!existing) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     const apiKey = await this.apiKeyRepository.softDelete({
@@ -293,7 +296,7 @@ export class ApiKeyService {
     });
 
     if (!apiKey) {
-      throw new ResourceError(ERROR_CODES.API_KEY_NOT_FOUND);
+      throw new AppError(ERROR_CODES.API_KEY_NOT_FOUND);
     }
 
     return apiKey;

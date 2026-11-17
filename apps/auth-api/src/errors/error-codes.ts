@@ -8,15 +8,15 @@ export const ERROR_CODES = {
   AUTH_SESSION_REVOKED: "AUTH_SESSION_REVOKED",
   AUTH_INVALID_REFRESH_TOKEN: "AUTH_INVALID_REFRESH_TOKEN",
   AUTH_SESSION_NOT_FOUND: "AUTH_SESSION_NOT_FOUND",
-
   AUTH_REFRESH_TOKEN_REUSE_DETECTED: "AUTH_REFRESH_TOKEN_REUSE_DETECTED",
-  SESSION_ACCESS_DENIED: "SESSION_ACCESS_DENIED",
+  AUTH_SESSION_ACCESS_DENIED: "AUTH_SESSION_ACCESS_DENIED",
+  AUTH_ONBOARDING_CONTEXT_REQUIRED: "AUTH_ONBOARDING_CONTEXT_REQUIRED",
 
   // Authorization
-  AUTHORIZATION_HEADER_MISSING: "AUTHORIZATION_HEADER_MISSING",
-  AUTHORIZATION_HEADER_INVALID: "AUTHORIZATION_HEADER_INVALID",
-  AUTH_VERIFICATION_TOKEN_REQUIRED: "AUTH_VERIFICATION_TOKEN_REQUIRED",
-  AUTH_EMAIL_REQUIRED: "AUTH_EMAIL_REQUIRED",
+  AUTH_HEADER_MISSING: "AUTH_HEADER_MISSING",
+  AUTH_HEADER_INVALID: "AUTH_HEADER_INVALID",
+  AUTH_VERIFICATION_TOKEN_MISSING: "AUTH_VERIFICATION_TOKEN_MISSING",
+  AUTH_EMAIL_MISSING: "AUTH_EMAIL_MISSING",
 
   // Recovery / Verification
   AUTH_VERIFICATION_TOKEN_INVALID: "AUTH_VERIFICATION_TOKEN_INVALID",
@@ -24,6 +24,10 @@ export const ERROR_CODES = {
   AUTH_VERIFICATION_TOKEN_USED: "AUTH_VERIFICATION_TOKEN_USED",
   AUTH_VERIFICATION_TOKEN_NOT_FOUND: "AUTH_VERIFICATION_TOKEN_NOT_FOUND",
 
+  // Authorization & Permissions
+  AUTH_FORBIDDEN: "AUTH_FORBIDDEN",
+  AUTH_INSUFFICIENT_PERMISSIONS: "AUTH_INSUFFICIENT_PERMISSIONS",
+  AUTH_ORGANIZATION_SELECTION_REQUIRED: "AUTH_ORGANIZATION_SELECTION_REQUIRED",
   // User
   USER_NOT_FOUND: "USER_NOT_FOUND",
   USER_ALREADY_ACTIVE: "USER_ALREADY_ACTIVE",
@@ -40,7 +44,9 @@ export const ERROR_CODES = {
   // Organization
   ORGANIZATION_NOT_FOUND: "ORGANIZATION_NOT_FOUND",
   ORGANIZATION_INACTIVE: "ORGANIZATION_INACTIVE",
-  ORGANIZATION_CREATOR_ONLY: "ORGANIZATION_CREATOR_ONLY",
+  ORGANIZATION_MEMBER_ACCESS_DENIED: "ORGANIZATION_MEMBER_ACCESS_DENIED",
+  ORGANIZATION_ACCESS_DENIED: "ORGANIZATION_ACCESS_DENIED",
+  ORGANIZATION_LAST_OWNER_PROTECTION: "ORGANIZATION_LAST_OWNER_PROTECTION",
 
   // Organization Member
   ORGANIZATION_MEMBER_NOT_FOUND: "ORGANIZATION_MEMBER_NOT_FOUND",
@@ -49,17 +55,7 @@ export const ERROR_CODES = {
   ORGANIZATION_MEMBER_NOT_SUSPENDED: "ORGANIZATION_MEMBER_NOT_SUSPENDED",
   ORGANIZATION_MEMBER_REMOVED: "ORGANIZATION_MEMBER_REMOVED",
   ORGANIZATION_MEMBER_SUSPENDED: "ORGANIZATION_MEMBER_SUSPENDED",
-  ORGANIZATION_MEMBER_ACTIVATION_REQUIRED: "ORGANIZATION_MEMBER_ACTIVATION_REQUIRED",
-  ORGANIZATION_MEMBER_SUSPENSION_REQUIRED: "ORGANIZATION_MEMBER_SUSPENSION_REQUIRED",
-  ORGANIZATION_MEMBER_REMOVE_DIRECTLY: "ORGANIZATION_MEMBER_REMOVE_DIRECTLY",
-
-  // Authorization & Permissions
-  AUTH_FORBIDDEN: "AUTH_FORBIDDEN",
-  AUTH_INSUFFICIENT_PERMISSIONS: "AUTH_INSUFFICIENT_PERMISSIONS",
-  ORGANIZATION_ACCESS_DENIED: "ORGANIZATION_ACCESS_DENIED",
-  ORGANIZATION_LAST_OWNER_PROTECTION: "ORGANIZATION_LAST_OWNER_PROTECTION",
-
-  // Authorization & Permissions
+  ORGANIZATION_MEMBER_INVITATION_PENDING: "ORGANIZATION_MEMBER_INVITATION_PENDING",
 
   // Role
   ROLE_NOT_FOUND: "ROLE_NOT_FOUND",
@@ -71,10 +67,19 @@ export const ERROR_CODES = {
   API_KEY_REVOKED: "API_KEY_REVOKED",
   API_KEY_UNAUTHORIZED: "API_KEY_UNAUTHORIZED",
 
-  // Validation
+  // Invitation
+  INVITATION_NOT_FOUND: "INVITATION_NOT_FOUND",
+  INVITATION_EXPIRED: "INVITATION_EXPIRED",
+  INVITATION_ALREADY_ACCEPTED: "INVITATION_ALREADY_ACCEPTED",
+  INVITATION_ALREADY_REJECTED: "INVITATION_ALREADY_REJECTED",
+  INVITATION_REJECTED: "INVITATION_REJECTED",
+  INVITATION_REVOKED: "INVITATION_REVOKED",
+  INVITATION_INVALID: "INVITATION_INVALID",
+
+  // Validation & General
   RATE_LIMIT_EXCEEDED: "RATE_LIMIT_EXCEEDED",
   VALIDATION_FAILED: "VALIDATION_FAILED",
-  SLUG_REQUIRED: "SLUG_REQUIRED",
+  ROUTE_NOT_FOUND: "ROUTE_NOT_FOUND",
   INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR",
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
@@ -87,18 +92,9 @@ export const ERROR_DEFINITIONS: Record<
   }
 > = {
   // Authentication
-  AUTH_REFRESH_TOKEN_REUSE_DETECTED: {
-    statusCode: 401,
-    message:
-      "Security breach detected: refresh token reuse attempted. All sessions have been revoked.",
-  },
-  SESSION_ACCESS_DENIED: {
-    statusCode: 403,
-    message: "You are not authorized to manage this session.",
-  },
   AUTH_UNAUTHORIZED: {
     statusCode: 401,
-    message: "Authentication is required to access this resource.",
+    message: "Authentication required. Please sign in to continue.",
   },
 
   AUTH_INVALID_CREDENTIALS: {
@@ -108,67 +104,78 @@ export const ERROR_DEFINITIONS: Record<
 
   AUTH_INVALID_TOKEN: {
     statusCode: 401,
-    message: "The authentication token is invalid.",
+    message: "The access token is invalid or malformed.",
   },
 
   AUTH_TOKEN_EXPIRED: {
     statusCode: 401,
-    message: "The authentication token has expired.",
+    message: "The access token has expired. Please refresh your session.",
   },
 
   AUTH_SESSION_EXPIRED: {
     statusCode: 401,
-    message: "Your authentication session has expired. Please sign in again.",
+    message: "Your session has expired. Please sign in again.",
   },
 
   AUTH_SESSION_REVOKED: {
     statusCode: 401,
-    message: "Your authentication session is no longer active. Please sign in again.",
+    message: "Your session has been terminated. Please sign in again.",
   },
 
   AUTH_INVALID_REFRESH_TOKEN: {
     statusCode: 401,
-    message: "The refresh token is invalid or no longer active.",
+    message: "The refresh token is invalid or has already been used.",
   },
 
   AUTH_SESSION_NOT_FOUND: {
     statusCode: 404,
-    message: "The requested authentication session could not be found.",
+    message: "Session not found.",
+  },
+
+  AUTH_REFRESH_TOKEN_REUSE_DETECTED: {
+    statusCode: 401,
+    message:
+      "Security alert: refresh token reuse detected. All sessions have been revoked.",
+  },
+
+  AUTH_SESSION_ACCESS_DENIED: {
+    statusCode: 403,
+    message: "You are not authorized to manage this session.",
+  },
+  AUTH_ORGANIZATION_SELECTION_REQUIRED: {
+    statusCode: 400,
+    message:
+      "User belongs to multiple organizations. Please specify an organization to sign in.",
   },
 
   // Authorization
-  AUTHORIZATION_HEADER_MISSING: {
+  AUTH_HEADER_MISSING: {
     statusCode: 401,
-    message: "Authorization header is required.",
+    message: "Missing Authorization header. Provide a Bearer token to authenticate.",
   },
 
-  AUTHORIZATION_HEADER_INVALID: {
+  AUTH_HEADER_INVALID: {
     statusCode: 401,
-    message: "The authorization header is invalid.",
+    message: "Invalid Authorization header. Expected format: 'Bearer <token>'.",
   },
 
-  AUTH_EMAIL_REQUIRED: {
+  AUTH_VERIFICATION_TOKEN_MISSING: {
     statusCode: 400,
-    message: "Email address is required.",
+    message: "A verification token is required.",
+  },
+
+  AUTH_EMAIL_MISSING: {
+    statusCode: 400,
+    message: "An email address is required.",
+  },
+
+  AUTH_ONBOARDING_CONTEXT_REQUIRED: {
+    statusCode: 400,
+    message:
+      "Please provide an organization name or an invitation token to proceed with registration.",
   },
 
   // Recovery / Verification
-  AUTH_FORBIDDEN: {
-    statusCode: 403,
-    message: "You do not have permission to perform this action.",
-  },
-  AUTH_INSUFFICIENT_PERMISSIONS: {
-    statusCode: 403,
-    message: "Insufficient permissions for the requested resource.",
-  },
-  ORGANIZATION_ACCESS_DENIED: {
-    statusCode: 403,
-    message: "Access to this organization is denied.",
-  },
-  ORGANIZATION_LAST_OWNER_PROTECTION: {
-    statusCode: 409,
-    message: "Cannot remove, suspend, or demote the last organization owner.",
-  },
   AUTH_VERIFICATION_TOKEN_INVALID: {
     statusCode: 400,
     message: "The verification token is invalid.",
@@ -181,22 +188,34 @@ export const ERROR_DEFINITIONS: Record<
 
   AUTH_VERIFICATION_TOKEN_USED: {
     statusCode: 400,
-    message: "The verification token has already been used.",
+    message: "This verification token has already been used.",
   },
 
   AUTH_VERIFICATION_TOKEN_NOT_FOUND: {
     statusCode: 404,
-    message: "The verification token could not be found.",
+    message: "Verification token not found.",
   },
-  AUTH_VERIFICATION_TOKEN_REQUIRED: {
-    statusCode: 400,
-    message: "Verification token is required.",
+
+  // Authorization & Permissions
+  AUTH_FORBIDDEN: {
+    statusCode: 403,
+    message: "You do not have permission to perform this action.",
+  },
+
+  AUTH_INSUFFICIENT_PERMISSIONS: {
+    statusCode: 403,
+    message: "You do not have the required permissions for this resource.",
   },
 
   // User
   USER_NOT_FOUND: {
     statusCode: 404,
-    message: "The requested user could not be found.",
+    message: "User not found.",
+  },
+
+  USER_ALREADY_ACTIVE: {
+    statusCode: 409,
+    message: "Your account is already active. Verification email cannot be resent.",
   },
 
   USER_EMAIL_ALREADY_EXISTS: {
@@ -206,111 +225,113 @@ export const ERROR_DEFINITIONS: Record<
 
   USER_EMAIL_NOT_VERIFIED: {
     statusCode: 403,
-    message: "Your email address must be verified before you can continue.",
+    message: "Please verify your email address before continuing.",
   },
 
   USER_ACCOUNT_DEACTIVATED: {
     statusCode: 403,
-    message: "Your account has been deactivated.",
+    message: "Your account has been deactivated. Contact support for assistance.",
   },
 
-  USER_ALREADY_ACTIVE: {
-    statusCode: 409,
-    message: "Your account is already active.",
-  },
   USER_ACCOUNT_INACTIVE: {
     statusCode: 403,
-    message: "Your account is inactive.",
+    message: "Your account is inactive. Contact support for assistance.",
   },
 
   USER_ACCOUNT_PENDING: {
     statusCode: 403,
-    message: "Your account is pending activation.",
+    message:
+      "Your email address is not verified. Check your inbox and verify your email to continue.",
   },
 
   USER_ACCOUNT_SUSPENDED: {
     statusCode: 403,
-    message: "Your account has been suspended.",
+    message: "Your account has been suspended. Contact support for assistance.",
+  },
+
+  USER_PASSWORD_UPDATE_FAILED: {
+    statusCode: 500,
+    message: "Failed to update password. Please try again.",
   },
 
   USER_EMAIL_CHANGE_TOKEN_INVALID: {
     statusCode: 400,
-    message: "The email change verification token is invalid.",
+    message: "The email change token is invalid.",
   },
+
   USER_EMAIL_CHANGE_TOKEN_EXPIRED: {
     statusCode: 400,
-    message: "The email change verification token has expired. Please request a new one.",
-  },
-  USER_PASSWORD_UPDATE_FAILED: {
-    statusCode: 500,
-    message: "The password could not be updated.",
+    message: "The email change token has expired. Please request a new one.",
   },
 
   // Organization
   ORGANIZATION_NOT_FOUND: {
     statusCode: 404,
-    message: "The requested organization could not be found.",
+    message: "Organization not found.",
   },
 
   ORGANIZATION_INACTIVE: {
     statusCode: 403,
-    message: "The organization is not active.",
+    message: "This organization is currently inactive.",
   },
 
-  ORGANIZATION_CREATOR_ONLY: {
+  ORGANIZATION_MEMBER_ACCESS_DENIED: {
     statusCode: 403,
-    message: "Only the organization creator can modify this resource.",
+    message: "You do not have access to this organization.",
+  },
+
+  ORGANIZATION_ACCESS_DENIED: {
+    statusCode: 403,
+    message: "Access to this organization is denied.",
+  },
+
+  ORGANIZATION_LAST_OWNER_PROTECTION: {
+    statusCode: 409,
+    message: "Cannot remove, suspend, or demote the last owner of an organization.",
   },
 
   // Organization Member
   ORGANIZATION_MEMBER_NOT_FOUND: {
     statusCode: 404,
-    message: "The requested organization member could not be found.",
+    message: "Organization member not found.",
   },
 
   ORGANIZATION_MEMBER_ALREADY_EXISTS: {
     statusCode: 409,
-    message: "The user is already a member of this organization.",
+    message: "This user is already a member of the organization.",
   },
 
   ORGANIZATION_MEMBER_NOT_ACTIVE: {
     statusCode: 409,
-    message: "The member must be active to perform this action.",
+    message: "This action requires the member to have an active status.",
   },
 
   ORGANIZATION_MEMBER_NOT_SUSPENDED: {
     statusCode: 409,
-    message: "The member must be suspended before they can be activated.",
+    message: "Only suspended members can be reactivated.",
   },
 
   ORGANIZATION_MEMBER_REMOVED: {
     statusCode: 409,
-    message: "This organization membership has been removed.",
+    message:
+      "Your membership in this organization has been removed. Contact an admin for access.",
   },
+
   ORGANIZATION_MEMBER_SUSPENDED: {
     statusCode: 409,
-    message: "This organization membership has been suspended.",
+    message: "Your membership in this organization has been suspended. Contact an admin.",
   },
 
-  ORGANIZATION_MEMBER_ACTIVATION_REQUIRED: {
-    statusCode: 409,
-    message: "Only suspended members can be activated.",
-  },
-
-  ORGANIZATION_MEMBER_SUSPENSION_REQUIRED: {
-    statusCode: 409,
-    message: "Only active members can be suspended.",
-  },
-
-  ORGANIZATION_MEMBER_REMOVE_DIRECTLY: {
-    statusCode: 400,
-    message: "Use the member removal operation to remove a member.",
+  ORGANIZATION_MEMBER_INVITATION_PENDING: {
+    statusCode: 403,
+    message:
+      "Your invitation is still pending. Please accept the invitation to access this organization.",
   },
 
   // Role
   ROLE_NOT_FOUND: {
     statusCode: 404,
-    message: "The requested role could not be found.",
+    message: "Role not found.",
   },
 
   ROLE_ALREADY_EXISTS: {
@@ -320,42 +341,77 @@ export const ERROR_DEFINITIONS: Record<
 
   ROLE_SYSTEM_PROTECTED: {
     statusCode: 403,
-    message: "System roles cannot be modified.",
+    message: "System roles cannot be modified or deleted.",
   },
 
   // API Key
   API_KEY_NOT_FOUND: {
     statusCode: 404,
-    message: "The requested API key could not be found.",
+    message: "API key not found.",
   },
 
   API_KEY_REVOKED: {
     statusCode: 403,
-    message: "The API key has been revoked and is no longer valid.",
+    message: "This API key has been revoked.",
   },
 
   API_KEY_UNAUTHORIZED: {
     statusCode: 403,
-    message: "The API key does not belong to the requested organization.",
+    message: "This API key does not belong to the requested organization.",
   },
 
-  // Validation
+  // Invitation
+  INVITATION_NOT_FOUND: {
+    statusCode: 404,
+    message: "Invitation not found.",
+  },
+
+  INVITATION_EXPIRED: {
+    statusCode: 410,
+    message: "This invitation has expired. Please request a new invitation.",
+  },
+
+  INVITATION_ALREADY_ACCEPTED: {
+    statusCode: 409,
+    message: "This invitation has already been accepted.",
+  },
+
+  INVITATION_ALREADY_REJECTED: {
+    statusCode: 409,
+    message: "This invitation has already been rejected.",
+  },
+  INVITATION_REJECTED: {
+    statusCode: 409,
+    message: "This invitation has been rejected.",
+  },
+
+  INVITATION_REVOKED: {
+    statusCode: 410,
+    message: "This invitation has been revoked.",
+  },
+  INVITATION_INVALID: {
+    statusCode: 400,
+    message: "This invitation is invalid.",
+  },
+
+  // Validation & General
   RATE_LIMIT_EXCEEDED: {
     statusCode: 429,
     message: "Too many requests. Please slow down and try again later.",
   },
+
   VALIDATION_FAILED: {
     statusCode: 400,
-    message: "The request contains invalid data.",
+    message: "The request data is invalid.",
   },
 
-  SLUG_REQUIRED: {
-    statusCode: 400,
-    message: "Organization slug is required.",
+  ROUTE_NOT_FOUND: {
+    statusCode: 404,
+    message: "The requested endpoint does not exist.",
   },
 
   INTERNAL_SERVER_ERROR: {
     statusCode: 500,
-    message: "An unexpected error occurred.",
+    message: "An unexpected error occurred. Please try again later.",
   },
 };

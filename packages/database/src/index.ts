@@ -182,8 +182,6 @@ export type {
   UpdateRoleData,
   FindRoleCriteria,
   FindManyRolesCriteria,
-  UpdateRoleCriteria,
-  DeleteRoleCriteria,
 } from "./repositories/role/role.types.js";
 
 export type { RoleRepository } from "./repositories/role/role-repository.js";

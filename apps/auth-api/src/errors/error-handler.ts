@@ -55,8 +55,8 @@ export function globalErrorHandler(
   return res.status(500).json({
     success: false,
     error: {
-      code: "INTERNAL_SERVER_ERROR",
-      message: "An unexpected error occurred.",
+      code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+      message: ERROR_DEFINITIONS.INTERNAL_SERVER_ERROR.message,
       requestId,
     },
   });
