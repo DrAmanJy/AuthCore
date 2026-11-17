@@ -13,12 +13,8 @@ import type {
 
 import type { CreateRecoveryTokenData, RecoveryTokenResult } from "./auth.types.js";
 
-import {
-  AuthenticationError,
-  TokenExpiredError,
-} from "../../errors/authentication-error.js";
-
 import { ERROR_CODES } from "../../errors/error-codes.js";
+import { AppError } from "../../errors/app-error.js";
 
 export class RecoveryService {
   constructor(
@@ -53,7 +49,7 @@ export class RecoveryService {
     const token = await this.verificationTokenRepository.markAsUsed(tokenId);
 
     if (!token) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_NOT_FOUND);
+      throw new AppError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_NOT_FOUND);
     }
   }
 
@@ -69,22 +65,19 @@ export class RecoveryService {
     });
 
     if (!verificationToken) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_INVALID);
+      throw new AppError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_INVALID);
     }
 
     if (verificationToken.type !== type) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_INVALID);
+      throw new AppError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_INVALID);
     }
 
     if (verificationToken.usedAt) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_USED);
+      throw new AppError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_USED);
     }
 
     if (verificationToken.expiresAt <= new Date()) {
-      throw new TokenExpiredError(
-        ERROR_CODES.AUTH_VERIFICATION_TOKEN_EXPIRED,
-        verificationToken.expiresAt,
-      );
+      throw new AppError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_EXPIRED);
     }
 
     return verificationToken;
