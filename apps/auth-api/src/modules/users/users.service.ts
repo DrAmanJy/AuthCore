@@ -1,14 +1,21 @@
-import type { UserId, CreateUserData, UserCredentials } from "@authcore/database";
+import type { UserId, CreateUserData, UserCredentials, Organization } from "@authcore/database";
 
 import type { User, UserRepository } from "@authcore/database";
 import type { ChangeStatus, UpdateProfile } from "@authcore/contracts";
-import { ResourceError } from "../../errors/resource-error.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { logger } from "@authcore/logger";
-import { InternalServerError } from "../../errors/internal-server-error.js";
+import { AppError } from "../../errors/app-error.js";
+import { sessionService } from "../../container.js";
+import type { MembersService } from "../organization/members/member.service.js";
 
 export class UserService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly membersService :MembersService) {}
+
+  async isEmailExist(email: string): Promise<boolean> {
+    return this.userRepository.exists({ by: "email", email });
+  }
 
   async getAuthenticatedUser(userId: UserId): Promise<User> {
     const user = await this.getUserById(userId);
@@ -24,7 +31,7 @@ export class UserService {
       userId,
     });
 
-    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+    if (!user) throw new AppError(ERROR_CODES.USER_NOT_FOUND);
 
     return user;
   }
@@ -35,7 +42,7 @@ export class UserService {
       email,
     });
 
-    if (!user) throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+    if (!user) throw new AppError(ERROR_CODES.USER_NOT_FOUND);
 
     return user;
   }
@@ -55,7 +62,7 @@ export class UserService {
           });
 
     if (!user) {
-      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+      throw new AppError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     return user;
@@ -64,6 +71,10 @@ export class UserService {
   async getAllUsers(): Promise<User[]> {
     const result = await this.userRepository.findMany({});
     return result.items;
+  }
+
+   getUserOrganizations(userId:UserId):Promise<Organization[]>{
+   return this.membersService.getUserOrganizations(userId)
   }
 
   async create(data: CreateUserData): Promise<User> {
@@ -81,7 +92,7 @@ export class UserService {
         "User creation rejected because email already exists",
       );
 
-      throw new ResourceError(ERROR_CODES.USER_EMAIL_ALREADY_EXISTS);
+      throw new AppError(ERROR_CODES.USER_EMAIL_ALREADY_EXISTS);
     }
 
     const user = await this.userRepository.create(data);
@@ -108,7 +119,7 @@ export class UserService {
     );
 
     if (!user) {
-      throw new InternalServerError();
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
     logger.info(
@@ -129,7 +140,7 @@ export class UserService {
     );
 
     if (!user) {
-      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
     return user;
@@ -140,7 +151,7 @@ export class UserService {
     const user = await this.userRepository.updatePassword(userId, passwordHash);
 
     if (!user) {
-      throw new ResourceError(ERROR_CODES.USER_PASSWORD_UPDATE_FAILED);
+      throw new AppError(ERROR_CODES.USER_PASSWORD_UPDATE_FAILED);
     }
 
     return user;
@@ -156,7 +167,7 @@ export class UserService {
     );
 
     if (!user) {
-      throw new ResourceError(ERROR_CODES.USER_NOT_FOUND);
+      throw new AppError(ERROR_CODES.USER_NOT_FOUND);
     }
 
     return user;
@@ -172,8 +183,16 @@ export class UserService {
       },
     );
 
+    if (data.status !== "active") {
+      await sessionService.revokeAllUserSessions(
+        userId,
+        undefined,
+        `User status changed to ${data.status}`,
+      );
+    }
+
     if (!user) {
-      throw new InternalServerError();
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
 
     logger.info(
@@ -188,38 +207,40 @@ export class UserService {
   }
 
   async deleteUser(userId: UserId): Promise<User> {
-    await this.getUserById(userId);
+    const user = await this.getUserById(userId);
 
     const success = await this.userRepository.delete({ userId });
 
     if (!success) {
-      throw new InternalServerError();
+      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
-    return this.getUserById(userId);
+    await sessionService.revokeAllUserSessions(userId, undefined, "User deleted");
+    return user;
   }
 
   async deactivateUser(userId: UserId) {
     await this.getAuthenticatedUser(userId);
+    await sessionService.revokeAllUserSessions(userId, undefined, "User deactivated");
     return this.changeStatus(userId, { status: "deactivated" });
   }
 
   public validateAccountStatus(user: User | UserCredentials): void {
     if ("emailVerified" in user && !user.emailVerified) {
-      throw new ResourceError(ERROR_CODES.USER_EMAIL_NOT_VERIFIED);
+      throw new AppError(ERROR_CODES.USER_EMAIL_NOT_VERIFIED);
     }
 
     switch (user.status) {
       case "deactivated":
-        throw new ResourceError(ERROR_CODES.USER_ACCOUNT_DEACTIVATED);
+        throw new AppError(ERROR_CODES.USER_ACCOUNT_DEACTIVATED);
 
       case "inactive":
-        throw new ResourceError(ERROR_CODES.USER_ACCOUNT_INACTIVE);
+        throw new AppError(ERROR_CODES.USER_ACCOUNT_INACTIVE);
 
       case "pending":
-        throw new ResourceError(ERROR_CODES.USER_ACCOUNT_PENDING);
+        throw new AppError(ERROR_CODES.USER_ACCOUNT_PENDING);
 
       case "suspended":
-        throw new ResourceError(ERROR_CODES.USER_ACCOUNT_SUSPENDED);
+        throw new AppError(ERROR_CODES.USER_ACCOUNT_SUSPENDED);
 
       case "active":
         return;
