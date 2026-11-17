@@ -22,8 +22,7 @@ import type {
 import type { PasswordService } from "./password.service.js";
 import type { RecoveryService } from "./recovery.service.js";
 import type { SessionService } from "./session.service.js";
-import { AuthenticationError } from "../../errors/authentication-error.js";
-import { ResourceError } from "../../errors/resource-error.js";
+
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import type { MembersService } from "../organization/members/member.service.js";
 import {
@@ -31,7 +30,12 @@ import {
   resendVerificationEmailTemplate,
   sendEmail,
   verificationEmailTemplate,
+  welcomeEmailTemplate,
 } from "@authcore/email";
+import { AppError } from "../../errors/app-error.js";
+import type { InvitationService } from "../organization/invitations/invitation.service.js";
+import type { OrganizationService } from "../organization/organization.service.js";
+import { config } from "@authcore/config";
 
 export class AuthService {
   constructor(
@@ -40,34 +44,38 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly recoveryService: RecoveryService,
     private readonly membersService: MembersService,
+    private readonly invitationService: InvitationService,
+    private readonly organizationService: OrganizationService,
   ) {}
 
   async registerUser(data: RegisterType): Promise<User> {
+    const hasInvitation = Boolean(data.InvitationToken);
+    const hasOrganization = Boolean(data.organization);
+
+    if (hasInvitation === hasOrganization) {
+      throw new AppError("AUTH_ONBOARDING_CONTEXT_REQUIRED");
+    }
+
+    const email = data.email.trim().toLowerCase();
+
+    const emailExists = await this.userService.isEmailExist(email);
+
+    if (emailExists) {
+      throw new AppError("USER_EMAIL_ALREADY_EXISTS");
+    }
+
     const passwordHash = await this.passwordService.hash(data.password);
 
-    const user = await this.userService.create({
-      displayName: data.displayName,
-      email: data.email,
-      passwordHash,
-      emailVerified: false,
-    });
-
-    const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
-      user.id,
-    );
-
-    const { html, subject, text } = verificationEmailTemplate({
-      displayName: user.displayName,
-      expiresAt: expiresAt.toISOString(),
-      verificationUrl: `not available/${token}`,
-    });
-
-    await sendEmail({ html, subject, to: user.email, text });
+    const { user, organizationId } = hasInvitation
+      ? await this.registerWithInvitation(data, email, passwordHash)
+      : await this.registerWithOrganization(data, email, passwordHash);
 
     logger.info(
       {
         event: "auth.register.success",
         userId: user.id,
+        onboardingType: hasInvitation ? "invitation" : "organization",
+        organizationId,
       },
       "User registered successfully",
     );
@@ -89,23 +97,12 @@ export class AuthService {
     );
 
     if (!isValidPassword) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+      throw new AppError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
-    const member = await this.membersService.getMemberByUser(
-      data.organizationId,
-      user.id,
-    );
+    const member = await this.resolveLoginMembership(user.id, data.organizationId);
 
-    if (member.status === "removed") {
-      throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_REMOVED);
-    }
-    if (member.status === "suspended") {
-      throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_SUSPENDED);
-    }
-    if (member.status === "invited") {
-      throw new AuthenticationError(ERROR_CODES.ORGANIZATION_MEMBER_SUSPENDED); //todo change this
-    }
+    this.validateMemberStatus(member);
 
     const session = await this.sessionService.createSession({
       userId: member.userId,
@@ -114,15 +111,15 @@ export class AuthService {
     });
 
     logger.info(
-      { event: "auth.login.success", userId: member.userId },
+      {
+        event: "auth.login.success",
+        userId: user.id,
+        organizationId: member.organizationId,
+      },
       "User logged in successfully",
     );
 
-    const {
-      passwordHash: _passwordHash,
-      emailVerified: _emailVerified,
-      ...safeUser
-    } = user;
+    const { passwordHash: _passwordHash, ...safeUser } = user;
 
     return {
       user: safeUser,
@@ -175,7 +172,7 @@ export class AuthService {
   async resendVerification(email: string): Promise<void> {
     const user = await this.userService.getUserByEmail(email);
     if (user.status !== "pending") {
-      throw new ResourceError(ERROR_CODES.USER_ALREADY_ACTIVE);
+      throw new AppError(ERROR_CODES.USER_ALREADY_ACTIVE);
     }
     const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
       user.id,
@@ -259,7 +256,7 @@ export class AuthService {
     );
 
     if (!isValidPassword) {
-      throw new AuthenticationError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+      throw new AppError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
     const passwordHash = await this.passwordService.hash(data.newPassword);
@@ -315,5 +312,154 @@ export class AuthService {
       "All user sessions revoked successfully",
     );
     return count;
+  }
+
+  private async registerWithInvitation(
+    data: RegisterType,
+    email: string,
+    passwordHash: string,
+  ): Promise<{ user: User; organizationId: OrganizationId }> {
+    if (!data.InvitationToken) {
+      throw new AppError("AUTH_ONBOARDING_CONTEXT_REQUIRED");
+    }
+
+    const invitation = await this.invitationService.getInviteByToken(
+      data.InvitationToken,
+    );
+    if (invitation.expiresAt < new Date()) throw new AppError("INVITATION_EXPIRED");
+    if (invitation.status === "accepted")
+      throw new AppError("INVITATION_ALREADY_ACCEPTED");
+    if (invitation.status === "rejected") throw new AppError("INVITATION_REJECTED");
+    if (invitation.status === "revoked") throw new AppError("INVITATION_REVOKED");
+    if (invitation.status === "expired") throw new AppError("INVITATION_EXPIRED");
+    if (!invitation.targetEmail && invitation.targetEmail !== email)
+      throw new AppError("INVITATION_INVALID");
+
+    const user = await this.userService.create({
+      displayName: data.displayName,
+      email,
+      passwordHash,
+      emailVerified: true,
+      status: "active",
+    });
+
+    const { organization } = await this.invitationService.acceptInvite(
+      invitation.id,
+      invitation.organizationId,
+      user.id,
+    );
+
+    const { html, subject, text } = welcomeEmailTemplate({
+      displayName: user.displayName,
+      occurredAt: new Date().toISOString(),
+      signInUrl: `${organization.frontendUrl}/login`,
+    });
+
+    await sendEmail({
+      html,
+      subject,
+      to: user.email,
+      text,
+    });
+
+    return { user, organizationId: organization.id };
+  }
+
+  private async registerWithOrganization(
+    data: RegisterType,
+    email: string,
+    passwordHash: string,
+  ): Promise<{ user: User; organizationId: OrganizationId }> {
+    if (!data.organization) {
+      throw new AppError("AUTH_ONBOARDING_CONTEXT_REQUIRED");
+    }
+
+    const user = await this.userService.create({
+      displayName: data.displayName,
+      email,
+      passwordHash,
+      emailVerified: false,
+    });
+
+    const organization = await this.organizationService.create(user.id, {
+      frontendUrl: data.organization.frontendUrl,
+      name: data.organization.name,
+      slug: data.organization.slug,
+    });
+
+    const { token, expiresAt } = await this.recoveryService.createEmailVerificationToken(
+      user.id,
+    );
+
+    const { html, subject, text } = verificationEmailTemplate({
+      displayName: user.displayName,
+      expiresAt: expiresAt.toISOString(),
+      verificationUrl: `${config.app.frontendUrl}/verify-email/${token}`,
+    });
+
+    await sendEmail({
+      html,
+      subject,
+      to: user.email,
+      text,
+    });
+
+    return { user, organizationId: organization.id };
+  }
+
+  private async resolveLoginMembership(
+    userId: UserId,
+    organizationId?: OrganizationId,
+  ): Promise<Awaited<ReturnType<MembersService["getMemberByUser"]>>> {
+    if (organizationId) {
+      return this.membersService.getMemberByUser(organizationId, userId);
+    }
+
+    const organizations = await this.membersService.getUserOrganizations(userId);
+
+    if (organizations.length === 0) {
+      throw new AppError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
+    }
+
+    if (organizations.length > 1) {
+      throw new AppError(ERROR_CODES.AUTH_ORGANIZATION_SELECTION_REQUIRED, {
+        details: {
+          organizations: organizations.map(organization => ({
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+          })),
+        },
+      });
+    }
+
+const organization = organizations[0];
+
+if (!organization) {
+  throw new AppError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
+}
+
+return this.membersService.getMemberByUser(
+  organization.id,
+  userId,
+);
+  }
+
+  private validateMemberStatus(
+    member: Awaited<ReturnType<MembersService["getMemberByUser"]>>,
+  ): void {
+    switch (member.status) {
+      case "active":
+        return;
+
+      case "removed":
+        throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_REMOVED);
+
+      case "suspended":
+        throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_SUSPENDED);
+
+      case "invited":
+        throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_INVITATION_PENDING);
+    }
   }
 }
