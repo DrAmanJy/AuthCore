@@ -2,10 +2,12 @@ export const SYSTEM_PERMISSIONS = {
   ORG_READ: "org:read",
   ORG_UPDATE: "org:update",
   ORG_DELETE: "org:delete",
+  ORG_TRANSFER: "org:transfer",
   MEMBERS_READ: "members:read",
   MEMBERS_INVITE: "members:invite",
   MEMBERS_UPDATE: "members:update",
   MEMBERS_REMOVE: "members:remove",
+  MEMBERS_DELETE: "members:delete",
   ROLES_READ: "roles:read",
   ROLES_CREATE: "roles:create",
   ROLES_UPDATE: "roles:update",
@@ -13,6 +15,11 @@ export const SYSTEM_PERMISSIONS = {
   API_KEYS_READ: "api_keys:read",
   API_KEYS_CREATE: "api_keys:create",
   API_KEYS_REVOKE: "api_keys:revoke",
+  API_KEYS_DELETE: "api_keys:delete",
+  PERM_READ: "perm:read",
+  PERM_CREATE: "perm:create",
+  PERM_UPDATE: "perm:update",
+  PERM_DELETE: "perm:delete",
 } as const;
 
 export type PermissionKey = (typeof SYSTEM_PERMISSIONS)[keyof typeof SYSTEM_PERMISSIONS];
