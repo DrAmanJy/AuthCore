@@ -87,10 +87,6 @@ export type {
   OrganizationInvitationParams,
 } from "./invitation/types.js";
 
-// Permissions
-export { PERMISSIONS, ALL_PERMISSIONS } from "./auth/permissions.js";
-export type { Permission } from "./auth/permissions.js";
-
 // Roles - Schemas
 export {
   createRoleSchema,
