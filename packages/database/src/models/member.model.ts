@@ -1,7 +1,13 @@
 import type { Types } from "mongoose";
 import { model, Schema } from "mongoose";
 
-export const _MEMBER_STATUSES = ["invited", "active", "suspended", "removed"] as const;
+export const _MEMBER_STATUSES = [
+  "invited",
+  "active",
+  "suspended",
+  "removed",
+  "left",
+] as const;
 
 export type MemberStatus = (typeof _MEMBER_STATUSES)[number];
 
