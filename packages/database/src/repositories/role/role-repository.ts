@@ -1,4 +1,3 @@
-import type { OrganizationId } from "../organization/organization.types.js";
 import type { PermissionId } from "../permission/permission.types.js";
 import type {
   HardDeleteRepository,
@@ -25,7 +24,6 @@ export interface RoleRepository
     >,
     SoftDeleteRepository<Role, FindRoleCriteria>,
     HardDeleteRepository<FindRoleCriteria> {
-  findDefault(organizationId: OrganizationId): Promise<Role | null>;
   createSystemRole(data: CreateRoleData): Promise<Role | null>;
   addPermissions(
     criteria: FindRoleCriteria,
