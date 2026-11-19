@@ -16,6 +16,7 @@ import type { MemberRepository } from "./organization-member-repository.js";
 import type {
   CreateMemberData,
   DeleteMemberCriteria,
+  ExistCriteria,
   FindManyMembersCriteria,
   FindMemberCriteria,
   Member,
@@ -45,6 +46,17 @@ type MongoMemberRecord = Pick<
 };
 
 export class MongoMemberRepository implements MemberRepository {
+  async exists(criteria: ExistCriteria): Promise<boolean> {
+    const hasAssignedMembers = await MemberModel.exists({
+      organizationId: criteria.organizationId,
+      roleId: criteria.roleId,
+      status: { $in: criteria.status },
+    })
+      .lean()
+      .exec();
+
+    return hasAssignedMembers ? true : false;
+  }
   async find(criteria: FindMemberCriteria): Promise<Member | null> {
     const filter: QueryFilter<IMember> = {
       organizationId: toObjectId(criteria.organizationId),
@@ -232,6 +244,8 @@ export class MongoMemberRepository implements MemberRepository {
         $set: {
           ...(data.roleId && { roleId: toObjectId(data.roleId) }),
           ...(data.status && { status: data.status }),
+          ...(typeof data.isOwner === "boolean" && { isOwner: data.isOwner }),
+          ...(data.joinedAt && { joinedAt: data.joinedAt }),
         },
       },
       {
@@ -288,6 +302,7 @@ export class MongoMemberRepository implements MemberRepository {
   private toMember(record: MongoMemberRecord): Member {
     return {
       id: asMemberId(record._id.toString()),
+
       organizationId: asOrganizationId(record.organizationId.toString()),
       userId: asUserId(record.userId.toString()),
       roleId: asRoleId(record.roleId.toString()),
