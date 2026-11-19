@@ -180,7 +180,7 @@ export class AuthService {
     const { html, subject, text } = resendVerificationEmailTemplate({
       displayName: user.displayName,
       expiresAt: expiresAt.toISOString(),
-      verificationUrl: `not available/${token}`,
+      verificationUrl: `${config.app.frontendUrl}/verify-email?token=${token}`,
     });
 
     await sendEmail({ html, subject, to: user.email, text });
@@ -209,7 +209,7 @@ export class AuthService {
     const { html, subject, text } = passwordResetEmailTemplate({
       displayName: user.displayName,
       expiresAt: expiresAt.toISOString(),
-      resetUrl: `not available/${token}`,
+      resetUrl: `${config.app.frontendUrl}/change-password?token=${token}`,
     });
 
     await sendEmail({ html, subject, to: user.email, text });
@@ -394,7 +394,7 @@ export class AuthService {
     const { html, subject, text } = verificationEmailTemplate({
       displayName: user.displayName,
       expiresAt: expiresAt.toISOString(),
-      verificationUrl: `${config.app.frontendUrl}/verify-email/${token}`,
+      verificationUrl: `${config.app.frontendUrl}/verify-email?token=${token}`,
     });
 
     await sendEmail({
@@ -433,16 +433,13 @@ export class AuthService {
       });
     }
 
-const organization = organizations[0];
+    const organization = organizations[0];
 
-if (!organization) {
-  throw new AppError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
-}
+    if (!organization) {
+      throw new AppError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
+    }
 
-return this.membersService.getMemberByUser(
-  organization.id,
-  userId,
-);
+    return this.membersService.getMemberByUser(organization.id, userId);
   }
 
   private validateMemberStatus(
@@ -460,6 +457,8 @@ return this.membersService.getMemberByUser(
 
       case "invited":
         throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_INVITATION_PENDING);
+      case "left":
+        throw new AppError("ORGANIZATION_MEMBER_REMOVED"); //to do add left error code and replace it
     }
   }
 }
