@@ -103,12 +103,8 @@ export class AuthController {
     sendSuccess(res, result.accessToken, "Access token refreshed successfully");
   }
 
-  async verifyEmail(req: Request<unknown, unknown, unknown>, res: Response) {
-    const { token } = req.query;
-
-    if (typeof token !== "string" || !token.trim()) {
-      throw new AppError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_MISSING);
-    }
+  async verifyEmail(req: Request<unknown, unknown, { token: string }>, res: Response) {
+    const { token } = req.body;
 
     await this.authService.verifyEmail(token);
 
@@ -116,13 +112,9 @@ export class AuthController {
   }
 
   async resendVerification(req: Request<unknown, unknown, EmailParams>, res: Response) {
-    const { email } = req.query;
+    const { email } = req.body;
 
-    if (typeof email !== "string" || !email.trim()) {
-      throw new AppError(ERROR_CODES.AUTH_EMAIL_MISSING);
-    }
-
-    await this.authService.resendVerification(email);
+    await this.authService.resendVerification(email.trim());
 
     sendNoContent(res);
   }
