@@ -8,6 +8,7 @@ import type { UserId } from "../user/user.types.js";
 import type {
   CreateMemberData,
   DeleteMemberCriteria,
+  ExistCriteria,
   FindManyMembersCriteria,
   FindMemberCriteria,
   Member,
@@ -27,6 +28,7 @@ export interface MemberRepository
     >,
     SoftDeleteRepository<Member, DeleteMemberCriteria>,
     HardDeleteRepository<DeleteMemberCriteria> {
+  exists(criteria: ExistCriteria): Promise<boolean>;
   findOwners(organizationId: OrganizationId): Promise<Member[]>;
   findUserOrganizations(userId: UserId): Promise<Organization[]>;
 }
