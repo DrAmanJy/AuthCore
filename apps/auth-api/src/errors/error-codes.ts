@@ -76,6 +76,9 @@ export const ERROR_CODES = {
   INVITATION_REVOKED: "INVITATION_REVOKED",
   INVITATION_INVALID: "INVITATION_INVALID",
 
+  // Permission
+  PERMISSION_NOT_FOUND: "PERMISSION_NOT_FOUND",
+
   // Validation & General
   RATE_LIMIT_EXCEEDED: "RATE_LIMIT_EXCEEDED",
   VALIDATION_FAILED: "VALIDATION_FAILED",
@@ -392,6 +395,12 @@ export const ERROR_DEFINITIONS: Record<
   INVITATION_INVALID: {
     statusCode: 400,
     message: "This invitation is invalid.",
+  },
+
+  // Invitation
+  PERMISSION_NOT_FOUND: {
+    statusCode: 404,
+    message: "Permission not found.",
   },
 
   // Validation & General
