@@ -26,7 +26,9 @@ export type CreatePermissionData = Pick<
   "organizationId" | "key" | "description"
 > & { scope?: PermissionScope; createdBy?: ActorId };
 
-export type UpdatePermissionData = Pick<CreatePermissionData, "description" | "key">;
+export type UpdatePermissionData = Partial<
+  Pick<CreatePermissionData, "description" | "key">
+>;
 
 export type FindPermissionCriteria =
   | {
