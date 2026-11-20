@@ -9,7 +9,6 @@ import type {
   OrganizationId,
   RoleId,
   UserId,
-  TargetType,
   Organization,
 } from "@authcore/database";
 
@@ -23,7 +22,7 @@ import { AppError } from "../../../errors/app-error.js";
 import type { UserService } from "../../users/users.service.js";
 import type { AuthorizationService } from "../authorization/authorization.service.js";
 import type { MembersService } from "../members/member.service.js";
-import { invitationEmailTemplate } from "@authcore/email";
+import { invitationEmailTemplate, sendEmail } from "@authcore/email";
 import type { RoleService } from "../roles/role.service.js";
 
 type InvitationAction = "accepted" | "rejected" | "revoked";
@@ -33,7 +32,7 @@ type InvitationStatus = Invitation["status"];
 type SendInvitationParams = {
   organization: Organization;
   roleId: RoleId;
-  targetType: TargetType;
+  targetType: "user" | "email";
   actorId: ActorId;
   targetEmail?: string;
   targetUserId?: UserId;
@@ -148,10 +147,6 @@ export class InvitationService {
   }
 
   async sendInvite(params: SendInvitationParams): Promise<Invitation> {
-    await this.authorizationService.getValidOrganization({
-      by: "id",
-      organizationId: params.organization.id,
-    });
     let targetUser;
 
     let targetEmail = params.targetEmail
@@ -166,11 +161,13 @@ export class InvitationService {
       targetUser = await this.userService.getAuthenticatedUser(params.targetUserId);
 
       targetEmail = this.normalizeEmail(targetUser.email);
-    } else if (!targetEmail) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED);
+    } else {
+      if (!targetEmail) throw new AppError(ERROR_CODES.VALIDATION_FAILED);
+      targetUser = await this.userService.getUserByEmail(targetEmail);
+      this.userService.validateAccountStatus(targetUser);
     }
 
-    const role = await this.roleService.getRole({
+    const role = await this.roleService.get({
       organizationId: params.organization.id,
       roleId: params.roleId,
       actorId: params.actorId,
@@ -190,14 +187,16 @@ export class InvitationService {
       expiresAt: getExpiryTime(config.auth.invitationExpiry),
     });
 
-    const {} = invitationEmailTemplate({
+    const { html, subject, text } = invitationEmailTemplate({
       expiresAt: invitation.expiresAt.toISOString(),
       inviterName: invitation.invitedBy,
-      inviteUrl: `${params.organization.frontendUrl}/accept-invitation/:`,
+      inviteUrl: `${params.organization.frontendUrl}/accept-invitation/:${token}`,
       organizationName: params.organization.name,
       roleName: role.name,
-      displayName: targetUser?.displayName ?? "Not available",
+      displayName: targetUser.displayName || "Not available",
     });
+
+    await sendEmail({ html, subject, to: targetEmail, text });
 
     return invitation;
   }
