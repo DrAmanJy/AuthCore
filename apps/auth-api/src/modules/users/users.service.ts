@@ -1,17 +1,27 @@
-import type { UserId, CreateUserData, UserCredentials, Organization } from "@authcore/database";
+import type {
+  UserId,
+  CreateUserData,
+  UserCredentials,
+  Organization,
+  OrganizationId,
+  ActorId,
+  Member,
+} from "@authcore/database";
 
 import type { User, UserRepository } from "@authcore/database";
 import type { ChangeStatus, UpdateProfile } from "@authcore/contracts";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { logger } from "@authcore/logger";
 import { AppError } from "../../errors/app-error.js";
-import { sessionService } from "../../container.js";
 import type { MembersService } from "../organization/members/member.service.js";
+import type { SessionService } from "../auth/session.service.js";
 
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly membersService :MembersService) {}
+    private readonly sessionService: SessionService,
+    private readonly membersService: MembersService,
+  ) {}
 
   async isEmailExist(email: string): Promise<boolean> {
     return this.userRepository.exists({ by: "email", email });
@@ -73,8 +83,8 @@ export class UserService {
     return result.items;
   }
 
-   getUserOrganizations(userId:UserId):Promise<Organization[]>{
-   return this.membersService.getUserOrganizations(userId)
+  getUserOrganizations(userId: UserId): Promise<Organization[]> {
+    return this.membersService.getUserOrganizations(userId);
   }
 
   async create(data: CreateUserData): Promise<User> {
@@ -156,6 +166,13 @@ export class UserService {
 
     return user;
   }
+  async leaveOrganizations(
+    organizationId: OrganizationId,
+    actorId: ActorId,
+  ): Promise<Member> {
+    await this.getAuthenticatedUser(actorId);
+    return this.membersService.leave(organizationId, actorId);
+  }
 
   async verifyEmail(userId: UserId): Promise<User> {
     const user = await this.userRepository.update(
@@ -184,7 +201,7 @@ export class UserService {
     );
 
     if (data.status !== "active") {
-      await sessionService.revokeAllUserSessions(
+      await this.sessionService.revokeAllUserSessions(
         userId,
         undefined,
         `User status changed to ${data.status}`,
@@ -214,13 +231,17 @@ export class UserService {
     if (!success) {
       throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
-    await sessionService.revokeAllUserSessions(userId, undefined, "User deleted");
+    await this.sessionService.revokeAllUserSessions(userId, undefined, "User deleted");
     return user;
   }
 
   async deactivateUser(userId: UserId) {
     await this.getAuthenticatedUser(userId);
-    await sessionService.revokeAllUserSessions(userId, undefined, "User deactivated");
+    await this.sessionService.revokeAllUserSessions(
+      userId,
+      undefined,
+      "User deactivated",
+    );
     return this.changeStatus(userId, { status: "deactivated" });
   }
 
