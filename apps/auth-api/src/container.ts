@@ -8,6 +8,7 @@ import {
   MongoMemberRepository,
   MongoOrganizationRepository,
   MongoRoleRepository,
+  MongoPermissionRepository,
 } from "@authcore/database";
 
 import { UserService } from "./modules/users/users.service.js";
@@ -28,6 +29,8 @@ import { ApiKeyController } from "./modules/organization/api-keys/api-key.contro
 import { InvitationController } from "./modules/organization/invitations/invitation.controller.js";
 import { MemberController } from "./modules/organization/members/member.controller.js";
 import { RoleController } from "./modules/organization/roles/role.controller.js";
+import { PermissionController } from "./modules/organization/permission/permission.controller.js";
+import { PermissionService } from "./modules/organization/permission/permission.service.js";
 
 const userRepository = new MongoUserRepository();
 const sessionRepository = new MongoSessionRepository();
@@ -38,6 +41,7 @@ const memberRepository = new MongoMemberRepository();
 const roleRepository = new MongoRoleRepository();
 const apiKeyRepository = new MongoApiKeyRepository();
 const invitationRepository = new MongoInvitationRepository();
+const permissionRepository = new MongoPermissionRepository();
 
 const sessionService = new SessionService(sessionRepository, refreshTokenRepository);
 const passwordService = new PasswordService();
@@ -54,14 +58,20 @@ const organizationService = new OrganizationService(
 );
 const apiKeyService = new ApiKeyService(apiKeyRepository, authorizationService);
 const memberService = new MembersService(memberRepository, authorizationService);
-const roleService = new RoleService(roleRepository, authorizationService);
+const roleService = new RoleService(
+  roleRepository,
+  memberRepository,
+  authorizationService,
+);
+const permissionService = new PermissionService(permissionRepository);
 
-const userService = new UserService(userRepository, memberService);
+const userService = new UserService(userRepository, sessionService, memberService);
 
 const invitationService = new InvitationService(
   invitationRepository,
   userService,
   memberService,
+  roleService,
   authorizationService,
 );
 const authService = new AuthService(
@@ -81,6 +91,7 @@ const apiKeyController = new ApiKeyController(apiKeyService);
 const invitationController = new InvitationController(invitationService);
 const memberController = new MemberController(memberService);
 const roleController = new RoleController(roleService);
+const permissionController = new PermissionController(permissionService);
 
 export {
   userController,
@@ -93,4 +104,5 @@ export {
   invitationController,
   memberController,
   roleController,
+  permissionController,
 };
