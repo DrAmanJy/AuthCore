@@ -25,6 +25,7 @@ userRouter.post("/deactivate", userController.deactivateUser);
 userRouter.delete("/", userController.deleteUser);
 
 userRouter.get("/organizations", userController.getUserOrganizations);
+userRouter.post("/organizations/:organizationId/leave", userController.leaveOrganization);
 
 userRouter.get("/invitation", invitationController.getUserInvites);
 userRouter.post(
