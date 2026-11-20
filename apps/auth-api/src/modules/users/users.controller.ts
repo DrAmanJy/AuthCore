@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 
+import type { OrganizationId } from "@authcore/database";
 import { asUserId } from "@authcore/database";
 
 import type { ChangeStatus, UpdateProfile } from "@authcore/contracts";
@@ -70,7 +71,15 @@ export class UserController {
 
     sendSuccess(res, organizations, "Organizations successfully retrieved");
   }
-
+  async leaveOrganization(
+    req: Request<{ organizationId: OrganizationId }>,
+    res: Response,
+  ) {
+    const { sub } = getAuthToken(req);
+    const { organizationId } = req.params;
+    const member = await this.userService.leaveOrganizations(organizationId, sub);
+    sendSuccess(res, member, "Organizations successfully left");
+  }
   async changeUserStatus(req: UserRequest<ChangeStatus>, res: Response) {
     const user = await this.userService.changeStatus(asUserId(req.params.userId), {
       status: req.body.status,
