@@ -28,4 +28,10 @@ apiKeyRouter.patch(
   apiKeyController.revokeApiKey,
 );
 
+apiKeyRouter.delete(
+  "/:apiKeyId",
+  requirePermission("api_keys:delete"),
+  apiKeyController.deleteApiKey,
+);
+
 export default apiKeyRouter;
