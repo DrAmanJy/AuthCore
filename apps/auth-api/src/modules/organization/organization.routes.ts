@@ -7,6 +7,7 @@ import roleRouter from "./roles/role.routes.js";
 import memberRouter from "./members/members.routes.js";
 import apiKeyRouter from "./api-keys/api-key.routes.js";
 import invitationRouter from "./invitations/invitations.routes.js";
+import permissionRouter from "./permission/permission.routes.js";
 
 const organizationRouter = Router();
 
@@ -35,6 +36,7 @@ scopedRouter.delete(
 scopedRouter.use("/roles", roleRouter);
 scopedRouter.use("/members", memberRouter);
 scopedRouter.use("/api-keys", apiKeyRouter);
+scopedRouter.use("/permissions", permissionRouter);
 
 organizationRouter.use("/:organizationId", scopedRouter);
 
