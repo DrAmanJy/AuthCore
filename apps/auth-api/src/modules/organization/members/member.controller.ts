@@ -3,6 +3,7 @@ import type {
   MemberId,
   OrganizationId,
   RoleId,
+  UserId,
 } from "@authcore/database";
 import getAuthToken from "../../../utils/token.js";
 import type { MembersService } from "./member.service.js";
@@ -13,6 +14,7 @@ import { ERROR_CODES } from "../../../errors/error-codes.js";
 
 export class MemberController {
   constructor(private readonly membersService: MembersService) {
+    this.transferOwnership = this.transferOwnership.bind(this);
     this.getMembers = this.getMembers.bind(this);
     this.createMember = this.createMember.bind(this);
     this.getMember = this.getMember.bind(this);
@@ -22,16 +24,23 @@ export class MemberController {
     this.removeMember = this.removeMember.bind(this);
   }
 
-  //   async transferOwnership(req: Request<{ newOwnerUserId: string }>, res: Response) {
-  //     const { sub } = getAuthToken(req);
-  //     const organization = await this.membersService.transferOwnership(
-  //       asOrganizationId(req.params.organizationId),
-  //       asActorId(sub),
-  //       asUserId(req.body.newOwnerUserId),
-  //     );
+  async transferOwnership(
+    req: Request<unknown, unknown, { newOwnerUserId: UserId }>,
+    res: Response,
+  ) {
+    const { sub } = getAuthToken(req);
+    if (!req.orgContext) throw new AppError("AUTH_FORBIDDEN");
+    const { organization } = req.orgContext;
+    const { newOwnerUserId } = req.body;
 
-  //     sendSuccess(res, organization, "Organization ownership transferred successfully");
-  //   }
+    const result = await this.membersService.transferOwnership(
+      organization,
+      sub,
+      newOwnerUserId,
+    );
+
+    sendSuccess(res, result, "Organization ownership transferred successfully");
+  }
 
   async getMembers(req: Request<{ organizationId: OrganizationId }>, res: Response) {
     const { sub } = getAuthToken(req);
