@@ -1,6 +1,7 @@
 import type {
   ActorId,
   CreateRoleData,
+  MemberRepository,
   OrganizationId,
   Role,
   RoleId,
@@ -11,16 +12,18 @@ import { ERROR_CODES } from "../../../errors/error-codes.js";
 import { logger } from "@authcore/logger";
 import type { AuthorizationService } from "../authorization/authorization.service.js";
 import { AppError } from "../../../errors/app-error.js";
+import type { PermissionId } from "@authcore/database/dist/repositories/permission/permission.types.js";
 
 export class RoleService {
   constructor(
     private readonly roleRepository: RoleRepository,
+    private readonly memberRepository: MemberRepository,
     private readonly authorizationService: AuthorizationService,
   ) {}
 
   // ─────────────────────────────────────────────
 
-  async getRole(params: {
+  async get(params: {
     organizationId: OrganizationId;
     roleId: RoleId;
     actorId?: ActorId;
@@ -46,7 +49,7 @@ export class RoleService {
     return role;
   }
 
-  async getRoleByName(params: {
+  async getByName(params: {
     organizationId: OrganizationId;
     name: string;
     actorId?: ActorId;
@@ -72,7 +75,10 @@ export class RoleService {
     return role;
   }
 
-  async getRoles(organizationId: OrganizationId, actorId?: ActorId): Promise<Role[]> {
+  async getByOrganizationId(
+    organizationId: OrganizationId,
+    actorId?: ActorId,
+  ): Promise<Role[]> {
     await this.authorizationService.getValidOrganization(
       {
         by: "id",
@@ -88,7 +94,7 @@ export class RoleService {
     return result.items;
   }
 
-  async createRole(params: {
+  async create(params: {
     organizationId: OrganizationId;
     actorId: ActorId;
     data: {
@@ -128,7 +134,7 @@ export class RoleService {
     return role;
   }
 
-  async updateRole(params: {
+  async update(params: {
     organizationId: OrganizationId;
     roleId: RoleId;
     actorId: ActorId;
@@ -154,11 +160,81 @@ export class RoleService {
     return updatedRole;
   }
 
-  async deleteRole(params: {
+  async addPermissions(params: {
+    organizationId: OrganizationId;
+    actorId: ActorId;
+    roleId: RoleId;
+    permissionIds: PermissionId[];
+  }): Promise<Role> {
+    await this.authorizationService.getValidOrganization(
+      {
+        by: "id",
+        organizationId: params.organizationId,
+      },
+      params.actorId,
+    );
+
+    const existingRole = await this.roleRepository.find({
+      by: "id",
+      roleId: params.roleId,
+      organizationId: params.organizationId,
+    });
+
+    if (existingRole) {
+      throw new AppError(ERROR_CODES.ROLE_ALREADY_EXISTS);
+    }
+    const updatedRole = await this.roleRepository.addPermissions(
+      { by: "id", roleId: params.roleId, organizationId: params.organizationId },
+      params.permissionIds,
+    );
+    if (!updatedRole) throw new AppError("INTERNAL_SERVER_ERROR");
+
+    return updatedRole;
+  }
+  async removePermissions(params: {
+    organizationId: OrganizationId;
+    actorId: ActorId;
+    roleId: RoleId;
+    permissionIds: PermissionId[];
+  }): Promise<Role> {
+    await this.authorizationService.getValidOrganization(
+      {
+        by: "id",
+        organizationId: params.organizationId,
+      },
+      params.actorId,
+    );
+
+    const existingRole = await this.roleRepository.find({
+      by: "id",
+      roleId: params.roleId,
+      organizationId: params.organizationId,
+    });
+
+    if (existingRole) {
+      throw new AppError(ERROR_CODES.ROLE_ALREADY_EXISTS);
+    }
+    const updatedRole = await this.roleRepository.removePermissions(
+      { by: "id", roleId: params.roleId, organizationId: params.organizationId },
+      params.permissionIds,
+    );
+    if (!updatedRole) throw new AppError("INTERNAL_SERVER_ERROR");
+
+    return updatedRole;
+  }
+
+  async softDelete(params: {
     organizationId: OrganizationId;
     roleId: RoleId;
     actorId: ActorId;
   }): Promise<Role> {
+    const isUsed = await this.memberRepository.exists({
+      organizationId: params.organizationId,
+      roleId: params.roleId,
+      status: ["active", "invited"],
+    });
+
+    if (isUsed) throw new AppError("API_KEY_NOT_FOUND"); //todo make error code for it.
     const deletedRole = await this.roleRepository.softDelete({
       by: "id",
       roleId: params.roleId,
