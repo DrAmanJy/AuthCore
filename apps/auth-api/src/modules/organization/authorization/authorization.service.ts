@@ -38,13 +38,14 @@ export class AuthorizationService {
     organizationId: OrganizationId,
     userId: UserId,
   ): Promise<OrgContext> {
-    const organization = await this.getValidOrganization({ by: "id", organizationId });
-
-    const member = await this.memberRepository.find({
-      by: "user",
-      userId,
-      organizationId,
-    });
+    const [organization, member] = await Promise.all([
+      this.getValidOrganization({ by: "id", organizationId }),
+      this.memberRepository.find({
+        by: "user",
+        userId,
+        organizationId,
+      }),
+    ]);
 
     if (!member) {
       throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_NOT_FOUND);
@@ -84,7 +85,6 @@ export class AuthorizationService {
 
   async getValidOrganization(
     criteria: FindOrganizationCriteria,
-    owner?: UserId,
   ): Promise<Organization> {
     const organization = await this.organizationRepository.find(criteria);
 
@@ -94,9 +94,6 @@ export class AuthorizationService {
 
     if (organization.status !== "active") {
       throw new AppError(ERROR_CODES.ORGANIZATION_INACTIVE);
-    }
-    if (owner && organization.createdBy.id !== owner) {
-      throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_ACCESS_DENIED);
     }
     return organization;
   }
