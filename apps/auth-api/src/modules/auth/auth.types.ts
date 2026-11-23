@@ -32,6 +32,8 @@ export type CreateSessionType = {
   userId: UserId;
   organizationId: OrganizationId;
   device: Device;
+  permissions?: string[];
+  isOwner?: boolean;
 };
 
 export type RevokeSessionType = {
@@ -51,6 +53,8 @@ export type AccessTokenPayload = {
   sid: SessionId;
   orgId: OrganizationId;
   jti: string;
+  permissions: string[];
+  isOwner?: boolean;
   type: "access";
 };
 
