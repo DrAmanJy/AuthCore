@@ -54,6 +54,7 @@ export const ERROR_CODES = {
   ORGANIZATION_MEMBER_NOT_ACTIVE: "ORGANIZATION_MEMBER_NOT_ACTIVE",
   ORGANIZATION_MEMBER_NOT_SUSPENDED: "ORGANIZATION_MEMBER_NOT_SUSPENDED",
   ORGANIZATION_MEMBER_REMOVED: "ORGANIZATION_MEMBER_REMOVED",
+  ORGANIZATION_MEMBER_LEFT: "ORGANIZATION_MEMBER_LEFT",
   ORGANIZATION_MEMBER_SUSPENDED: "ORGANIZATION_MEMBER_SUSPENDED",
   ORGANIZATION_MEMBER_INVITATION_PENDING: "ORGANIZATION_MEMBER_INVITATION_PENDING",
 
@@ -61,6 +62,7 @@ export const ERROR_CODES = {
   ROLE_NOT_FOUND: "ROLE_NOT_FOUND",
   ROLE_ALREADY_EXISTS: "ROLE_ALREADY_EXISTS",
   ROLE_SYSTEM_PROTECTED: "ROLE_SYSTEM_PROTECTED",
+  ROLE_IN_USE: "ROLE_IN_USE",
 
   // API Key
   API_KEY_NOT_FOUND: "API_KEY_NOT_FOUND",
@@ -320,6 +322,11 @@ export const ERROR_DEFINITIONS: Record<
       "Your membership in this organization has been removed. Contact an admin for access.",
   },
 
+  ORGANIZATION_MEMBER_LEFT: {
+    statusCode: 403,
+    message: "You have left this organization. Contact an admin to rejoin.",
+  },
+
   ORGANIZATION_MEMBER_SUSPENDED: {
     statusCode: 409,
     message: "Your membership in this organization has been suspended. Contact an admin.",
@@ -345,6 +352,11 @@ export const ERROR_DEFINITIONS: Record<
   ROLE_SYSTEM_PROTECTED: {
     statusCode: 403,
     message: "System roles cannot be modified or deleted.",
+  },
+
+  ROLE_IN_USE: {
+    statusCode: 409,
+    message: "Cannot delete a role that is currently assigned to members.",
   },
 
   // API Key
