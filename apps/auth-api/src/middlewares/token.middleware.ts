@@ -66,6 +66,10 @@ export async function validateAccessToken(
       sid: asSessionId(decoded.sid),
       orgId: asOrganizationId(decoded.orgId),
       jti: decoded.jti,
+      permissions: Array.isArray(decoded.permissions)
+        ? decoded.permissions.filter((p): p is string => typeof p === "string")
+        : [],
+      isOwner: typeof decoded.isOwner === "boolean" ? decoded.isOwner : undefined,
       type: "access",
     };
 
@@ -82,6 +86,7 @@ export async function validateAccessToken(
     next();
   } catch (error) {
     logger.error(error, "unknown error in validate access token");
+    next(error);
   }
 }
 
