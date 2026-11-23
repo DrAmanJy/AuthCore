@@ -149,9 +149,9 @@ export class MongoOrganizationRepository implements OrganizationRepository {
   ): Promise<Organization | null> {
     try {
       const filter: QueryFilter<IOrganization> = {
-        ...(criteria.by === "actor" && { createdBy: criteria.actorId }),
-        ...(criteria.by === "id" && { createdBy: toObjectId(criteria.organizationId) }),
-        ...(criteria.by === "slug" && { createdBy: criteria.slug }),
+        ...(criteria.by === "actor" && { createdBy: toObjectId(criteria.actorId) }),
+        ...(criteria.by === "id" && { _id: toObjectId(criteria.organizationId) }),
+        ...(criteria.by === "slug" && { slug: criteria.slug }),
         deletedAt: { $exists: false },
       };
 
@@ -181,9 +181,9 @@ export class MongoOrganizationRepository implements OrganizationRepository {
   async softDelete(criteria: FindOrganizationCriteria): Promise<Organization | null> {
     try {
       const filter: QueryFilter<IOrganization> = {
-        ...(criteria.by === "actor" && { createdBy: criteria.actorId }),
-        ...(criteria.by === "id" && { createdBy: toObjectId(criteria.organizationId) }),
-        ...(criteria.by === "slug" && { createdBy: criteria.slug }),
+        ...(criteria.by === "actor" && { createdBy: toObjectId(criteria.actorId) }),
+        ...(criteria.by === "id" && { _id: toObjectId(criteria.organizationId) }),
+        ...(criteria.by === "slug" && { slug: criteria.slug }),
         deletedAt: { $exists: false },
       };
       const organization = await OrganizationModel.findOneAndUpdate(
@@ -214,9 +214,9 @@ export class MongoOrganizationRepository implements OrganizationRepository {
   async delete(criteria: FindOrganizationCriteria): Promise<boolean> {
     try {
       const filter: QueryFilter<IOrganization> = {
-        ...(criteria.by === "actor" && { createdBy: criteria.actorId }),
-        ...(criteria.by === "id" && { createdBy: toObjectId(criteria.organizationId) }),
-        ...(criteria.by === "slug" && { createdBy: criteria.slug }),
+        ...(criteria.by === "actor" && { createdBy: toObjectId(criteria.actorId) }),
+        ...(criteria.by === "id" && { _id: toObjectId(criteria.organizationId) }),
+        ...(criteria.by === "slug" && { slug: criteria.slug }),
         deletedAt: { $exists: true },
       };
 
