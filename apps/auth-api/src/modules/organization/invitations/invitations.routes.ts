@@ -22,8 +22,4 @@ invitationRouter.delete(
   invitationController.revokeInvitation,
 );
 
-invitationRouter.post("/:invitationId/accept", invitationController.acceptInvitation);
-
-invitationRouter.post("/:invitationId/reject", invitationController.rejectInvitation);
-
 export default invitationRouter;
