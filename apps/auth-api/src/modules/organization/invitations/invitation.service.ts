@@ -10,6 +10,8 @@ import type {
   RoleId,
   UserId,
   Organization,
+  FindManyOptions,
+  PaginatedResult,
 } from "@authcore/database";
 
 import { getExpiryTime } from "@authcore/database";
@@ -55,22 +57,30 @@ export class InvitationService {
     private readonly authorizationService: AuthorizationService,
   ) {}
 
-  async getInvitesByActorId(actorId: ActorId): Promise<Invitation[]> {
-    const result = await this.invitationRepository.findMany({
-      userId: actorId,
-      activeOnly: true,
-    });
-
-    return result.items;
+  async getInvitesByActorId(
+    actorId: ActorId,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Invitation>> {
+    return this.invitationRepository.findMany(
+      {
+        userId: actorId,
+        activeOnly: true,
+      },
+      options,
+    );
   }
 
-  async getInvitesByUserId(userId: UserId): Promise<Invitation[]> {
-    const result = await this.invitationRepository.findMany({
-      userId,
-      activeOnly: true,
-    });
-
-    return result.items;
+  async getInvitesByUserId(
+    userId: UserId,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Invitation>> {
+    return this.invitationRepository.findMany(
+      {
+        userId,
+        activeOnly: true,
+      },
+      options,
+    );
   }
   async getInviteByToken(token: string): Promise<Invitation> {
     const tokenHash = hashString(token);
@@ -135,15 +145,17 @@ export class InvitationService {
     return invitation;
   }
 
-  async getOrganizationInvites(organizationId: OrganizationId): Promise<Invitation[]> {
-    await this.validateOrganization(organizationId);
-
-    const result = await this.invitationRepository.findMany({
-      organizationId,
-      activeOnly: true,
-    });
-
-    return result.items;
+  async getOrganizationInvites(
+    organizationId: OrganizationId,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Invitation>> {
+    return this.invitationRepository.findMany(
+      {
+        organizationId,
+        activeOnly: true,
+      },
+      options,
+    );
   }
 
   async sendInvite(params: SendInvitationParams): Promise<Invitation> {
@@ -190,7 +202,7 @@ export class InvitationService {
     const { html, subject, text } = invitationEmailTemplate({
       expiresAt: invitation.expiresAt.toISOString(),
       inviterName: invitation.invitedBy,
-      inviteUrl: `${params.organization.frontendUrl}/accept-invitation/:${token}`,
+      inviteUrl: `${params.organization.frontendUrl}/accept-invitation/${token}`,
       organizationName: params.organization.name,
       roleName: role.name,
       displayName: targetUser.displayName || "Not available",
@@ -206,12 +218,13 @@ export class InvitationService {
     organizationId: OrganizationId,
     actorId: ActorId,
   ): Promise<{ member: Member; organization: Organization }> {
-    const invitation = await this.findInvitationById(invitationId);
-
-    const organization = await this.authorizationService.getValidOrganization({
-      by: "id",
-      organizationId: organizationId,
-    });
+    const [invitation, organization] = await Promise.all([
+      this.findInvitationById(invitationId),
+      this.authorizationService.getValidOrganization({
+        by: "id",
+        organizationId: organizationId,
+      }),
+    ]);
 
     await this.validateInvitationAction(invitation, organizationId, actorId, "accepted");
 
@@ -272,15 +285,6 @@ export class InvitationService {
     actorId: ActorId,
   ): Promise<void> {
     const invitation = await this.findInvitationById(invitationId);
-
-    // Only an authorized organization member can revoke an invitation.
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: invitation.organizationId,
-      },
-      actorId,
-    );
 
     await this.validateInvitationAction(
       invitation,
