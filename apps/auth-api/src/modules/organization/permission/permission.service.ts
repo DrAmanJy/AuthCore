@@ -1,5 +1,7 @@
 import type {
+  FindManyOptions,
   OrganizationId,
+  PaginatedResult,
   PermissionRepository,
   Permission,
   RoleId,
@@ -26,19 +28,30 @@ export class PermissionService {
     return permission;
   }
 
-  async getRoles(roleId: RoleId, organizationId: OrganizationId): Promise<Permission[]> {
-    const permissions = await this.permissionRepository.findMany({
-      roleId,
-      organizationId,
-    });
-    return permissions.items;
+  async getRoles(
+    roleId: RoleId,
+    organizationId: OrganizationId,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Permission>> {
+    return this.permissionRepository.findMany(
+      {
+        roleId,
+        organizationId,
+      },
+      options,
+    );
   }
 
-  async getOrganizations(organizationId: OrganizationId): Promise<Permission[]> {
-    const permissions = await this.permissionRepository.findMany({ organizationId });
-    const systemPermissions = await this.permissionRepository.findSystemPermissions();
+  async getOrganizations(
+    organizationId: OrganizationId,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Permission>> {
+    const [permissions, systemPermissions] = await Promise.all([
+      this.permissionRepository.findMany({ organizationId }, options),
+      this.permissionRepository.findSystemPermissions(),
+    ]);
     systemPermissions.forEach(permission => permissions.items.push(permission));
-    return permissions.items;
+    return permissions;
   }
 
   async create(params: Omit<CreatePermissionData, "scope">) {
