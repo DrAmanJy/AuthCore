@@ -5,21 +5,21 @@ import { requirePermission } from "../../../middlewares/permission.js";
 const permissionRouter = Router({ mergeParams: true });
 
 permissionRouter.get(
-  "/:permissionId",
+  "/",
   requirePermission("perm:read"),
-  permissionController.get,
+  permissionController.getOrganizationPermissions,
 );
 
 permissionRouter.get(
-  "/:roleId",
+  "/role/:roleId",
   requirePermission("perm:read"),
   permissionController.getRolePermissions,
 );
 
 permissionRouter.get(
-  "/",
+  "/:permissionId",
   requirePermission("perm:read"),
-  permissionController.getOrganizationPermissions,
+  permissionController.get,
 );
 
 permissionRouter.post("/", requirePermission("perm:create"), permissionController.create);
