@@ -1,8 +1,10 @@
 import type {
   ActorId,
   CreateRoleData,
+  FindManyOptions,
   MemberRepository,
   OrganizationId,
+  PaginatedResult,
   Role,
   RoleId,
   RoleRepository,
@@ -10,7 +12,6 @@ import type {
 } from "@authcore/database";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
 import { logger } from "@authcore/logger";
-import type { AuthorizationService } from "../authorization/authorization.service.js";
 import { AppError } from "../../../errors/app-error.js";
 import type { PermissionId } from "@authcore/database/dist/repositories/permission/permission.types.js";
 
@@ -18,7 +19,6 @@ export class RoleService {
   constructor(
     private readonly roleRepository: RoleRepository,
     private readonly memberRepository: MemberRepository,
-    private readonly authorizationService: AuthorizationService,
   ) {}
 
   // ─────────────────────────────────────────────
@@ -28,14 +28,6 @@ export class RoleService {
     roleId: RoleId;
     actorId?: ActorId;
   }): Promise<Role> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const role = await this.roleRepository.find({
       by: "id",
       roleId: params.roleId,
@@ -54,14 +46,6 @@ export class RoleService {
     name: string;
     actorId?: ActorId;
   }): Promise<Role> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const role = await this.roleRepository.find({
       by: "name",
       name: params.name,
@@ -77,21 +61,15 @@ export class RoleService {
 
   async getByOrganizationId(
     organizationId: OrganizationId,
-    actorId?: ActorId,
-  ): Promise<Role[]> {
-    await this.authorizationService.getValidOrganization(
+    options?: FindManyOptions,
+    _actorId?: ActorId,
+  ): Promise<PaginatedResult<Role>> {
+    return this.roleRepository.findMany(
       {
-        by: "id",
         organizationId,
       },
-      actorId,
+      options,
     );
-
-    const result = await this.roleRepository.findMany({
-      organizationId,
-    });
-
-    return result.items;
   }
 
   async create(params: {
@@ -102,14 +80,6 @@ export class RoleService {
       permissionIds: CreateRoleData["permissionIds"];
     };
   }): Promise<Role> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const existingRole = await this.roleRepository.find({
       by: "name",
       name: params.data.name,
@@ -166,28 +136,11 @@ export class RoleService {
     roleId: RoleId;
     permissionIds: PermissionId[];
   }): Promise<Role> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
-    const existingRole = await this.roleRepository.find({
-      by: "id",
-      roleId: params.roleId,
-      organizationId: params.organizationId,
-    });
-
-    if (existingRole) {
-      throw new AppError(ERROR_CODES.ROLE_ALREADY_EXISTS);
-    }
     const updatedRole = await this.roleRepository.addPermissions(
       { by: "id", roleId: params.roleId, organizationId: params.organizationId },
       params.permissionIds,
     );
-    if (!updatedRole) throw new AppError("INTERNAL_SERVER_ERROR");
+    if (!updatedRole) throw new AppError(ERROR_CODES.ROLE_NOT_FOUND);
 
     return updatedRole;
   }
@@ -197,28 +150,11 @@ export class RoleService {
     roleId: RoleId;
     permissionIds: PermissionId[];
   }): Promise<Role> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
-    const existingRole = await this.roleRepository.find({
-      by: "id",
-      roleId: params.roleId,
-      organizationId: params.organizationId,
-    });
-
-    if (existingRole) {
-      throw new AppError(ERROR_CODES.ROLE_ALREADY_EXISTS);
-    }
     const updatedRole = await this.roleRepository.removePermissions(
       { by: "id", roleId: params.roleId, organizationId: params.organizationId },
       params.permissionIds,
     );
-    if (!updatedRole) throw new AppError("INTERNAL_SERVER_ERROR");
+    if (!updatedRole) throw new AppError(ERROR_CODES.ROLE_NOT_FOUND);
 
     return updatedRole;
   }
@@ -234,7 +170,7 @@ export class RoleService {
       status: ["active", "invited"],
     });
 
-    if (isUsed) throw new AppError("API_KEY_NOT_FOUND"); //todo make error code for it.
+    if (isUsed) throw new AppError(ERROR_CODES.ROLE_IN_USE);
     const deletedRole = await this.roleRepository.softDelete({
       by: "id",
       roleId: params.roleId,
