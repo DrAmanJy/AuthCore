@@ -4,7 +4,9 @@ import type {
   ApiKey,
   ApiKeyRepository,
   ApiKeyId,
+  FindManyOptions,
   OrganizationId,
+  PaginatedResult,
 } from "@authcore/database";
 
 import { hashString } from "../../../utils/hashString.js";
@@ -22,16 +24,8 @@ export class ApiKeyService {
   async getById(params: {
     organizationId: OrganizationId;
     apiKeyId: ApiKeyId;
-    actorId: ActorId;
+    actorId?: ActorId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const apiKey = await this.apiKeyRepository.find({
       by: "id",
       apiKeyId: params.apiKeyId,
@@ -48,16 +42,8 @@ export class ApiKeyService {
   async getByKey(params: {
     organizationId: OrganizationId;
     rawKey: string;
-    actorId: ActorId;
+    actorId?: ActorId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const keyHash = asKeyHash(hashString(params.rawKey));
 
     const apiKey = await this.apiKeyRepository.find({
@@ -73,23 +59,19 @@ export class ApiKeyService {
     return apiKey;
   }
 
-  async getAllOrganizationKey(params: {
-    organizationId: OrganizationId;
-    actorId: ActorId;
-  }): Promise<ApiKey[]> {
-    await this.authorizationService.getValidOrganization(
+  async getAllOrganizationKey(
+    params: {
+      organizationId: OrganizationId;
+      actorId?: ActorId;
+    },
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<ApiKey>> {
+    return this.apiKeyRepository.findMany(
       {
-        by: "id",
         organizationId: params.organizationId,
       },
-      params.actorId,
+      options,
     );
-
-    const result = await this.apiKeyRepository.findMany({
-      organizationId: params.organizationId,
-    });
-
-    return result.items;
   }
 
   async create(params: {
@@ -97,14 +79,6 @@ export class ApiKeyService {
     organizationId: OrganizationId;
     actorId: ActorId;
   }): Promise<{ apiKey: ApiKey; key: string }> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const key = randomBytes(64).toString("base64url");
     const keyHash = asKeyHash(hashString(key));
 
@@ -121,15 +95,8 @@ export class ApiKeyService {
   async revokeByKey(params: {
     key: string;
     organizationId: OrganizationId;
-    actorId: ActorId;
+    actorId?: ActorId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
     const keyHash = asKeyHash(hashString(params.key));
     const apiKey = await this.apiKeyRepository.find({
       by: "keyHash",
@@ -156,16 +123,8 @@ export class ApiKeyService {
   async revokeById(params: {
     apiKeyId: ApiKeyId;
     organizationId: OrganizationId;
-    actorId: ActorId;
+    actorId?: ActorId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const apiKey = await this.apiKeyRepository.revoke({
       apiKeyId: params.apiKeyId,
       organizationId: params.organizationId,
@@ -182,11 +141,6 @@ export class ApiKeyService {
     apiKeyId: ApiKeyId;
     organizationId: OrganizationId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization({
-      by: "id",
-      organizationId: params.organizationId,
-    });
-
     const apiKey = await this.apiKeyRepository.update(
       {
         apiKeyId: params.apiKeyId,
@@ -208,11 +162,6 @@ export class ApiKeyService {
     key: string;
     organizationId: OrganizationId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization({
-      by: "id",
-      organizationId: params.organizationId,
-    });
-
     const keyHash = asKeyHash(hashString(params.key));
     const existing = await this.apiKeyRepository.find({
       by: "keyHash",
@@ -244,16 +193,8 @@ export class ApiKeyService {
   async softDeleteById(params: {
     organizationId: OrganizationId;
     apiKeyId: ApiKeyId;
-    actorId: ActorId;
+    actorId?: ActorId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const apiKey = await this.apiKeyRepository.softDelete({
       apiKeyId: params.apiKeyId,
       organizationId: params.organizationId,
@@ -269,16 +210,8 @@ export class ApiKeyService {
   async softDeleteByKey(params: {
     organizationId: OrganizationId;
     key: string;
-    actorId: ActorId;
+    actorId?: ActorId;
   }): Promise<ApiKey> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const keyHash = asKeyHash(hashString(params.key));
     const existing = await this.apiKeyRepository.find({
       by: "keyHash",
