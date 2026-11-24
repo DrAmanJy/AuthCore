@@ -1,10 +1,12 @@
 import type {
   ActorId,
+  FindManyOptions,
   Member,
   MemberId,
   MemberRepository,
   Organization,
   OrganizationId,
+  PaginatedResult,
   RoleId,
   UserId,
 } from "@authcore/database";
@@ -84,16 +86,8 @@ export class MembersService {
   async getMember(
     organizationId: OrganizationId,
     memberId: MemberId,
-    actorId: ActorId,
+    _actorId?: ActorId,
   ): Promise<Member> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId,
-      },
-      actorId,
-    );
-
     const member = await this.memberRepository.find({
       by: "id",
       memberId,
@@ -110,16 +104,8 @@ export class MembersService {
   async getMemberByUser(
     organizationId: OrganizationId,
     userId: UserId,
-    actorId?: ActorId,
+    _actorId?: ActorId,
   ): Promise<Member> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId,
-      },
-      actorId,
-    );
-
     const member = await this.memberRepository.find({
       by: "user",
       userId,
@@ -133,17 +119,12 @@ export class MembersService {
     return member;
   }
 
-  async getMembers(organizationId: OrganizationId, actorId: ActorId): Promise<Member[]> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId,
-      },
-      actorId,
-    );
-
-    const result = await this.memberRepository.findMany({ organizationId });
-    return result.items;
+  async getMembers(
+    organizationId: OrganizationId,
+    options?: FindManyOptions,
+    _actorId?: ActorId,
+  ): Promise<PaginatedResult<Member>> {
+    return this.memberRepository.findMany({ organizationId }, options);
   }
 
   getUserOrganizations(userId: UserId): Promise<Organization[]> {
@@ -157,14 +138,6 @@ export class MembersService {
     roleId: RoleId;
     status: "invited" | "active";
   }): Promise<Member> {
-    await this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId: params.organizationId,
-      },
-      params.actorId,
-    );
-
     const existingMember = await this.memberRepository.find({
       by: "user",
       userId: params.userId,
