@@ -7,7 +7,12 @@ import type {
 } from "@authcore/database";
 import getAuthToken from "../../../utils/token.js";
 import type { MembersService } from "./member.service.js";
-import { sendCreated, sendSuccess } from "../../../utils/response.utils.js";
+import {
+  getPaginationOptions,
+  sendCreated,
+  sendPaginated,
+  sendSuccess,
+} from "../../../utils/response.utils.js";
 import type { Request, Response } from "express";
 import { AppError } from "../../../errors/app-error.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
@@ -49,9 +54,10 @@ export class MemberController {
     if (!organizationId) {
       throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
-    const members = await this.membersService.getMembers(organizationId, sub);
+    const options = getPaginationOptions(req.query);
+    const members = await this.membersService.getMembers(organizationId, options, sub);
 
-    sendSuccess(res, members, "Organization Members successfully retrieved");
+    sendPaginated(res, members, "Organization Members successfully retrieved");
   }
 
   async createMember(
