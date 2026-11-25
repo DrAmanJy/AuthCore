@@ -1,5 +1,6 @@
 // Common
 export { emailSchema, dateSchema } from "./common/schemas/common.schema.js";
+export { paginationQuerySchema, type PaginationQuery } from "./common/schemas/pagination.schema.js";
 
 export { idSchema } from "./common/schemas/id.schema.js";
 
