@@ -7,7 +7,12 @@ import type {
   RoleId,
   UpdateRoleData,
 } from "@authcore/database";
-import { sendCreated, sendSuccess } from "../../../utils/response.utils.js";
+import {
+  getPaginationOptions,
+  sendCreated,
+  sendPaginated,
+  sendSuccess,
+} from "../../../utils/response.utils.js";
 import type { PermissionId } from "@authcore/database/dist/repositories/permission/permission.types.js";
 
 export class RoleController {
@@ -17,14 +22,17 @@ export class RoleController {
     this.getRole = this.getRole.bind(this);
     this.updateRole = this.updateRole.bind(this);
     this.deleteRole = this.deleteRole.bind(this);
+    this.addPermissions = this.addPermissions.bind(this);
+    this.removePermissions = this.removePermissions.bind(this);
   }
 
   async getRoles(req: Request<{ organizationId: OrganizationId }>, res: Response) {
     const { organizationId } = req.params;
+    const options = getPaginationOptions(req.query);
 
-    const roles = await this.roleService.getByOrganizationId(organizationId);
+    const roles = await this.roleService.getByOrganizationId(organizationId, options);
 
-    sendSuccess(res, roles, "Roles successfully retrieved");
+    sendPaginated(res, roles, "Roles successfully retrieved");
   }
 
   async createRole(
