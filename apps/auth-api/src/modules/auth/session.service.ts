@@ -10,10 +10,14 @@ import {
 
 import type {
   ActorId,
+  FindManyOptions,
+  MemberRepository,
   OrganizationId,
+  PaginatedResult,
   RefreshToken,
   RefreshTokenHash,
   RefreshTokenRepository,
+  RoleRepository,
   Session,
   SessionId,
   SessionRepository,
@@ -22,6 +26,7 @@ import type {
 } from "@authcore/database";
 
 import { config } from "@authcore/config";
+import { SYSTEM_PERMISSIONS } from "@authcore/contracts";
 
 import type {
   AccessTokenPayload,
@@ -37,7 +42,39 @@ export class SessionService {
   constructor(
     private readonly sessionRepository: SessionRepository,
     private readonly refreshTokenRepository: RefreshTokenRepository,
+    private readonly memberRepository: MemberRepository,
+    private readonly roleRepository: RoleRepository,
   ) {}
+
+  async getUserPermissions(
+    organizationId: OrganizationId,
+    userId: UserId,
+  ): Promise<{ permissions: string[]; isOwner: boolean }> {
+    const member = await this.memberRepository.find({
+      by: "user",
+      userId,
+      organizationId,
+    });
+
+    if (!member || member.status !== "active") {
+      return { permissions: [], isOwner: false };
+    }
+
+    if (member.isOwner) {
+      return { permissions: Object.values(SYSTEM_PERMISSIONS), isOwner: true };
+    }
+
+    const role = await this.roleRepository.find({
+      by: "id",
+      roleId: member.roleId,
+      organizationId,
+    });
+
+    return {
+      permissions: role?.permissions ?? [],
+      isOwner: false,
+    };
+  }
 
   async createSession(data: CreateSessionType): Promise<CreateSessionResult> {
     const { refreshToken, refreshTokenHash } = this.generateRefreshToken();
@@ -45,7 +82,9 @@ export class SessionService {
     const sessionExpiresAt = getExpiryTime(config.auth.sessionExpiry);
 
     const session = await this.sessionRepository.create({
-      ...data,
+      userId: data.userId,
+      organizationId: data.organizationId,
+      device: data.device,
       expiresAt: sessionExpiresAt,
     });
 
@@ -60,12 +99,23 @@ export class SessionService {
       expiresAt: refreshTokenExpiresAt,
     });
 
+    let permissions = data.permissions;
+    let isOwner = data.isOwner;
+
+    if (!permissions || isOwner === undefined) {
+      const resolved = await this.getUserPermissions(data.organizationId, data.userId);
+      permissions = permissions ?? resolved.permissions;
+      isOwner = isOwner ?? resolved.isOwner;
+    }
+
     const accessToken = this.generateAccessToken({
       sub: session.userId,
       sid: session.id,
       orgId: session.organizationId,
       jti: randomUUID(),
       type: "access",
+      permissions,
+      isOwner,
     });
 
     return {
@@ -88,21 +138,29 @@ export class SessionService {
     organizationId: OrganizationId;
     limit?: number;
     skip?: number;
-  }): Promise<Session[]> {
-    return this.getUserSessions({
-      userId: params.userId,
-      organizationId: params.organizationId,
-      activeOnly: true,
-    });
+  }): Promise<PaginatedResult<Session>> {
+    return this.getUserSessions(
+      {
+        userId: params.userId,
+        organizationId: params.organizationId,
+        activeOnly: true,
+      },
+      params.limit ? { limit: params.limit } : undefined,
+    );
   }
 
-  async getUserSessions(data: FindUserAllSessionType): Promise<Session[]> {
-    const result = await this.sessionRepository.findMany({
-      userId: data.userId,
-      organizationId: data.organizationId,
-      activeOnly: data.activeOnly,
-    });
-    return result.items;
+  async getUserSessions(
+    data: FindUserAllSessionType,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Session>> {
+    return this.sessionRepository.findMany(
+      {
+        userId: data.userId,
+        organizationId: data.organizationId,
+        activeOnly: data.activeOnly,
+      },
+      options,
+    );
   }
 
   async updateSession(sessionId: SessionId, data: UpdateSessionData): Promise<Session> {
@@ -196,6 +254,11 @@ export class SessionService {
       ),
     );
 
+    const { permissions, isOwner } = await this.getUserPermissions(
+      session.organizationId,
+      session.userId,
+    );
+
     await this.refreshTokenRepository.create({
       sessionId: session.id,
       parentTokenId: consumedToken.id,
@@ -210,6 +273,8 @@ export class SessionService {
       orgId: session.organizationId,
       jti: randomUUID(),
       type: "access",
+      permissions,
+      isOwner,
     });
 
     return {
