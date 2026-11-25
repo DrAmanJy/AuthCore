@@ -8,8 +8,10 @@ import type {
   UserId,
 } from "@authcore/database";
 import {
+  getPaginationOptions,
   sendCreated,
   sendNoContent,
+  sendPaginated,
   sendSuccess,
 } from "../../../utils/response.utils.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
@@ -64,17 +66,19 @@ export class InvitationController {
     if (!organizationId) {
       throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
+    const options = getPaginationOptions(req.query);
     const invitations =
-      await this.invitationService.getOrganizationInvites(organizationId);
+      await this.invitationService.getOrganizationInvites(organizationId, options);
 
-    sendSuccess(res, invitations, "Invitation successfully retrieved");
+    sendPaginated(res, invitations, "Invitation successfully retrieved");
   }
 
   async getUserInvites(req: Request, res: Response) {
     const { sub } = this.getAuthToken(req);
-    const invitations = await this.invitationService.getInvitesByUserId(sub);
+    const options = getPaginationOptions(req.query);
+    const invitations = await this.invitationService.getInvitesByUserId(sub, options);
 
-    sendSuccess(res, invitations, "Invitation successfully retrieved");
+    sendPaginated(res, invitations, "Invitation successfully retrieved");
   }
 
   async acceptInvitation(
