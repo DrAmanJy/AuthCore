@@ -6,6 +6,8 @@ import type {
   OrganizationId,
   ActorId,
   Member,
+  FindManyOptions,
+  PaginatedResult,
 } from "@authcore/database";
 
 import type { User, UserRepository } from "@authcore/database";
@@ -78,9 +80,8 @@ export class UserService {
     return user;
   }
 
-  async getAllUsers(): Promise<User[]> {
-    const result = await this.userRepository.findMany({});
-    return result.items;
+  async getAllUsers(options?: FindManyOptions): Promise<PaginatedResult<User>> {
+    return this.userRepository.findMany({}, options);
   }
 
   getUserOrganizations(userId: UserId): Promise<Organization[]> {
