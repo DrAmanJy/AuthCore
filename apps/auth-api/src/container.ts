@@ -43,7 +43,12 @@ const apiKeyRepository = new MongoApiKeyRepository();
 const invitationRepository = new MongoInvitationRepository();
 const permissionRepository = new MongoPermissionRepository();
 
-const sessionService = new SessionService(sessionRepository, refreshTokenRepository);
+const sessionService = new SessionService(
+  sessionRepository,
+  refreshTokenRepository,
+  memberRepository,
+  roleRepository,
+);
 const passwordService = new PasswordService();
 const recoveryService = new RecoveryService(verificationTokenRepository);
 const authorizationService = new AuthorizationService(
@@ -61,7 +66,6 @@ const memberService = new MembersService(memberRepository, authorizationService)
 const roleService = new RoleService(
   roleRepository,
   memberRepository,
-  authorizationService,
 );
 const permissionService = new PermissionService(permissionRepository);
 
