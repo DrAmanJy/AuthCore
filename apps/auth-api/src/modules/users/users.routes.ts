@@ -14,7 +14,7 @@ userRouter.use(validateAccessToken);
 // Authenticated user
 // ─────────────────────────────────────────────
 
-userRouter.get("/me", validateAccessToken, userController.getAuthenticatedUser);
+userRouter.get("/me", userController.getAuthenticatedUser);
 userRouter.patch(
   "/profile",
   validateBody(updateUserProfile),

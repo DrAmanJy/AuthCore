@@ -7,7 +7,11 @@ import type { ChangeStatus, UpdateProfile } from "@authcore/contracts";
 
 import type { UserService } from "./users.service.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
-import { sendSuccess } from "../../utils/response.utils.js";
+import {
+  getPaginationOptions,
+  sendPaginated,
+  sendSuccess,
+} from "../../utils/response.utils.js";
 import type { AccessTokenPayload } from "../auth/auth.types.js";
 import { AppError } from "../../errors/app-error.js";
 import getAuthToken from "../../utils/token.js";
@@ -60,9 +64,10 @@ export class UserController {
     sendSuccess(res, user, "User successfully deleted");
   }
 
-  async getAllUsers(_req: Request, res: Response) {
-    const users = await this.userService.getAllUsers();
-    sendSuccess(res, users, "Users successfully retrieved");
+  async getAllUsers(req: Request, res: Response) {
+    const options = getPaginationOptions(req.query);
+    const users = await this.userService.getAllUsers(options);
+    sendPaginated(res, users, "Users successfully retrieved");
   }
 
   async getUserOrganizations(req: Request, res: Response) {
