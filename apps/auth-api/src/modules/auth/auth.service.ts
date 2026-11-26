@@ -1,6 +1,8 @@
 import type {
   ActorId,
+  FindManyOptions,
   OrganizationId,
+  PaginatedResult,
   RefreshToken,
   Session,
   SessionId,
@@ -276,12 +278,19 @@ export class AuthService {
     return updatedUser;
   }
 
-  async getSessions(organizationId: OrganizationId, userId: UserId): Promise<Session[]> {
-    return this.sessionService.getUserSessions({
-      organizationId,
-      userId,
-      activeOnly: true,
-    });
+  async getSessions(
+    organizationId: OrganizationId,
+    userId: UserId,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Session>> {
+    return this.sessionService.getUserSessions(
+      {
+        organizationId,
+        userId,
+        activeOnly: true,
+      },
+      options,
+    );
   }
 
   async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
@@ -332,7 +341,7 @@ export class AuthService {
     if (invitation.status === "rejected") throw new AppError("INVITATION_REJECTED");
     if (invitation.status === "revoked") throw new AppError("INVITATION_REVOKED");
     if (invitation.status === "expired") throw new AppError("INVITATION_EXPIRED");
-    if (!invitation.targetEmail && invitation.targetEmail !== email)
+    if (invitation.targetEmail && invitation.targetEmail !== email)
       throw new AppError("INVITATION_INVALID");
 
     const user = await this.userService.create({
@@ -458,7 +467,7 @@ export class AuthService {
       case "invited":
         throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_INVITATION_PENDING);
       case "left":
-        throw new AppError("ORGANIZATION_MEMBER_REMOVED"); //to do add left error code and replace it
+        throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_LEFT);
     }
   }
 }
