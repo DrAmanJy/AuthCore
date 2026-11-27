@@ -12,7 +12,6 @@ import {
   sendCreated,
   sendNoContent,
   sendPaginated,
-  sendSuccess,
 } from "../../../utils/response.utils.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
 import type { AccessTokenPayload } from "../../auth/auth.types.js";

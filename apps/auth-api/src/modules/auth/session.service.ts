@@ -56,7 +56,7 @@ export class SessionService {
       organizationId,
     });
 
-    if (!member || member.status !== "active") {
+    if (member?.status !== "active") {
       return { permissions: [], isOwner: false };
     }
 
