@@ -1,9 +1,11 @@
 import type {
   ActorId,
   CreateOrganizationData,
+  FindManyOptions,
   Organization,
   OrganizationId,
   OrganizationRepository,
+  PaginatedResult,
   UpdateOrganizationData,
 } from "@authcore/database";
 import { logger } from "@authcore/logger";
@@ -17,42 +19,43 @@ export class OrganizationService {
     private readonly authorizationService: AuthorizationService,
   ) {}
 
-  async getById(organizationId: OrganizationId, actorId: ActorId): Promise<Organization> {
-    return this.authorizationService.getValidOrganization(
-      {
-        by: "id",
-        organizationId,
-      },
-      actorId,
-    );
-  }
-
-  async getBySlug(slug: string, actorId: ActorId): Promise<Organization> {
-    return this.authorizationService.getValidOrganization(
-      {
-        by: "slug",
-        slug,
-      },
-      actorId,
-    );
-  }
-
-  async getByActor(actorId: ActorId): Promise<Organization[]> {
-    const result = await this.organizationRepository.findMany({
-      by: "actor",
-      actorId,
-      status: "active",
+  async getById(organizationId: OrganizationId, _actorId?: ActorId): Promise<Organization> {
+    return this.authorizationService.getValidOrganization({
+      by: "id",
+      organizationId,
     });
-    return result.items;
+  }
+
+  async getBySlug(slug: string, _actorId?: ActorId): Promise<Organization> {
+    return this.authorizationService.getValidOrganization({
+      by: "slug",
+      slug,
+    });
+  }
+
+  async getByActor(
+    actorId: ActorId,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Organization>> {
+    return this.organizationRepository.findMany(
+      {
+        by: "actor",
+        actorId,
+        status: "active",
+      },
+      options,
+    );
   }
 
   // no Security checks use securely
-  async getAll(): Promise<Organization[]> {
-    const result = await this.organizationRepository.findMany({
-      by: "status",
-      status: "active",
-    });
-    return result.items;
+  async getAll(options?: FindManyOptions): Promise<PaginatedResult<Organization>> {
+    return this.organizationRepository.findMany(
+      {
+        by: "status",
+        status: "active",
+      },
+      options,
+    );
   }
 
   async create(
@@ -72,17 +75,12 @@ export class OrganizationService {
   }
 
   async update(
-    organizationId: OrganizationId,
+    organization: Organization,
     actorId: ActorId,
     data: Pick<UpdateOrganizationData, "name" | "frontendUrl">,
   ): Promise<Organization> {
-    const organization = await this.authorizationService.getValidOrganization({
-      by: "id",
-      organizationId,
-    });
-
     const updatedOrganization = await this.organizationRepository.update(
-      { by: "id", organizationId },
+      { by: "id", organizationId: organization.id },
       data,
     );
 
@@ -137,21 +135,16 @@ export class OrganizationService {
     organizationId: OrganizationId,
     actorId: ActorId,
   ): Promise<Organization> {
-    const organization = await this.authorizationService.getValidOrganization({
-      by: "id",
-      organizationId,
-    });
-
     const organizationDeleted = await this.organizationRepository.softDelete({
       by: "id",
       organizationId,
     });
 
     if (!organizationDeleted) {
-      throw new AppError(ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new AppError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
     }
     logger.info(
-      { event: "organization.delete.success", actorId, orgId: organization.id },
+      { event: "organization.delete.success", actorId, orgId: organizationId },
       "Organization deleted successfully",
     );
 

@@ -136,12 +136,11 @@ export { asMemberId } from "./repositories/organization-member/organization-memb
 export type {
   Member,
   MemberId,
-  MemberStatus,
   CreateMemberData,
   UpdateMemberData,
   FindMemberCriteria,
 } from "./repositories/organization-member/organization-member.types.js";
-
+export type { MemberStatus } from "./models/member.model.js";
 export type { MemberRepository } from "./repositories/organization-member/organization-member-repository.js";
 
 export { MongoMemberRepository } from "./repositories/organization-member/mongo-organization-member-repository.js";
@@ -230,8 +229,25 @@ export type {
   UpdateInvitationCriteria,
   RevokeInvitationCriteria,
 } from "./repositories/invitation/invitation-types.js";
-export type { TargetType } from "./models/invitation.model.js";
 
 export type { InvitationRepository } from "./repositories/invitation/invitation-repository.js";
 
 export { MongoInvitationRepository } from "./repositories/invitation/mongo-invitation-repository.js";
+
+export type { TargetType } from "./models/invitation.model.js";
+
+// ─────────────────────────────────────────────
+// Permission
+// ─────────────────────────────────────────────
+export { asPermissionId } from "./repositories/permission/permission.types.js";
+export type {
+  CreatePermissionData,
+  FindManyPermissionsCriteria,
+  FindPermissionCriteria,
+  Permission,
+  PermissionId,
+  UpdatePermissionData,
+} from "./repositories/permission/permission.types.js";
+
+export type { PermissionRepository } from "./repositories/permission/permission.repository.js";
+export { MongoPermissionRepository } from "./repositories/permission/mongo.permission.repository.js";

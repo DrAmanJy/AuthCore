@@ -19,6 +19,12 @@ memberRouter.patch(
 );
 
 memberRouter.post(
+  "/transfer-ownership",
+  requirePermission("org:transfer"),
+  memberController.transferOwnership,
+);
+
+memberRouter.post(
   "/:memberId/activate",
   requirePermission("members:update"),
   memberController.activateMember,

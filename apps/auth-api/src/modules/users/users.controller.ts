@@ -1,12 +1,17 @@
 import type { Request, Response } from "express";
 
+import type { OrganizationId } from "@authcore/database";
 import { asUserId } from "@authcore/database";
 
 import type { ChangeStatus, UpdateProfile } from "@authcore/contracts";
 
 import type { UserService } from "./users.service.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
-import { sendSuccess } from "../../utils/response.utils.js";
+import {
+  getPaginationOptions,
+  sendPaginated,
+  sendSuccess,
+} from "../../utils/response.utils.js";
 import type { AccessTokenPayload } from "../auth/auth.types.js";
 import { AppError } from "../../errors/app-error.js";
 import getAuthToken from "../../utils/token.js";
@@ -59,9 +64,10 @@ export class UserController {
     sendSuccess(res, user, "User successfully deleted");
   }
 
-  async getAllUsers(_req: Request, res: Response) {
-    const users = await this.userService.getAllUsers();
-    sendSuccess(res, users, "Users successfully retrieved");
+  async getAllUsers(req: Request, res: Response) {
+    const options = getPaginationOptions(req.query);
+    const users = await this.userService.getAllUsers(options);
+    sendPaginated(res, users, "Users successfully retrieved");
   }
 
   async getUserOrganizations(req: Request, res: Response) {
@@ -70,7 +76,15 @@ export class UserController {
 
     sendSuccess(res, organizations, "Organizations successfully retrieved");
   }
-
+  async leaveOrganization(
+    req: Request<{ organizationId: OrganizationId }>,
+    res: Response,
+  ) {
+    const { sub } = getAuthToken(req);
+    const { organizationId } = req.params;
+    const member = await this.userService.leaveOrganizations(organizationId, sub);
+    sendSuccess(res, member, "Organizations successfully left");
+  }
   async changeUserStatus(req: UserRequest<ChangeStatus>, res: Response) {
     const user = await this.userService.changeStatus(asUserId(req.params.userId), {
       status: req.body.status,

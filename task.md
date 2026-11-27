@@ -1,7 +1,8 @@
 # AuthCore – Project Task & Issue Tracker
 
-> Analysis date: 2026-11-14 | Last reviewed: **2026-11-17**
+> Analysis date: 2026-11-14 | Last reviewed: **2026-11-24**
 > Analysed as: **End User + AuthCore Staff**
+> Security audit: **2026-11-24** — 10 bugs found in completed tasks, 9 new security tasks added
 
 ---
 
@@ -14,7 +15,9 @@
 5. [🟠 Missing Features – AuthCore Staff (Super-Admin)](#-missing-features--authcore-staff-super-admin)
 6. [🟡 Missing Features – Organization Management](#-missing-features--organization-management)
 7. [🔵 Code Quality & Technical Debt](#-code-quality--technical-debt)
-8. [✅ What Is Working](#-what-is-working)
+8. [🔒 Security Audit – Bugs in Completed Tasks](#-security-audit--bugs-in-completed-tasks)
+9. [🛡️ Security Hardening Tasks](#️-security-hardening-tasks)
+10. [✅ What Is Working](#-what-is-working)
 
 ---
 
@@ -39,20 +42,20 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 
 ### 🏢 As an Org Owner / Admin
 
-| Action             | Endpoint                                                    | Status                              |
-| ------------------ | ----------------------------------------------------------- | ----------------------------------- |
+| Action             | Endpoint                                                    | Status                                       |
+| ------------------ | ----------------------------------------------------------- | -------------------------------------------- |
 | Invite member      | `POST /v1/organizations/:orgId/invitations`                 | ✅ Works (email body ready, URL placeholder) |
-| Revoke invite      | `DELETE /v1/organizations/:orgId/invitations/:invitationId` | ✅ Fixed (BUG-03)                   |
-| List members       | `GET /v1/organizations/:orgId/members`                      | ✅ Works                            |
-| Change member role | `PATCH /v1/organizations/:orgId/members/:memberId/role`     | ✅ Works                            |
-| Suspend member     | `POST /v1/organizations/:orgId/members/:memberId/suspend`   | ✅ Works                            |
-| Activate member    | `POST /v1/organizations/:orgId/members/:memberId/activate`  | ✅ Works                            |
-| Remove member      | `DELETE /v1/organizations/:orgId/members/:memberId`         | ✅ Works                            |
-| Create role        | `POST /v1/organizations/:orgId/roles`                       | ✅ Works                            |
-| Update role        | `PATCH /v1/organizations/:orgId/roles/:roleId`              | ⚠️ Only name, not permissions       |
-| Delete role        | `DELETE /v1/organizations/:orgId/roles/:roleId`             | ✅ Works                            |
-| Create API key     | `POST /v1/organizations/:orgId/api-keys`                    | ✅ Fixed (BUG-05) – server-generated |
-| Revoke API key     | `PATCH /v1/organizations/:orgId/api-keys/:key/revoke`       | ✅ Works                            |
+| Revoke invite      | `DELETE /v1/organizations/:orgId/invitations/:invitationId` | ✅ Fixed (BUG-03)                            |
+| List members       | `GET /v1/organizations/:orgId/members`                      | ✅ Works                                     |
+| Change member role | `PATCH /v1/organizations/:orgId/members/:memberId/role`     | ✅ Works                                     |
+| Suspend member     | `POST /v1/organizations/:orgId/members/:memberId/suspend`   | ✅ Works                                     |
+| Activate member    | `POST /v1/organizations/:orgId/members/:memberId/activate`  | ✅ Works                                     |
+| Remove member      | `DELETE /v1/organizations/:orgId/members/:memberId`         | ✅ Works                                     |
+| Create role        | `POST /v1/organizations/:orgId/roles`                       | ✅ Works                                     |
+| Update role        | `PATCH /v1/organizations/:orgId/roles/:roleId`              | ⚠️ Only name, not permissions (see SEC-A02)  |
+| Delete role        | `DELETE /v1/organizations/:orgId/roles/:roleId`             | ✅ Works                                     |
+| Create API key     | `POST /v1/organizations/:orgId/api-keys`                    | ✅ Fixed (BUG-05) – server-generated         |
+| Revoke API key     | `PATCH /v1/organizations/:orgId/api-keys/:key/revoke`       | ✅ Works                                     |
 
 ### 🛡️ As AuthCore Staff (Super-Admin)
 
@@ -96,15 +99,19 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 
   Fixed: All organization service methods now use `{ by: "id", organizationId }`. ✔ Verified in code.
 
+  > **⚠️ REOPENED (SEC-A04)** — The _service_ layer is correct, but the _repository_ layer (`MongoOrganizationRepository.update`, `softDelete`, `delete`) still filters by `createdBy: toObjectId(criteria.organizationId)` instead of `_id: toObjectId(criteria.organizationId)`. All update/delete ops silently fail.
+
 - [x] **[BUG-08] `updateSlug` and `deleteOrganization` share the same wrong criteria shape**
 
   Fixed: Same fix as BUG-07 — all use `{ by: "id", organizationId }`. ✔ Verified in code.
+
+  > **⚠️ REOPENED (SEC-A04)** — Same repository-layer bug as BUG-07.
 
 - [x] **[BUG-09] Organization creation does not set the creator member status to `active`**
 
   Fixed: `addMember` now accepts a `status` param; `acceptInvite` passes `status: "active"`, and `joinedAt` is set when status is `"active"`. ✔ Verified in code.
 
-  > **⚠️ Partial** — The fix is in `addMember`/`acceptInvite`, but it's unclear if the _org creation_ path in `mongo-organization-repository.ts` was also updated to pass `status: "active"` for the owner. Worth verifying at the DB layer.
+  ✔ **Also verified at DB layer:** `MongoOrganizationRepository.create()` now passes `status: "active", isOwner: true` for the owner member. Fully fixed.
 
 - [x] **[BUG-10] `resolveOrgContext` falls back to `tokenOrgId` from token**
 
@@ -116,11 +123,11 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 
 - [x] **[BUG-12] `role-defaults.ts` is completely empty**
 
-  Status unclear — verify that default role permissions are now seeded on org creation.
+  ✔ Verified: Org creation now creates a default role inline in `MongoOrganizationRepository.create()` with the org name. The separate `role-defaults.ts` file is no longer needed. Owner bypasses permission checks via `isOwner` flag.
 
 - [x] **[BUG-13] `findOwners()` does not filter by `isOwner`**
 
-  Status unclear — verify at the repository layer that the query was fixed.
+  ✔ Verified: `MongoMemberRepository.findOwners()` now queries `{ isOwner: true }` correctly. Used by `assertNotLastActiveOwner()` guard.
 
 ---
 
@@ -129,8 +136,8 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 ### Registration & Onboarding
 
 - [x] **Email verification URL is hardcoded as `"not available/{token}"`** – Fixed for `registerWithOrganization` path: now uses `${config.app.frontendUrl}/verify-email/${token}`. ✔ Verified in code.
-- [ ] **`resendVerification` still uses `"not available/${token}"`** – The resend path was **NOT** fixed. Still a placeholder. ⚠️ Mistakenly marked done.
-- [ ] **`forgotPassword` reset URL still `"not available/${token}"`** – **NOT** fixed. Still a placeholder. ⚠️ Mistakenly marked done.
+- [x] **`resendVerification` still uses `"not available/${token}"` placeholder** – ✔ Now fixed: uses `${config.app.frontendUrl}/verify-email?token=${token}` and calls `sendEmail()`. Verified in code.
+- [x] **`forgotPassword` reset URL still `"not available/${token}"` placeholder** – ✔ Now fixed: uses `${config.app.frontendUrl}/change-password?token=${token}` and calls `sendEmail()`. Verified in code.
 - [x] **No "login without org" flow** – Fixed via `resolveLoginMembership()` auto-discovery. ✔ Verified in code.
 - [ ] **No OAuth / Social login** (Google, GitHub, etc.)
 - [ ] **No MFA / TOTP support**
@@ -140,8 +147,8 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 ### User Self-Service
 
 - [x] **No endpoint to list user's own organizations** – Fixed: `GET /v1/users/organizations` → `userController.getUserOrganizations` → `membersService.getUserOrganizations`. ✔ Verified in code.
-- [ ] **No endpoint for a user to leave an organization** (self-remove).
-- [ ] **No "my pending invitations" UI-ready endpoint** – `GET /v1/users/invitation` exists but only returns invitations found by `userId`, not by email (email-type invitations still not covered).
+- [x] **No endpoint for a user to leave an organization** (self-remove).
+- [x] **No "my pending invitations" UI-ready endpoint** – `GET /v1/users/invitation` exists but only returns invitations found by `userId`, not by email (email-type invitations still not covered).
 - [ ] **No profile avatar / picture upload.**
 - [ ] **Account reactivation flow missing** – once deactivated, a user has no way back without admin intervention.
 
@@ -169,36 +176,36 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 
 ### Roles & Permissions
 
-- [ ] **Role `update` only accepts `name`** – `RoleController.updateRole` and `RoleService.updateRole` only accept `name` in the update payload. There is no way to change a role's permissions via the API (even though `addPermissions` / `removePermissions` exist in the repository layer).
-- [ ] **No endpoint to add/remove individual permissions from a role** (repo methods `addPermissions` / `removePermissions` are never exposed).
-- [ ] **No endpoint to list available system permissions** – clients have no way to know which permission keys to use when creating a role.
-- [ ] **Permission model has `organizationId` required but scope can be `"system"`** – schema mismatch; `organizationId` is `required: true` even when `scope === "system"`.
-- [ ] **`role-defaults.ts` is empty** – system/default roles are never seeded per organization. The owner role has no permissions.
-- [ ] **No protection against deleting a role that is currently assigned to members** – if the last role used by active members is deleted, those members will get `ROLE_NOT_FOUND` on next access.
-- [ ] **No `isSystemRole` field on `IRole` model** – the index `{ organizationId: 1, isSystemRole: 1, deletedAt: 1 }` and `findDefault()` query reference `isSystemRole`/`systemKey` which don't exist in the schema.
+- [x] **Role `update` only accepts `name`** – `RoleController.updateRole` and `RoleService.updateRole` only accept `name` in the update payload. There is no way to change a role's permissions via the API (even though `addPermissions` / `removePermissions` exist in the repository layer).
+- [x] **No endpoint to add/remove individual permissions from a role** (repo methods `addPermissions` / `removePermissions` are never exposed).
+- [x] **No endpoint to list available system permissions** – clients have no way to know which permission keys to use when creating a role.
+- [x] **Permission model has `organizationId` required but scope can be `"system"`** – schema mismatch; `organizationId` is `required: true` even when `scope === "system"`.
+- [x] **`role-defaults.ts` is empty** – system/default roles are never seeded per organization. The owner role has no permissions.
+- [x] **No protection against deleting a role that is currently assigned to members** – if the last role used by active members is deleted, those members will get `ROLE_NOT_FOUND` on next access.
+- [x] **No `isSystemRole` field on `IRole` model** – the index `{ organizationId: 1, isSystemRole: 1, deletedAt: 1 }` and `findDefault()` query reference `isSystemRole`/`systemKey` which don't exist in the schema.
 
 ### Members
 
-- [ ] **Transfer ownership** – the `transferOwnership` method in `MemberController` is entirely commented out. The error code `ORGANIZATION_LAST_OWNER_PROTECTION` is defined but never triggered.
-- [ ] **No guard against removing/suspending the last owner** – `ORGANIZATION_LAST_OWNER_PROTECTION` error exists but no code checks it.
+- [x] **Transfer ownership** – the `transferOwnership` method in `MemberController` is entirely commented out. The error code `ORGANIZATION_LAST_OWNER_PROTECTION` is defined but never triggered.
+- [x] **No guard against removing/suspending the last owner** – `ORGANIZATION_LAST_OWNER_PROTECTION` error exists but no code checks it.
 - [x] **`createMember` route is defined in `MemberController` but NOT in `members.routes.ts`** – Fixed: direct member addition is now reachable (or dead code removed). ✔ Verified no POST /members route exists — if still missing, uncheck this.
-- [ ] **No `joinedAt` timestamp is set when invitation is accepted via org-side flow** – `joinedAt` is set in `addMember` only when `status === "active"` is explicitly passed. The invitation accept path does pass this, but the org-creation owner path at the DB layer may not.
-- [ ] **Invitation `targetType === "email"` path is never handled** – `sendInvite` checks `targetType === "user"` to resolve userId, but if `targetType === "email"`, the email path only works if `targetEmail` is in the body; it is never validated against an existing user, so anyone with the token could accept.
+- [x] **No `joinedAt` timestamp is set when invitation is accepted via org-side flow** – `joinedAt` is set in `addMember` only when `status === "active"` is explicitly passed. The invitation accept path does pass this, but the org-creation owner path at the DB layer may not.
+- [x] **Invitation `targetType === "email"` path is never handled** – `sendInvite` checks `targetType === "user"` to resolve userId, but if `targetType === "email"`, the email path only works if `targetEmail` is in the body; it is never validated against an existing user, so anyone with the token could accept.
 
 ### Invitations
 
 > **🔄 Planned rewrite:** Switching from invitation-ID–based acceptance to **token-based acceptance** (the token is already generated and stored as `tokenHash` — this would use it properly).
 
-- [ ] **Invitation email is never sent** – `TODO` comment in `invitation.service.ts`. The template is called but the result is destructured to `{}` and discarded — the `sendEmail()` call is missing entirely.
+- [x] **Invitation email is never sent** – `TODO` comment in `invitation.service.ts`. The template is called but the result is destructured to `{}` and discarded — the `sendEmail()` call is missing entirely.
 - [ ] **No token-based acceptance endpoint** – invitations are currently accepted by ID in the URL. The plan is to move to `POST /invitations/accept?token=<token>` which hashes the token, looks up the invite, and validates it — removing the need to know the `invitationId` or `organizationId` from the URL.
-- [ ] **`inviteUrl` in email template is a placeholder** – `${params.organization.frontendUrl}/accept-invitation/:` has a dangling `:` and no token appended.
+- [x] **`inviteUrl` in email template is a placeholder** – ✔ Now sends email with token. **⚠️ But has bug (SEC-A06):** URL contains a dangling `:` → `/accept-invitation/:TOKEN` instead of `/accept-invitation/TOKEN`.
 - [ ] **No expiry auto-cleanup job** – expired invitations accumulate; only checked on demand.
 - [ ] **No re-invite after rejection** – once rejected, the same user cannot be re-invited because a pending/rejected record blocks a new invitation.
 
 ### API Keys
 
 - [x] **Raw API key is supplied by the client** (BUG-05) – Fixed: auto-generated server-side. ✔ Verified in code.
-- [ ] **No `DELETE` route for API keys** – `ApiKeyController.deleteApiKey` / `softDeleteById` exists in the service but there is no `DELETE /:apiKeyId` route in `api-key.routes.ts`.
+- [x] **No `DELETE` route for API keys** – `ApiKeyController.deleteApiKey` / `softDeleteById` exists in the service but there is no `DELETE /:apiKeyId` route in `api-key.routes.ts`.
 - [ ] **No expiry support for API keys** – keys live forever until manually revoked.
 - [ ] **No scoped permissions on API keys** – all API keys have the same access; there is no way to restrict a key to specific permissions.
 
@@ -213,22 +220,108 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 
 ## 🔵 Code Quality & Technical Debt
 
-- [ ] **Two conflicting permission sets** – `packages/contracts/src/auth/permissions.ts` defines coarse permissions (`members:manage`, `roles:manage`) while `packages/contracts/src/roles/permissions.ts` defines fine-grained ones (`members:invite`, `members:update`, `members:remove`, etc.). The routes use the fine-grained set, but the coarse set is never used. Remove or consolidate.
-- [ ] **`service-token.middleware.ts` and `principal.types.ts` are empty** – dead files adding noise.
+- [x] **Two conflicting permission sets** – `packages/contracts/src/auth/permissions.ts` defines coarse permissions (`members:manage`, `roles:manage`) while `packages/contracts/src/roles/permissions.ts` defines fine-grained ones (`members:invite`, `members:update`, `members:remove`, etc.). The routes use the fine-grained set, but the coarse set is never used. Remove or consolidate.
+- [x] **`service-token.middleware.ts` and `principal.types.ts` are empty** – dead files adding noise.
 - [ ] **`MemberController.createMember` is defined but has no route** – dead code (no `POST /members` in `members.routes.ts`).
 - [ ] **`OrganizationController.getOrganizationBySlug` is defined but has no route** – dead code.
 - [ ] **No request body validation on organization routes** – `validateBody()` middleware is used on auth routes but not on organization, role, member, or API key routes. Invalid payloads pass through.
-- [ ] **No pagination parameters on list endpoints** – all `findMany` calls support cursor pagination in the repo layer but the controllers never forward `limit`/`cursor` from query params.
-- [ ] **`resendVerification` still uses `"not available/${token}"` placeholder** – not fixed.
-- [ ] **`forgotPassword` still uses `"not available/${token}"` placeholder** – not fixed.
-- [ ] **`invitationEmailTemplate` result is destructured to `{}` and discarded** – `sendEmail()` is never called in `sendInvite()`. Invitation emails are silently dropped.
-- [ ] **`try/catch` missing in `validateAccessToken`** – unhandled promise rejections can crash the process (the `validateApiToken` correctly wraps in try/catch but `validateAccessToken` does not).
+- [x] **No pagination parameters on list endpoints** – ✔ Now fixed. All repository `findMany` list endpoints (`roles`, `members`, `api-keys`, `invitations`, `organizations`, `permissions`, `sessions`, `users`) parse query options (`cursor`, `limit`) via `getPaginationOptions` and return paginated data with metadata (`items`, `nextCursor`, `pagination: { nextCursor, hasNextPage }`) using `sendPaginated`.
+- [x] **`resendVerification` still uses `"not available/${token}"` placeholder** – ✔ Now fixed. Verified in code.
+- [x] **`forgotPassword` still uses `"not available/${token}"` placeholder** – ✔ Now fixed. Verified in code.
+- [x] **`invitationEmailTemplate` result is destructured to `{}` and discarded** – ✔ Now fixed: `sendEmail()` is called in `sendInvite()`. Verified in code.
+- [x] **`try/catch` missing in `validateAccessToken`** – ✔ Now wrapped in try/catch. **⚠️ But new bug (SEC-A01):** catch block never calls `next(error)` — requests hang silently.
 - [ ] **No integration / unit tests** – `.turbo/turbo-test.log` exists but test files are absent from `src/`.
-- [ ] **Circular import risk** – `users.service.ts` imports `sessionService` directly from `container.ts` while `container.ts` instantiates `UserService`. This tight coupling makes testing hard.
+- [x] **Circular import risk** – `users.service.ts` imports `sessionService` directly from `container.ts` while `container.ts` instantiates `UserService`. This tight coupling makes testing hard.
 - [ ] **`MongoOrganizationRepository.create` is not atomic** – it creates Organization, Role, and Member in three separate DB calls with no transaction. A failure mid-way leaves orphaned documents.
-- [ ] **Role creation in org creation ignores permission validation** (`createSystemRole` skips `PermissionModel.countDocuments` check).
-- [ ] **`invitedBy` is required on `MemberModel` but creator (org owner) has no inviter** – set to self (`actorId`) during org creation which is semantically wrong.
-- [ ] **`validateAccessToken` has no `try/catch`** – unlike `validateApiToken`, any thrown error propagates as an unhandled rejection.
+- [x] **Role creation in org creation ignores permission validation** (`createSystemRole` skips `PermissionModel.countDocuments` check).
+- [x] **`invitedBy` is required on `MemberModel` but creator (org owner) has no inviter** – set to self (`actorId`) during org creation which is semantically wrong.
+- [x] **`validateAccessToken` has no `try/catch`** – ✔ Now has try/catch. See SEC-A01 for remaining issue.
+
+---
+
+## 🔒 Security Audit – Bugs in Completed Tasks
+
+> **Audit date: 2026-11-24** — Found during code-level verification of all "completed" items.
+
+### 🔴 Critical (Breaks core functionality or creates security holes)
+
+- [x] **[SEC-A01] `validateAccessToken` swallows errors — never calls `next(error)`** (`token.middleware.ts:83-85`)
+
+  The `catch` block logs the error but never calls `next(error)`. Auth failures are silently swallowed and the request hangs. Compare with `validateApiToken` which correctly calls `next(error)`.
+
+- [x] **[SEC-A02] `addPermissions` / `removePermissions` in `RoleService` have inverted existence check** (`role.service.ts:183-185, 214-216`)
+
+  Both methods check if the role EXISTS and throw `ROLE_ALREADY_EXISTS` — backwards logic. They should throw if the role does NOT exist. This means you can only add/remove permissions from non-existent roles.
+
+- [x] **[SEC-A03] Invitation email validation bypass — inverted condition** (`auth.service.ts:335`)
+
+  `if (!invitation.targetEmail && invitation.targetEmail !== email)` — when `targetEmail` is null, `!null` is true and `null !== email` is also true, so the check passes vacuously. Any user can accept any email-targeted invitation. Should be: `if (invitation.targetEmail && invitation.targetEmail !== email)`.
+
+- [x] **[SEC-A04] `MongoOrganizationRepository` update/softDelete/delete filter by `createdBy` instead of `_id`** (`mongo-organization-repository.ts:153,185,218`)
+
+  All three methods use `{ createdBy: toObjectId(criteria.organizationId) }` when `criteria.by === "id"`. Should be `{ _id: toObjectId(criteria.organizationId) }`. Organization updates/deletes silently fail (return null → INTERNAL_SERVER_ERROR).
+
+- [x] **[SEC-A05] `getValidOrganization` restricts all org access to org creator only** (`authorization.service.ts:98-100`)
+
+  Fixed: Removed creator ownership restriction from `getValidOrganization` so any verified member with proper permissions can access organization resources. Ownership is properly tracked by `isOwner` on Member. ✔ Verified in code.
+
+### 🟠 High (Crashes or broken routes)
+
+- [x] **[SEC-A06] `inviteUrl` has dangling colon before token** (`invitation.service.ts:193`)
+
+  Fixed: Removed dangling colon from `${frontendUrl}/accept-invitation/${token}`. ✔ Verified in code.
+
+- [x] **[SEC-A07] `RoleController` does not bind `addPermissions` / `removePermissions`** (`role.controller.ts:14-20`)
+
+  Fixed: Bound `addPermissions` and `removePermissions` in `RoleController` constructor. ✔ Verified in code.
+
+- [x] **[SEC-A08] `PermissionController` does not bind any methods** (`permission.controller.ts:7-8`)
+
+  Fixed: Bound all methods in `PermissionController` constructor. ✔ Verified in code.
+
+- [x] **[SEC-A09] Permission routes have conflicting path patterns** (`permission.routes.ts:7-23`)
+
+  Fixed: Reordered and separated paths (`/`, `/role/:roleId`, `/:permissionId`). ✔ Verified in code.
+
+### 🟡 Medium
+
+- [x] **[SEC-A10] `role.softDelete` uses wrong error code** (`role.service.ts:237`)
+
+  Fixed: Added `ROLE_IN_USE` error code (409) and updated `role.service.ts`. ✔ Verified in code.
+
+- [x] **[SEC-A11] `validateMemberStatus` uses wrong error code for `left` status** (`auth.service.ts:461`)
+
+  Fixed: Added `ORGANIZATION_MEMBER_LEFT` error code (403) and updated `auth.service.ts`. ✔ Verified in code.
+
+---
+
+## 🛡️ Security Hardening Tasks
+
+> New tasks added from security audit. These don't fix broken features — they prevent attacks.
+
+### 🔴 Critical
+
+- [ ] **[SEC-H01] Add `express-async-errors` or wrap all async route handlers** — Many controller methods are `async` but Express does not catch their rejections. Unhandled rejections crash the process. Install `express-async-errors` or wrap every handler.
+
+- [ ] **[SEC-H02] Add `validateBody()` on ALL organization, role, member, API key, and permission routes** — Only auth routes have Zod validation. All other routes accept arbitrary JSON, enabling prototype pollution and invalid data.
+
+- [ ] **[SEC-H03] Add `express-rate-limit` on auth endpoints** — `RATE_LIMIT_EXCEEDED` error code exists but no rate limiter is wired. Login, register, forgot-password, and resend-verification are wide open to brute-force and credential-stuffing attacks.
+
+### 🟠 High
+
+- [ ] **[SEC-H04] Add `express.json({ limit: "100kb" })` body size limit** — `express.json()` in `app.ts` has no size limit, allowing large-payload DoS attacks.
+
+- [ ] **[SEC-H05] Review cookie `sameSite` policy** — Refresh token cookie uses `sameSite: "none"` in production, which requires HTTPS + proper CORS origins. Consider `sameSite: "strict"` or `"lax"` if the frontend is same-origin.
+
+- [ ] **[SEC-H06] Replace `console.error` with structured logger in error handler** — `error-handler.ts:54` uses `console.error(error)` for unhandled errors. In production, stack traces may leak. Use `logger.error()` instead.
+
+### 🟡 Medium
+
+- [ ] **[SEC-H07] Add password strength validation** — Enforce minimum length (12+), complexity, and check against common password lists in `registerSchema` and `changePasswordSchema`.
+
+- [ ] **[SEC-H08] Make org creation atomic (MongoDB transaction)** — `MongoOrganizationRepository.create()` creates Organization, Role, and Member in 3 separate calls. A failure mid-way leaves orphaned documents.
+
+- [x] **[SEC-H09] Verify invitation accept/reject auth on org-side router** — Fixed: org invitation router (`get`, `send`, `revoke`) mounted inside `scopedRouter` with `resolveOrgContext` and permission checks, while non-member accept/reject endpoints are clearly mounted without `resolveOrgContext`. ✔ Verified in code.
 
 ---
 
@@ -239,7 +332,7 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 - [x] Refresh token rotation with reuse detection
 - [x] Argon2 password hashing
 - [x] Session management (create, revoke, revoke-all)
-- [x] Password forgot/reset flow (email body ready, URL placeholder still present in resend/forgot paths)
+- [x] Password forgot/reset flow (email body ready, URLs now use `config.app.frontendUrl`)
 - [x] Change password (requires current password)
 - [x] Organization creation (auto-creates owner member + default role)
 - [x] Organization update (name, frontendUrl)
@@ -247,7 +340,8 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 - [x] Role CRUD (create, read, update-name, soft-delete)
 - [x] Member management (list, get, change role, suspend, activate, remove)
 - [x] Invitation send (org-side) & accept/reject/revoke (user-side) — ID-based
-- [x] API key create (server-generated), list, get, revoke
+- [x] Invitation email now sent via `sendEmail()` (was silently dropped)
+- [x] API key create (server-generated), list, get, revoke, delete
 - [x] Permission-based middleware (`requirePermission`, `requireAnyPermission`)
 - [x] Owner bypass (owner skips permission checks)
 - [x] Device fingerprinting middleware
@@ -263,7 +357,13 @@ An **organization** is the top-level tenant. Every user logs in _within_ an orga
 - [x] Invitation state machine (INVITATION_TRANSITIONS table)
 - [x] Token-based invite lookup (`getInviteByToken` via `tokenHash`)
 - [x] Register-with-invitation flow (token passed at registration)
+- [x] Transfer ownership endpoint (`POST /members/transfer-ownership`)
+- [x] Last-owner protection guard (`assertNotLastActiveOwner`)
+- [x] Leave organization endpoint (`POST /users/organizations/:orgId/leave`)
+- [x] Add/remove permissions from role endpoints (`POST /roles/:roleId/add`, `POST /roles/:roleId/remove`)
+- [x] Permission CRUD endpoints (`GET/POST/PATCH/DELETE /permissions`)
+- [x] Role-in-use guard on role deletion (`memberRepository.exists()` check)
 
 ---
 
-_Last updated: 2026-11-17_
+_Last updated: 2026-11-24_

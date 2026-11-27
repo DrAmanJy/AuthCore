@@ -54,6 +54,7 @@ export const ERROR_CODES = {
   ORGANIZATION_MEMBER_NOT_ACTIVE: "ORGANIZATION_MEMBER_NOT_ACTIVE",
   ORGANIZATION_MEMBER_NOT_SUSPENDED: "ORGANIZATION_MEMBER_NOT_SUSPENDED",
   ORGANIZATION_MEMBER_REMOVED: "ORGANIZATION_MEMBER_REMOVED",
+  ORGANIZATION_MEMBER_LEFT: "ORGANIZATION_MEMBER_LEFT",
   ORGANIZATION_MEMBER_SUSPENDED: "ORGANIZATION_MEMBER_SUSPENDED",
   ORGANIZATION_MEMBER_INVITATION_PENDING: "ORGANIZATION_MEMBER_INVITATION_PENDING",
 
@@ -61,6 +62,7 @@ export const ERROR_CODES = {
   ROLE_NOT_FOUND: "ROLE_NOT_FOUND",
   ROLE_ALREADY_EXISTS: "ROLE_ALREADY_EXISTS",
   ROLE_SYSTEM_PROTECTED: "ROLE_SYSTEM_PROTECTED",
+  ROLE_IN_USE: "ROLE_IN_USE",
 
   // API Key
   API_KEY_NOT_FOUND: "API_KEY_NOT_FOUND",
@@ -75,6 +77,9 @@ export const ERROR_CODES = {
   INVITATION_REJECTED: "INVITATION_REJECTED",
   INVITATION_REVOKED: "INVITATION_REVOKED",
   INVITATION_INVALID: "INVITATION_INVALID",
+
+  // Permission
+  PERMISSION_NOT_FOUND: "PERMISSION_NOT_FOUND",
 
   // Validation & General
   RATE_LIMIT_EXCEEDED: "RATE_LIMIT_EXCEEDED",
@@ -317,6 +322,11 @@ export const ERROR_DEFINITIONS: Record<
       "Your membership in this organization has been removed. Contact an admin for access.",
   },
 
+  ORGANIZATION_MEMBER_LEFT: {
+    statusCode: 403,
+    message: "You have left this organization. Contact an admin to rejoin.",
+  },
+
   ORGANIZATION_MEMBER_SUSPENDED: {
     statusCode: 409,
     message: "Your membership in this organization has been suspended. Contact an admin.",
@@ -342,6 +352,11 @@ export const ERROR_DEFINITIONS: Record<
   ROLE_SYSTEM_PROTECTED: {
     statusCode: 403,
     message: "System roles cannot be modified or deleted.",
+  },
+
+  ROLE_IN_USE: {
+    statusCode: 409,
+    message: "Cannot delete a role that is currently assigned to members.",
   },
 
   // API Key
@@ -392,6 +407,12 @@ export const ERROR_DEFINITIONS: Record<
   INVITATION_INVALID: {
     statusCode: 400,
     message: "This invitation is invalid.",
+  },
+
+  // Invitation
+  PERMISSION_NOT_FOUND: {
+    statusCode: 404,
+    message: "Permission not found.",
   },
 
   // Validation & General

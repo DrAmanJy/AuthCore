@@ -12,7 +12,13 @@ import type {
 
 import type { AuthService } from "./auth.service.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
-import { sendCreated, sendNoContent, sendSuccess } from "../../utils/response.utils.js";
+import {
+  getPaginationOptions,
+  sendCreated,
+  sendNoContent,
+  sendPaginated,
+  sendSuccess,
+} from "../../utils/response.utils.js";
 import getAuthToken from "../../utils/token.js";
 import type { LoginType } from "./auth.types.js";
 import { AppError } from "../../errors/app-error.js";
@@ -103,12 +109,8 @@ export class AuthController {
     sendSuccess(res, result.accessToken, "Access token refreshed successfully");
   }
 
-  async verifyEmail(req: Request<unknown, unknown, unknown>, res: Response) {
-    const { token } = req.query;
-
-    if (typeof token !== "string" || !token.trim()) {
-      throw new AppError(ERROR_CODES.AUTH_VERIFICATION_TOKEN_MISSING);
-    }
+  async verifyEmail(req: Request<unknown, unknown, { token: string }>, res: Response) {
+    const { token } = req.body;
 
     await this.authService.verifyEmail(token);
 
@@ -116,13 +118,9 @@ export class AuthController {
   }
 
   async resendVerification(req: Request<unknown, unknown, EmailParams>, res: Response) {
-    const { email } = req.query;
+    const { email } = req.body;
 
-    if (typeof email !== "string" || !email.trim()) {
-      throw new AppError(ERROR_CODES.AUTH_EMAIL_MISSING);
-    }
-
-    await this.authService.resendVerification(email);
+    await this.authService.resendVerification(email.trim());
 
     sendNoContent(res);
   }
@@ -157,10 +155,11 @@ export class AuthController {
 
   async getSessions(req: Request, res: Response) {
     const { orgId, sub } = getAuthToken(req);
+    const options = getPaginationOptions(req.query);
 
-    const sessions = await this.authService.getSessions(orgId, sub);
+    const sessions = await this.authService.getSessions(orgId, sub, options);
 
-    sendSuccess(res, sessions, "Session successfully retrieved");
+    sendPaginated(res, sessions, "Session successfully retrieved");
   }
 
   async revokeSession(req: Request<{ sessionId: SessionId }>, res: Response) {

@@ -1,6 +1,8 @@
 import type {
   ActorId,
+  FindManyOptions,
   OrganizationId,
+  PaginatedResult,
   RefreshToken,
   Session,
   SessionId,
@@ -180,7 +182,7 @@ export class AuthService {
     const { html, subject, text } = resendVerificationEmailTemplate({
       displayName: user.displayName,
       expiresAt: expiresAt.toISOString(),
-      verificationUrl: `not available/${token}`,
+      verificationUrl: `${config.app.frontendUrl}/verify-email?token=${token}`,
     });
 
     await sendEmail({ html, subject, to: user.email, text });
@@ -209,7 +211,7 @@ export class AuthService {
     const { html, subject, text } = passwordResetEmailTemplate({
       displayName: user.displayName,
       expiresAt: expiresAt.toISOString(),
-      resetUrl: `not available/${token}`,
+      resetUrl: `${config.app.frontendUrl}/change-password?token=${token}`,
     });
 
     await sendEmail({ html, subject, to: user.email, text });
@@ -276,12 +278,19 @@ export class AuthService {
     return updatedUser;
   }
 
-  async getSessions(organizationId: OrganizationId, userId: UserId): Promise<Session[]> {
-    return this.sessionService.getUserSessions({
-      organizationId,
-      userId,
-      activeOnly: true,
-    });
+  async getSessions(
+    organizationId: OrganizationId,
+    userId: UserId,
+    options?: FindManyOptions,
+  ): Promise<PaginatedResult<Session>> {
+    return this.sessionService.getUserSessions(
+      {
+        organizationId,
+        userId,
+        activeOnly: true,
+      },
+      options,
+    );
   }
 
   async revokeSession(sessionId: SessionId, actorId: ActorId): Promise<Session> {
@@ -332,7 +341,7 @@ export class AuthService {
     if (invitation.status === "rejected") throw new AppError("INVITATION_REJECTED");
     if (invitation.status === "revoked") throw new AppError("INVITATION_REVOKED");
     if (invitation.status === "expired") throw new AppError("INVITATION_EXPIRED");
-    if (!invitation.targetEmail && invitation.targetEmail !== email)
+    if (invitation.targetEmail && invitation.targetEmail !== email)
       throw new AppError("INVITATION_INVALID");
 
     const user = await this.userService.create({
@@ -394,7 +403,7 @@ export class AuthService {
     const { html, subject, text } = verificationEmailTemplate({
       displayName: user.displayName,
       expiresAt: expiresAt.toISOString(),
-      verificationUrl: `${config.app.frontendUrl}/verify-email/${token}`,
+      verificationUrl: `${config.app.frontendUrl}/verify-email?token=${token}`,
     });
 
     await sendEmail({
@@ -433,16 +442,13 @@ export class AuthService {
       });
     }
 
-const organization = organizations[0];
+    const organization = organizations[0];
 
-if (!organization) {
-  throw new AppError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
-}
+    if (!organization) {
+      throw new AppError(ERROR_CODES.ORGANIZATION_NOT_FOUND);
+    }
 
-return this.membersService.getMemberByUser(
-  organization.id,
-  userId,
-);
+    return this.membersService.getMemberByUser(organization.id, userId);
   }
 
   private validateMemberStatus(
@@ -460,6 +466,8 @@ return this.membersService.getMemberByUser(
 
       case "invited":
         throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_INVITATION_PENDING);
+      case "left":
+        throw new AppError(ERROR_CODES.ORGANIZATION_MEMBER_LEFT);
     }
   }
 }

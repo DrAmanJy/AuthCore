@@ -32,21 +32,26 @@ export async function resolveOrgContext(
 
 export function requirePermission(...requiredPermissions: PermissionKey[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const context = req.orgContext;
-    if (!context) {
-      throw new AppError("AUTH_UNAUTHORIZED");
-    }
-
-    if (context.isOwner) {
+    if (req.token?.isOwner || req.orgContext?.isOwner) {
       next();
       return;
     }
 
+    const permissions = req.orgContext
+      ? req.orgContext.permissions
+      : req.token?.permissions
+        ? new Set(req.token.permissions)
+        : null;
+
+    if (!permissions) {
+      throw new AppError(ERROR_CODES.AUTH_UNAUTHORIZED);
+    }
+
     const hasAllPermissions = requiredPermissions.every(permission =>
-      context.permissions.has(permission),
+      permissions.has(permission),
     );
     if (!hasAllPermissions) {
-      throw new AppError("AUTH_INSUFFICIENT_PERMISSIONS");
+      throw new AppError(ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
     }
     next();
   };
@@ -54,17 +59,24 @@ export function requirePermission(...requiredPermissions: PermissionKey[]) {
 
 export function requireAnyPermission(...permissions: PermissionKey[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const context = req.orgContext;
-    if (!context) {
-      throw new AppError("AUTH_UNAUTHORIZED");
-    }
-    if (context.isOwner) {
+    if (req.token?.isOwner || req.orgContext?.isOwner) {
       next();
       return;
     }
-    const hasAny = permissions.some(permission => context.permissions.has(permission));
+
+    const userPerms = req.orgContext
+      ? req.orgContext.permissions
+      : req.token?.permissions
+        ? new Set(req.token.permissions)
+        : null;
+
+    if (!userPerms) {
+      throw new AppError(ERROR_CODES.AUTH_UNAUTHORIZED);
+    }
+
+    const hasAny = permissions.some(permission => userPerms.has(permission));
     if (!hasAny) {
-      throw new AppError("AUTH_INSUFFICIENT_PERMISSIONS");
+      throw new AppError(ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS);
     }
     next();
   };

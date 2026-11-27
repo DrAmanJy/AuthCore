@@ -3,10 +3,7 @@ import type { IPermission } from "../../models/permission.model.js";
 import type { IRole } from "../../models/role.model.js";
 import { RoleModel } from "../../models/role.model.js";
 import { toObjectId } from "../../utils/object-id.utils.js";
-import {
-  asOrganizationId,
-  type OrganizationId,
-} from "../organization/organization.types.js";
+import { asOrganizationId } from "../organization/organization.types.js";
 import type { FindManyOptions, PaginatedResult } from "../repository-pagination.types.js";
 import { asUserId } from "../user/user.types.js";
 import type { RoleRepository } from "./role-repository.js";
@@ -99,27 +96,6 @@ export class MongoRoleRepository implements RoleRepository {
     };
   }
 
-  async findDefault(organizationId: OrganizationId): Promise<Role | null> {
-    const role = await RoleModel.findOne({
-      organizationId: toObjectId(organizationId),
-      isSystemRole: true,
-      deletedAt: { $exists: false },
-    })
-      .sort({ createdAt: 1 })
-      .populate({
-        path: "createdBy",
-        select: "_id displayName",
-      })
-      .populate({
-        path: "permissionIds",
-        select: "key",
-      })
-      .lean<MongoRoleRecord>()
-      .exec();
-
-    return role ? this.toRole(role) : null;
-  }
-
   async create(data: CreateRoleData): Promise<Role> {
     const permissionIds = [...new Set(data.permissionIds.map(id => id.toString()))].map(
       toObjectId,
@@ -127,8 +103,8 @@ export class MongoRoleRepository implements RoleRepository {
 
     const validPermissions = await PermissionModel.countDocuments({
       _id: { $in: permissionIds },
-      organizationId: toObjectId(data.organizationId),
       deletedAt: { $exists: false },
+      $or: [{ scope: "system" }, { organizationId: toObjectId(data.organizationId) }],
     });
 
     if (validPermissions !== permissionIds.length) {
@@ -166,6 +142,15 @@ export class MongoRoleRepository implements RoleRepository {
       toObjectId,
     );
 
+    const validPermissions = await PermissionModel.countDocuments({
+      _id: { $in: permissionIds },
+      deletedAt: { $exists: false },
+      $or: [{ scope: "system" }, { organizationId: toObjectId(data.organizationId) }],
+    });
+
+    if (validPermissions !== permissionIds.length) {
+      throw new Error("Some permissions are invalid.");
+    }
     const role = await RoleModel.create({
       organizationId: toObjectId(data.organizationId),
       name: data.name,
@@ -229,8 +214,8 @@ export class MongoRoleRepository implements RoleRepository {
 
     const validPermissions = await PermissionModel.countDocuments({
       _id: { $in: permissionIds },
-      organizationId: toObjectId(criteria.organizationId),
       deletedAt: { $exists: false },
+      $or: [{ scope: "system" }, { organizationId: toObjectId(criteria.organizationId) }],
     });
 
     if (validPermissions !== permissionIds.length) {

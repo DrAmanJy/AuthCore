@@ -14,7 +14,7 @@ userRouter.use(validateAccessToken);
 // Authenticated user
 // ─────────────────────────────────────────────
 
-userRouter.get("/me", validateAccessToken, userController.getAuthenticatedUser);
+userRouter.get("/me", userController.getAuthenticatedUser);
 userRouter.patch(
   "/profile",
   validateBody(updateUserProfile),
@@ -25,6 +25,7 @@ userRouter.post("/deactivate", userController.deactivateUser);
 userRouter.delete("/", userController.deleteUser);
 
 userRouter.get("/organizations", userController.getUserOrganizations);
+userRouter.post("/organizations/:organizationId/leave", userController.leaveOrganization);
 
 userRouter.get("/invitation", invitationController.getUserInvites);
 userRouter.post(

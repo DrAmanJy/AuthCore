@@ -7,7 +7,13 @@ import type {
   RoleId,
   UpdateRoleData,
 } from "@authcore/database";
-import { sendCreated, sendSuccess } from "../../../utils/response.utils.js";
+import {
+  getPaginationOptions,
+  sendCreated,
+  sendPaginated,
+  sendSuccess,
+} from "../../../utils/response.utils.js";
+import type { PermissionId } from "@authcore/database/dist/repositories/permission/permission.types.js";
 
 export class RoleController {
   constructor(private readonly roleService: RoleService) {
@@ -16,14 +22,17 @@ export class RoleController {
     this.getRole = this.getRole.bind(this);
     this.updateRole = this.updateRole.bind(this);
     this.deleteRole = this.deleteRole.bind(this);
+    this.addPermissions = this.addPermissions.bind(this);
+    this.removePermissions = this.removePermissions.bind(this);
   }
 
   async getRoles(req: Request<{ organizationId: OrganizationId }>, res: Response) {
     const { organizationId } = req.params;
+    const options = getPaginationOptions(req.query);
 
-    const roles = await this.roleService.getRoles(organizationId);
+    const roles = await this.roleService.getByOrganizationId(organizationId, options);
 
-    sendSuccess(res, roles, "Roles successfully retrieved");
+    sendPaginated(res, roles, "Roles successfully retrieved");
   }
 
   async createRole(
@@ -37,7 +46,7 @@ export class RoleController {
     const { sub: actorId } = getAuthToken(req);
     const { organizationId } = req.params;
     const { name, permissionIds } = req.body;
-    const role = await this.roleService.createRole({
+    const role = await this.roleService.create({
       organizationId,
       actorId,
       data: { name, permissionIds },
@@ -52,7 +61,7 @@ export class RoleController {
   ) {
     const { organizationId, roleId } = req.params;
 
-    const role = await this.roleService.getRole({ organizationId, roleId });
+    const role = await this.roleService.get({ organizationId, roleId });
 
     sendSuccess(res, role, "Role successfully retrieved");
   }
@@ -68,7 +77,7 @@ export class RoleController {
     const { organizationId, roleId } = req.params;
     const { sub: actorId } = getAuthToken(req);
     const { name } = req.body;
-    const role = await this.roleService.updateRole({
+    const role = await this.roleService.update({
       organizationId,
       roleId,
       actorId,
@@ -80,13 +89,54 @@ export class RoleController {
     sendSuccess(res, role, "Role successfully updated");
   }
 
+  async addPermissions(
+    req: Request<
+      { roleId: RoleId; organizationId: OrganizationId },
+      unknown,
+      { permissionIds: PermissionId[] }
+    >,
+    res: Response,
+  ) {
+    const { sub } = getAuthToken(req);
+    const { roleId, organizationId } = req.params;
+    const { permissionIds } = req.body;
+    const role = await this.roleService.addPermissions({
+      actorId: sub,
+      organizationId,
+      roleId,
+      permissionIds,
+    });
+
+    sendSuccess(res, role, "Role successfully updated");
+  }
+  async removePermissions(
+    req: Request<
+      { roleId: RoleId; organizationId: OrganizationId },
+      unknown,
+      { permissionIds: PermissionId[] }
+    >,
+    res: Response,
+  ) {
+    const { sub } = getAuthToken(req);
+    const { roleId, organizationId } = req.params;
+    const { permissionIds } = req.body;
+    const role = await this.roleService.removePermissions({
+      actorId: sub,
+      organizationId,
+      roleId,
+      permissionIds,
+    });
+
+    sendSuccess(res, role, "Role successfully updated");
+  }
+
   async deleteRole(
     req: Request<{ organizationId: OrganizationId; roleId: RoleId }>,
     res: Response,
   ) {
     const { organizationId, roleId } = req.params;
     const { sub: actorId } = getAuthToken(req);
-    const role = await this.roleService.deleteRole({ organizationId, roleId, actorId });
+    const role = await this.roleService.softDelete({ organizationId, roleId, actorId });
 
     sendSuccess(res, role, "Role successfully deleted");
   }

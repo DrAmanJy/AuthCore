@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
 import {
+  getPaginationOptions,
   sendCreated,
   sendNoContent,
+  sendPaginated,
   sendSuccess,
 } from "../../../utils/response.utils.js";
 import getAuthToken from "../../../utils/token.js";
@@ -40,13 +42,17 @@ export class ApiKeyController {
   ) {
     const { sub: actorId } = getAuthToken(req);
     const { organizationId } = req.params;
+    const options = getPaginationOptions(req.query);
 
-    const apiKeys = await this.apiKeyService.getAllOrganizationKey({
-      organizationId,
-      actorId,
-    });
+    const apiKeys = await this.apiKeyService.getAllOrganizationKey(
+      {
+        organizationId,
+        actorId,
+      },
+      options,
+    );
 
-    sendSuccess(res, apiKeys, "All api key successfully retrieved");
+    sendPaginated(res, apiKeys, "All api key successfully retrieved");
   }
 
   async getApiKeyById(

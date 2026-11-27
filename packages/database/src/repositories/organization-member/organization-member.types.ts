@@ -1,3 +1,4 @@
+import type { MemberStatus } from "../../models/member.model.js";
 import type { OrganizationId } from "../organization/organization.types.js";
 import type { RoleId } from "../role/role.types.js";
 import type { ActorId, CreatedBy, UserId } from "../user/user.types.js";
@@ -7,10 +8,6 @@ export type MemberId = string & {
 };
 
 export const asMemberId = (id: string): MemberId => id as MemberId;
-
-export const _MEMBER_STATUSES = ["invited", "active", "suspended", "removed"] as const;
-
-export type MemberStatus = (typeof _MEMBER_STATUSES)[number];
 
 export type Member = {
   id: MemberId;
@@ -34,8 +31,15 @@ export type CreateMemberData = Pick<
   isOwner?: boolean;
 };
 
-export type UpdateMemberData = Partial<Pick<Member, "roleId" | "status" | "isOwner" | "joinedAt">>;
+export type UpdateMemberData = Partial<
+  Pick<Member, "roleId" | "status" | "isOwner" | "joinedAt">
+>;
 
+export type ExistCriteria = {
+  organizationId: OrganizationId;
+  roleId: RoleId;
+  status: MemberStatus[];
+};
 export type FindMemberCriteria =
   | {
       by: "id";

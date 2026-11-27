@@ -16,7 +16,7 @@ import {
 } from "./permission.types.js";
 
 type PermissionRecord = IPermission & {
-  createdBy: CreatedBy;
+  createdBy?: CreatedBy;
 };
 
 export class MongoPermissionRepository implements PermissionRepository {

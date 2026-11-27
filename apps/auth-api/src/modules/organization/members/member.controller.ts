@@ -3,16 +3,23 @@ import type {
   MemberId,
   OrganizationId,
   RoleId,
+  UserId,
 } from "@authcore/database";
 import getAuthToken from "../../../utils/token.js";
 import type { MembersService } from "./member.service.js";
-import { sendCreated, sendSuccess } from "../../../utils/response.utils.js";
+import {
+  getPaginationOptions,
+  sendCreated,
+  sendPaginated,
+  sendSuccess,
+} from "../../../utils/response.utils.js";
 import type { Request, Response } from "express";
 import { AppError } from "../../../errors/app-error.js";
 import { ERROR_CODES } from "../../../errors/error-codes.js";
 
 export class MemberController {
   constructor(private readonly membersService: MembersService) {
+    this.transferOwnership = this.transferOwnership.bind(this);
     this.getMembers = this.getMembers.bind(this);
     this.createMember = this.createMember.bind(this);
     this.getMember = this.getMember.bind(this);
@@ -22,16 +29,23 @@ export class MemberController {
     this.removeMember = this.removeMember.bind(this);
   }
 
-  //   async transferOwnership(req: Request<{ newOwnerUserId: string }>, res: Response) {
-  //     const { sub } = getAuthToken(req);
-  //     const organization = await this.membersService.transferOwnership(
-  //       asOrganizationId(req.params.organizationId),
-  //       asActorId(sub),
-  //       asUserId(req.body.newOwnerUserId),
-  //     );
+  async transferOwnership(
+    req: Request<unknown, unknown, { newOwnerUserId: UserId }>,
+    res: Response,
+  ) {
+    const { sub } = getAuthToken(req);
+    if (!req.orgContext) throw new AppError("AUTH_FORBIDDEN");
+    const { organization } = req.orgContext;
+    const { newOwnerUserId } = req.body;
 
-  //     sendSuccess(res, organization, "Organization ownership transferred successfully");
-  //   }
+    const result = await this.membersService.transferOwnership(
+      organization,
+      sub,
+      newOwnerUserId,
+    );
+
+    sendSuccess(res, result, "Organization ownership transferred successfully");
+  }
 
   async getMembers(req: Request<{ organizationId: OrganizationId }>, res: Response) {
     const { sub } = getAuthToken(req);
@@ -40,9 +54,10 @@ export class MemberController {
     if (!organizationId) {
       throw new AppError(ERROR_CODES.VALIDATION_FAILED);
     }
-    const members = await this.membersService.getMembers(organizationId, sub);
+    const options = getPaginationOptions(req.query);
+    const members = await this.membersService.getMembers(organizationId, options, sub);
 
-    sendSuccess(res, members, "Organization Members successfully retrieved");
+    sendPaginated(res, members, "Organization Members successfully retrieved");
   }
 
   async createMember(

@@ -1,5 +1,6 @@
 // Common
 export { emailSchema, dateSchema } from "./common/schemas/common.schema.js";
+export { paginationQuerySchema, type PaginationQuery } from "./common/schemas/pagination.schema.js";
 
 export { idSchema } from "./common/schemas/id.schema.js";
 
@@ -86,10 +87,6 @@ export type {
   InvitationParams,
   OrganizationInvitationParams,
 } from "./invitation/types.js";
-
-// Permissions
-export { PERMISSIONS, ALL_PERMISSIONS } from "./auth/permissions.js";
-export type { Permission } from "./auth/permissions.js";
 
 // Roles - Schemas
 export {

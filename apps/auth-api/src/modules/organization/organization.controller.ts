@@ -10,7 +10,12 @@ import type {
 
 import type { OrganizationService } from "./organization.service.js";
 import type { AccessTokenPayload } from "../auth/auth.types.js";
-import { sendCreated, sendSuccess } from "../../utils/response.utils.js";
+import {
+  getPaginationOptions,
+  sendCreated,
+  sendPaginated,
+  sendSuccess,
+} from "../../utils/response.utils.js";
 import { ERROR_CODES } from "../../errors/error-codes.js";
 import { AppError } from "../../errors/app-error.js";
 
@@ -30,9 +35,13 @@ export class OrganizationController {
 
   async getOrganizations(req: Request, res: Response) {
     const { sub } = this.getAuthToken(req);
-    const organizations = await this.organizationService.getByActor(asActorId(sub));
+    const options = getPaginationOptions(req.query);
+    const organizations = await this.organizationService.getByActor(
+      asActorId(sub),
+      options,
+    );
 
-    sendSuccess(res, organizations, "Organizations successfully retrieved");
+    sendPaginated(res, organizations, "Organizations successfully retrieved");
   }
 
   async createOrganization(
@@ -60,27 +69,26 @@ export class OrganizationController {
     sendSuccess(res, organization, "Organization successfully retrieved");
   }
 
-  async getOrganization(req: Request<{ organizationId: OrganizationId }>, res: Response) {
-    const { sub } = this.getAuthToken(req);
-    const { organizationId } = req.params;
+  getOrganization(req: Request, res: Response) {
+    if (!req.orgContext) {
+      throw new AppError(ERROR_CODES.AUTH_UNAUTHORIZED);
+    }
 
-    const organization = await this.organizationService.getById(organizationId, sub);
-
-    sendSuccess(res, organization, "Organization successfully retrieved");
+    sendSuccess(res, req.orgContext.organization, "Organization successfully retrieved");
   }
 
   async updateOrganization(
     req: Request<{ organizationId: OrganizationId }, unknown, UpdateOrganizationData>,
     res: Response,
   ) {
+    if (!req.orgContext) throw new AppError(ERROR_CODES.AUTH_UNAUTHORIZED);
     const { sub } = this.getAuthToken(req);
-    const { organizationId } = req.params;
     const { frontendUrl, name } = req.body;
-
-    const organization = await this.organizationService.update(organizationId, sub, {
-      frontendUrl,
-      name,
-    });
+    const organization = await this.organizationService.update(
+      req.orgContext.organization,
+      sub,
+      { frontendUrl, name },
+    );
 
     sendSuccess(res, organization, "Organization successfully updated");
   }
